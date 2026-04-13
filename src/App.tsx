@@ -201,7 +201,8 @@ function App() {
       // 检查红方是否能成功吃子
       if (redMove) {
         const { captured, isMutualExchange } = checkCapture(redMove, pieces, allMoves);
-        if (captured) {
+        // 只有普通吃子（非互吃交换）才移除被吃棋子
+        if (captured && !isMutualExchange) {
           toRemove.push(captured.id);
         }
         redIsMutualExchange = isMutualExchange;
@@ -210,7 +211,8 @@ function App() {
       // 检查黑方是否能成功吃子
       if (blackMove) {
         const { captured, isMutualExchange } = checkCapture(blackMove, pieces, allMoves);
-        if (captured) {
+        // 只有普通吃子（非互吃交换）才移除被吃棋子
+        if (captured && !isMutualExchange) {
           toRemove.push(captured.id);
         }
         blackIsMutualExchange = isMutualExchange;
