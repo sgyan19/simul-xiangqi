@@ -12,12 +12,13 @@ import { checkGameEnd, formatMove } from './gameLogic';
 import ChessBoard from './ChessBoard';
 
 // 判断某个移动是否能成功吃到子
-// 吃的是位置：如果目标位置有敌方棋子且敌方棋子不在同时移动到别处，则吃子成功
+// 吃的是位置：如果目标位置有敌方棋子，且敌方棋子不在同时移动到别处，则吃子成功
+// 如果敌方棋子同时移动到己方棋子位置，则是互吃交换
 const checkCapture = (
   move: Move, 
   pieces: Piece[], 
   allMoves: { red: Move | null; black: Move | null }
-): { captured: Piece | null } => {
+): { captured: Piece | null; isMutualExchange: boolean } => {
   const [fromCol, fromRow] = move.from;
   const [toCol, toRow] = move.to;
   
@@ -26,29 +27,31 @@ const checkCapture = (
   
   // 如果目标位置没有棋子，不能吃
   if (!targetPiece) {
-    return { captured: null };
+    return { captured: null, isMutualExchange: false };
   }
   
   // 找到移动的棋子
   const movingPiece = pieces.find(p => p.position[0] === fromCol && p.position[1] === fromRow);
   if (!movingPiece || movingPiece.side === targetPiece.side) {
-    return { captured: null };
+    return { captured: null, isMutualExchange: false };
   }
   
   // 检查目标位置的敌方棋子是否也在同时移动
   const opponentSide = movingPiece.side === 'red' ? 'black' : 'red';
   const opponentMove = opponentSide === 'red' ? allMoves.red : allMoves.black;
   
-  // 如果敌方棋子也在移动到别处，则扑空（吃不到）
+  // 如果敌方棋子也在移动
   if (opponentMove) {
-    // 如果敌方棋子移动的目标不是当前位置，则扑空
-    if (opponentMove.to[0] !== toCol || opponentMove.to[1] !== toRow) {
-      return { captured: null }; // 扑空
+    // 检查敌方棋子是否移动到我的位置（互吃交换）
+    if (opponentMove.to[0] === fromCol && opponentMove.to[1] === fromRow) {
+      // 互吃交换：双方都成功吃到对方的位置
+      return { captured: targetPiece, isMutualExchange: true };
     }
-    // 如果敌方棋子移动到同一位置，这是互吃，后面单独处理
+    // 如果敌方棋子移动到别处，则扑空
+    return { captured: null, isMutualExchange: false };
   }
   
-  return { captured: targetPiece };
+  return { captured: targetPiece, isMutualExchange: false };
 };
 
 // 初始游戏状态
@@ -190,28 +193,35 @@ function App() {
       
       // 需要移除的棋子（被吃掉的）
       const toRemove: string[] = [];
+      
+      // 是否互吃交换
+      let redIsMutualExchange = false;
+      let blackIsMutualExchange = false;
 
       // 检查红方是否能成功吃子
       if (redMove) {
-        const { captured } = checkCapture(redMove, pieces, allMoves);
+        const { captured, isMutualExchange } = checkCapture(redMove, pieces, allMoves);
         if (captured) {
           toRemove.push(captured.id);
         }
+        redIsMutualExchange = isMutualExchange;
       }
 
       // 检查黑方是否能成功吃子
       if (blackMove) {
-        const { captured } = checkCapture(blackMove, pieces, allMoves);
+        const { captured, isMutualExchange } = checkCapture(blackMove, pieces, allMoves);
         if (captured) {
           toRemove.push(captured.id);
         }
+        blackIsMutualExchange = isMutualExchange;
       }
 
       // 移除被吃掉的棋子
       finalPieces = finalPieces.filter(p => !toRemove.includes(p.id));
 
       // 执行移动
-      if (redMove) {
+      if (redMove && !redIsMutualExchange) {
+        // 非互吃交换，正常移动
         finalPieces = finalPieces.map(p => {
           if (p.position[0] === redMove.from[0] && p.position[1] === redMove.from[1]) {
             return { ...p, position: [...redMove.to] as Position };
@@ -220,10 +230,24 @@ function App() {
         });
       }
 
-      if (blackMove) {
+      if (blackMove && !blackIsMutualExchange) {
+        // 非互吃交换，正常移动
         finalPieces = finalPieces.map(p => {
           if (p.position[0] === blackMove.from[0] && p.position[1] === blackMove.from[1]) {
             return { ...p, position: [...blackMove.to] as Position };
+          }
+          return p;
+        });
+      }
+
+      // 如果是互吃交换，双方都移动
+      if (redIsMutualExchange && blackIsMutualExchange) {
+        finalPieces = finalPieces.map(p => {
+          if (p.position[0] === redMove!.from[0] && p.position[1] === redMove!.from[1]) {
+            return { ...p, position: [...redMove!.to] as Position };
+          }
+          if (p.position[0] === blackMove!.from[0] && p.position[1] === blackMove!.from[1]) {
+            return { ...p, position: [...blackMove!.to] as Position };
           }
           return p;
         });
