@@ -193,7 +193,7 @@ const ChessPiece = ({
       style={{ left, top }}
       onClick={isSelectable || isInValidMoves ? onClick : undefined}
     >
-      <div className={`piece-inner ${flipped ? 'flipped' : ''}`}>
+      <div className={`piece-inner ${piece.side === 'black' ? 'flipped' : ''}`}>
         {pieceName}
       </div>
     </div>

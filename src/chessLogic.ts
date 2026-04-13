@@ -129,12 +129,13 @@ const getAdvisorMoves = (piece: Piece, pieces: Piece[]): Position[] => {
 const getElephantMoves = (piece: Piece, pieces: Piece[]): Position[] => {
   const moves: Position[] = [];
   const [col, row] = piece.position;
-  // 象走"田"字，有4个方向
+  // 象走"田"字，对角线移动，有4个方向
+  // leg是"象眼"位置（蹩象眼的位置），target是目标位置
   const movesConfig = [
-    { leg: [1, 0], target: [2, 2] },   // 右下
-    { leg: [1, 0], target: [2, -2] },  // 右上
-    { leg: [-1, 0], target: [-2, 2] }, // 左下
-    { leg: [-1, 0], target: [-2, -2] },// 左上
+    { leg: [+1, +1], target: [+2, +2] },   // 右下
+    { leg: [+1, -1], target: [+2, -2] },  // 右上
+    { leg: [-1, +1], target: [-2, +2] },  // 左下
+    { leg: [-1, -1], target: [-2, -2] }, // 左上
   ];
 
   for (const config of movesConfig) {
@@ -144,7 +145,7 @@ const getElephantMoves = (piece: Piece, pieces: Piece[]): Position[] => {
     const targetRow = row + config.target[1];
 
     if (isOnBoard(targetCol, targetRow) && !isElephantCrossed(targetRow, piece.side)) {
-      // 检查象眼是否被堵
+      // 检查象眼是否被堵（蹩象眼）
       if (!isElephantEyeBlocked(legCol, legRow, pieces)) {
         const target = getPieceAt(targetCol, targetRow, pieces);
         if (!target || target.side !== piece.side) {

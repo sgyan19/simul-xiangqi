@@ -391,6 +391,17 @@ body {
   box-shadow: 0 4px 15px rgba(102, 102, 102, 0.4);
 }
 
+.btn-settle {
+  background: linear-gradient(135deg, #FFD700, #FFA500);
+  color: #333;
+  font-weight: bold;
+}
+
+.btn-settle:hover:not(:disabled) {
+  box-shadow: 0 4px 20px rgba(255, 215, 0, 0.6);
+  transform: scale(1.05);
+}
+
 /* 视角切换 */
 .view-switch {
   display: flex;
