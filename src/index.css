@@ -1,21 +1,530 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --board-primary: #DEB887;
+  --board-line: #8B4513;
+  --board-border: #654321;
+  --piece-red: #C41E3A;
+  --piece-red-bg: #FFE4E1;
+  --piece-black: #1A1A1A;
+  --piece-black-bg: #F5F5DC;
+  --highlight: #FFD700;
+  --danger: #FF4444;
+  --success: #4CAF50;
+  --bg-page: #1a1a2e;
+  --text-primary: #FFFFFF;
+  --text-muted: #AAAAAA;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #app {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background: var(--bg-page);
+  color: var(--text-primary);
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.app-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px;
+  gap: 10px;
+}
+
+/* 顶部状态栏 */
+.status-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  max-width: 400px;
+  padding: 10px 15px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  font-size: 14px;
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.status-dot.red {
+  background: var(--piece-red);
+}
+
+.status-dot.black {
+  background: var(--piece-black);
+  border: 1px solid #666;
+}
+
+.status-dot.confirmed {
+  background: var(--success);
+}
+
+.status-dot.waiting {
+  background: var(--text-muted);
+}
+
+.phase-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.phase-badge.strategy {
+  background: rgba(255, 215, 0, 0.2);
+  color: var(--highlight);
+}
+
+.phase-badge.settlement {
+  background: rgba(76, 175, 80, 0.2);
+  color: var(--success);
+}
+
+.phase-badge.ended {
+  background: rgba(255, 68, 68, 0.2);
+  color: var(--danger);
+}
+
+/* 棋盘容器 */
+.board-container {
+  position: relative;
+  width: 100%;
+  max-width: 360px;
+  aspect-ratio: 9 / 10;
+  transition: transform 0.5s ease;
+}
+
+.board-container.flipped {
+  transform: rotate(180deg);
+}
+
+.board-container.flipped .piece {
+  transform: rotate(180deg);
+}
+
+.board-container.flipped .move-indicator {
+  transform: rotate(180deg);
+}
+
+/* 棋盘 */
+.chess-board {
+  width: 100%;
+  height: 100%;
+  background: var(--board-primary);
+  border: 8px solid var(--board-border);
+  border-radius: 4px;
+  position: relative;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+/* 棋盘线条 */
+.board-line {
+  position: absolute;
+  background: var(--board-line);
+}
+
+/* 横线 */
+.board-line.horizontal {
+  height: 2px;
+  left: 4%;
+  right: 4%;
+}
+
+/* 竖线 */
+.board-line.vertical {
+  width: 2px;
+  top: 4%;
+  bottom: 4%;
+}
+
+/* 楚河汉界 */
+.river-area {
+  position: absolute;
+  top: 45%;
+  left: 4%;
+  right: 4%;
+  height: 10%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: 'SimSun', 'STSong', serif;
+  font-size: 18px;
+  color: var(--board-line);
+  font-weight: bold;
+}
+
+/* 九宫格斜线 */
+.palace-diagonal {
+  position: absolute;
+  width: 2px;
+  background: var(--board-line);
+  transform-origin: top left;
+}
+
+/* 棋子样式 */
+.piece {
+  position: absolute;
+  width: calc(100% / 9);
+  height: calc(100% / 10);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  z-index: 10;
+}
+
+.piece-inner {
+  width: 85%;
+  height: 90%;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: 'SimSun', 'STSong', serif;
+  font-size: calc(min(100vw, 360px) / 14);
+  font-weight: bold;
+  border: 2px solid;
+  box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+.piece.red .piece-inner {
+  background: var(--piece-red-bg);
+  color: var(--piece-red);
+  border-color: var(--piece-red);
+}
+
+.piece.black .piece-inner {
+  background: var(--piece-black-bg);
+  color: var(--piece-black);
+  border-color: var(--piece-black);
+}
+
+.piece.selectable:hover .piece-inner {
+  transform: scale(1.08);
+  box-shadow: 0 0 15px var(--highlight);
+}
+
+.piece.selected .piece-inner {
+  transform: scale(1.1);
+  box-shadow: 0 0 20px var(--highlight), 0 0 40px rgba(255, 215, 0, 0.4);
+  border-color: var(--highlight) !important;
+}
+
+.piece.hidden {
+  cursor: default;
+}
+
+.piece.hidden .piece-inner {
+  opacity: 0.3;
+}
+
+.piece.capturing {
+  animation: pulse 0.5s ease;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}
+
+.piece.captured {
+  animation: fadeOut 0.5s ease forwards;
+}
+
+@keyframes fadeOut {
+  0% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0); }
+}
+
+/* 移动指示器 */
+.move-indicator {
+  position: absolute;
+  width: calc(100% / 9);
+  height: calc(100% / 10);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 5;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.move-dot {
+  width: 30%;
+  height: 30%;
+  border-radius: 50%;
+  background: rgba(255, 215, 0, 0.5);
+  border: 2px solid var(--highlight);
+  transition: transform 0.15s ease;
+}
+
+.move-indicator:hover .move-dot {
+  transform: scale(1.3);
+  background: rgba(255, 215, 0, 0.8);
+}
+
+.move-indicator.capture .move-dot {
+  width: 90%;
+  height: 95%;
+  background: transparent;
+  border: 3px solid var(--danger);
+  border-radius: 8%;
+}
+
+/* 炮架标记 */
+.cannon-marker {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: var(--board-line);
+  transform: rotate(45deg);
+}
+
+/* 控制面板 */
+.control-panel {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  max-width: 360px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.btn {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 100px;
+}
+
+.btn:active {
+  transform: scale(0.95);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-red {
+  background: linear-gradient(135deg, #C41E3A, #8B0000);
+  color: white;
+}
+
+.btn-red:hover:not(:disabled) {
+  box-shadow: 0 4px 15px rgba(196, 30, 58, 0.4);
+}
+
+.btn-black {
+  background: linear-gradient(135deg, #333, #111);
+  color: white;
+}
+
+.btn-black:hover:not(:disabled) {
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+}
+
+.btn-confirm {
+  background: linear-gradient(135deg, var(--success), #2E7D32);
+  color: white;
+}
+
+.btn-confirm:hover:not(:disabled) {
+  box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+}
+
+.btn-confirm.locked {
+  background: linear-gradient(135deg, #666, #444);
+}
+
+.btn-reset {
+  background: linear-gradient(135deg, #666, #444);
+  color: white;
+}
+
+.btn-reset:hover:not(:disabled) {
+  box-shadow: 0 4px 15px rgba(102, 102, 102, 0.4);
+}
+
+/* 视角切换 */
+.view-switch {
+  display: flex;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 25px;
+  padding: 4px;
+  gap: 4px;
+}
+
+.view-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  background: transparent;
+  color: var(--text-muted);
+  transition: all 0.2s ease;
+}
+
+.view-btn.active {
+  background: var(--highlight);
+  color: #333;
+}
+
+/* 提示信息 */
+.toast {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 20px 40px;
+  border-radius: 10px;
+  font-size: 18px;
+  font-weight: bold;
+  z-index: 100;
+  animation: toastIn 0.3s ease;
+  text-align: center;
+}
+
+.toast.danger {
+  border: 2px solid var(--danger);
+  color: var(--danger);
+}
+
+.toast.success {
+  border: 2px solid var(--success);
+  color: var(--success);
+}
+
+@keyframes toastIn {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+  100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+/* 结算弹窗 */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 200;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-content {
+  background: linear-gradient(135deg, #2a2a4a, #1a1a2e);
+  padding: 40px;
+  border-radius: 20px;
+  text-align: center;
+  animation: modalIn 0.4s ease;
+  max-width: 90%;
+}
+
+@keyframes modalIn {
+  0% { opacity: 0; transform: scale(0.8) translateY(20px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.modal-content h2 {
+  font-size: 32px;
+  margin-bottom: 10px;
+}
+
+.modal-content.red-wins h2 { color: var(--piece-red); }
+.modal-content.black-wins h2 { color: #888; }
+.modal-content.draw h2 { color: var(--highlight); }
+
+.modal-content p {
+  color: var(--text-muted);
+  margin-bottom: 30px;
+  font-size: 14px;
+}
+
+.modal-content .btn {
+  min-width: 150px;
+}
+
+/* 将军提示 */
+.check-indicator {
+  position: absolute;
+  top: 5px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--danger);
+  color: white;
+  padding: 5px 15px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: bold;
+  animation: checkPulse 1s infinite;
+  z-index: 50;
+}
+
+@keyframes checkPulse {
+  0%, 100% { box-shadow: 0 0 10px var(--danger); }
+  50% { box-shadow: 0 0 20px var(--danger), 0 0 30px var(--danger); }
+}
+
+/* 结算动画遮罩 */
+.settlement-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  border-radius: 4px;
+}
+
+.settlement-text {
+  font-size: 24px;
+  font-weight: bold;
+  color: white;
+  animation: settleText 0.5s ease;
+}
+
+@keyframes settleText {
+  0% { opacity: 0; transform: scale(0.5); }
+  50% { transform: scale(1.2); }
+  100% { opacity: 1; transform: scale(1); }
 }

@@ -13,13 +13,18 @@
   "dependencies": {
     "@supabase/supabase-js": "2.95.3",
     "dotenv": "^17.2.3",
-    "express": "^4.21.2"
+    "express": "^4.21.2",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
   },
   "devDependencies": {
     "@types/express": "^5.0.0",
     "@types/node": "^22.10.5",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
     "autoprefixer": "^10.4.20",
-    "coze-coding-dev-sdk": "^0.7.16",
+    "coze-coding-dev-sdk": "^0.7.19",
     "esbuild": "^0.24.2",
     "eslint": "^9",
     "only-allow": "^1.2.2",
