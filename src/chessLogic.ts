@@ -5,8 +5,9 @@ const BOARD_COLS = 9;
 const BOARD_ROWS = 10;
 
 // 九宫格边界
-const RED_PALACE = { minCol: 3, maxCol: 5, minRow: 0, maxRow: 2 };
-const BLACK_PALACE = { minCol: 3, maxCol: 5, minRow: 7, maxRow: 9 };
+// 红方在下方（row 7-9），黑方在上方（row 0-2）
+const RED_PALACE = { minCol: 3, maxCol: 5, minRow: 7, maxRow: 9 };
+const BLACK_PALACE = { minCol: 3, maxCol: 5, minRow: 0, maxRow: 2 };
 
 // 获取棋子移动方向增量
 const getDirection = (side: Side, forward: number): number => side === 'red' ? forward : -forward;
@@ -26,10 +27,12 @@ export const isInPalace = (col: number, row: number, side: Side): boolean => {
          row >= BLACK_PALACE.minRow && row <= BLACK_PALACE.maxRow;
 };
 
-// 检查象是否过河
+// 检查象是否过河（象不能过楚河汉界，楚河汉界在 row 5 附近）
+// 红象在下方（row 7-9），不能过河到 row 5 及以上
+// 黑象在上方（row 0-2），不能过河到 row 4 及以下
 export const isElephantCrossed = (row: number, side: Side): boolean => {
-  if (side === 'red') return row > 4;
-  return row < 5;
+  if (side === 'red') return row < 7; // 红方象不能离开下方区域（row 7-9）
+  return row > 2; // 黑方象不能离开上方区域（row 0-2）
 };
 
 // 获取某位置上的棋子
@@ -259,7 +262,12 @@ const getCannonMoves = (piece: Piece, pieces: Piece[]): Position[] => {
 const getPawnMoves = (piece: Piece, pieces: Piece[]): Position[] => {
   const moves: Position[] = [];
   const [col, row] = piece.position;
+  
+  // 红方在下方（row 7-9），向上走是 row 减小
+  // 黑方在上方（row 0-2），向下走是 row 增大
   const forward = piece.side === 'red' ? -1 : 1;
+  
+  // 过河线：红方过河是到达 row <= 4（黑方区域），黑方过河是到达 row >= 5（红方区域）
   const crossedRow = piece.side === 'red' ? 4 : 5;
 
   // 前进
@@ -271,7 +279,7 @@ const getPawnMoves = (piece: Piece, pieces: Piece[]): Position[] => {
     }
   }
 
-  // 过河后可以横向移动
+  // 过河后可以横向移动（到达对方阵地后）
   if ((piece.side === 'red' && row <= crossedRow) || (piece.side === 'black' && row >= crossedRow)) {
     for (const dc of [-1, 1]) {
       const newCol = col + dc;

@@ -114,19 +114,6 @@ body {
   width: 100%;
   max-width: 360px;
   aspect-ratio: 9 / 10;
-  transition: transform 0.5s ease;
-}
-
-.board-container.flipped {
-  transform: rotate(180deg);
-}
-
-.board-container.flipped .piece {
-  transform: rotate(180deg);
-}
-
-.board-container.flipped .move-indicator {
-  transform: rotate(180deg);
 }
 
 /* 棋盘 */
@@ -187,14 +174,16 @@ body {
 /* 棋子样式 */
 .piece {
   position: absolute;
-  width: calc(100% / 9);
-  height: calc(100% / 10);
+  width: 11.11%;
+  height: 10%;
   display: flex;
   justify-content: center;
   align-items: center;
   cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
   z-index: 10;
+  /* 居中于格子中心 */
+  transform: translate(-50%, -50%);
 }
 
 .piece-inner {
@@ -234,6 +223,20 @@ body {
   border-color: var(--highlight) !important;
 }
 
+.piece-inner.flipped {
+  transform: rotate(180deg);
+}
+
+.piece.can-capture .piece-inner {
+  box-shadow: 0 0 15px var(--danger), 0 0 30px rgba(255, 68, 68, 0.3);
+  border-color: var(--danger) !important;
+}
+
+.piece.can-capture:hover .piece-inner {
+  transform: scale(1.1);
+  box-shadow: 0 0 20px var(--danger), 0 0 40px rgba(255, 68, 68, 0.5);
+}
+
 .piece.hidden {
   cursor: default;
 }
@@ -263,14 +266,17 @@ body {
 /* 移动指示器 */
 .move-indicator {
   position: absolute;
-  width: calc(100% / 9);
-  height: calc(100% / 10);
+  width: 12%;
+  height: 10%;
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 5;
   cursor: pointer;
   transition: background 0.2s ease;
+  /* 居中于格子中心 */
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
 }
 
 .move-dot {
@@ -287,12 +293,22 @@ body {
   background: rgba(255, 215, 0, 0.8);
 }
 
+.move-indicator.capture {
+  pointer-events: auto;
+}
+
 .move-indicator.capture .move-dot {
   width: 90%;
   height: 95%;
   background: transparent;
   border: 3px solid var(--danger);
   border-radius: 8%;
+  animation: capturePulse 1s infinite;
+}
+
+@keyframes capturePulse {
+  0%, 100% { border-color: var(--danger); }
+  50% { border-color: #ff8888; }
 }
 
 /* 炮架标记 */

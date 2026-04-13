@@ -1,3 +1,4 @@
+import React, { ReactNode } from 'react';
 import { Piece, Position, Side, GamePhase, PIECE_NAMES } from './types';
 
 interface ChessBoardProps {
@@ -11,169 +12,150 @@ interface ChessBoardProps {
   onMovePiece: (to: Position) => void;
 }
 
-// 绘制棋盘背景和线条
-const BoardBackground = ({ flipped }: { flipped: boolean }) => {
-  const lines = [];
+// 棋盘尺寸常量
+const COLS = 9;
+const ROWS = 10;
+const CELL_WIDTH = 100 / (COLS - 1); // 11.11...%
+const CELL_HEIGHT = 100 / (ROWS - 1); // 11.11...%
+
+// 坐标转换：逻辑坐标 -> 百分比
+// 红方视角（flipped=false）：col从左到右，row从下到上
+// 黑方视角（flipped=true）：col从右到左，row从上到下
+const getPosition = (col: number, row: number, flipped: boolean): { left: string; top: string } => {
+  const displayCol = flipped ? (COLS - 1 - col) : col;
+  const displayRow = flipped ? (ROWS - 1 - row) : row;
+  
+  // 百分比位置（居中于格子中心）
+  const left = `${displayCol * CELL_WIDTH}%`;
+  const top = `${displayRow * CELL_HEIGHT}%`;
+  
+  return { left, top };
+};
+
+// 绘制棋盘背景
+const BoardBackground = () => {
+  const lines: ReactNode[] = [];
   
   // 横向线条 (10条)
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < ROWS; i++) {
     lines.push(
       <line
         key={`h${i}`}
-        x1="5%"
-        y1={`${5 + i * 9}%`}
-        x2="95%"
-        y2={`${5 + i * 9}%`}
+        x1="0%"
+        y1={`${i * CELL_HEIGHT}%`}
+        x2="100%"
+        y2={`${i * CELL_HEIGHT}%`}
         stroke="#8B4513"
-        strokeWidth="0.8"
+        strokeWidth="2"
       />
     );
   }
 
   // 竖向线条 (9条)
-  for (let i = 0; i < 9; i++) {
-    const x = 5 + i * 11.25;
-    // 楚河汉界区域跳过
-    if (i === 0 || i === 8) {
+  for (let i = 0; i < COLS; i++) {
+    const x = i * CELL_WIDTH;
+    if (i === 0 || i === COLS - 1) {
       // 边线到头
       lines.push(
         <line
           key={`v${i}`}
           x1={`${x}%`}
-          y1="5%"
+          y1="0%"
           x2={`${x}%`}
-          y2="95%"
+          y2="100%"
           stroke="#8B4513"
-          strokeWidth="0.8"
+          strokeWidth="2"
         />
       );
     } else {
-      // 上半部分
+      // 上半部分（楚河汉界以上）
       lines.push(
         <line
           key={`v${i}t`}
           x1={`${x}%`}
-          y1="5%"
+          y1="0%"
           x2={`${x}%`}
-          y2="45%"
+          y2={`${5 * CELL_HEIGHT}%`}
           stroke="#8B4513"
-          strokeWidth="0.8"
+          strokeWidth="2"
         />
       );
-      // 下半部分
+      // 下半部分（汉界以下）
       lines.push(
         <line
           key={`v${i}b`}
           x1={`${x}%`}
-          y1="55%"
+          y1={`${5 * CELL_HEIGHT}%`}
           x2={`${x}%`}
-          y2="95%"
+          y2="100%"
           stroke="#8B4513"
-          strokeWidth="0.8"
+          strokeWidth="2"
         />
       );
     }
   }
 
-  // 九宫格斜线 - 红方（左上角）
+  // 九宫格斜线 - 红方（下方，row 7-9，即视觉上的下方）
+  const redPalaceX1 = 3 * CELL_WIDTH;
+  const redPalaceX2 = 5 * CELL_WIDTH;
+  const redPalaceTop = 7 * CELL_HEIGHT;
+  const redPalaceBottom = 9 * CELL_HEIGHT;
+  const redPalaceCenter = 8 * CELL_HEIGHT;
+
+  // 红方九宫 X 形
   lines.push(
-    <line key="palace1" x1="38.25%" y1="5%" x2="50%" y2="22%" stroke="#8B4513" strokeWidth="0.8" />,
-    <line key="palace2" x1="50%" y1="5%" x2="38.25%" y2="22%" stroke="#8B4513" strokeWidth="0.8" />
+    <line key="palace-red-1" x1={`${redPalaceX1}%`} y1={`${redPalaceTop}%`} x2={`${redPalaceX2}%`} y2={`${redPalaceBottom}%`} stroke="#8B4513" strokeWidth="2" />,
+    <line key="palace-red-2" x1={`${redPalaceX2}%`} y1={`${redPalaceTop}%`} x2={`${redPalaceX1}%`} y2={`${redPalaceBottom}%`} stroke="#8B4513" strokeWidth="2" />
   );
 
-  // 九宫格斜线 - 红方（右上角）
+  // 黑方九宫（上方，row 0-2，即视觉上的上方）
+  const blackPalaceX1 = 3 * CELL_WIDTH;
+  const blackPalaceX2 = 5 * CELL_WIDTH;
+  const blackPalaceTop = 0 * CELL_HEIGHT;
+  const blackPalaceBottom = 2 * CELL_HEIGHT;
+
+  // 黑方九宫 X 形
   lines.push(
-    <line key="palace3" x1="61.75%" y1="5%" x2="50%" y2="22%" stroke="#8B4513" strokeWidth="0.8" />,
-    <line key="palace4" x1="50%" y1="5%" x2="61.75%" y2="22%" stroke="#8B4513" strokeWidth="0.8" />
+    <line key="palace-black-1" x1={`${blackPalaceX1}%`} y1={`${blackPalaceTop}%`} x2={`${blackPalaceX2}%`} y2={`${blackPalaceBottom}%`} stroke="#8B4513" strokeWidth="2" />,
+    <line key="palace-black-2" x1={`${blackPalaceX2}%`} y1={`${blackPalaceTop}%`} x2={`${blackPalaceX1}%`} y2={`${blackPalaceBottom}%`} stroke="#8B4513" strokeWidth="2" />
   );
 
-  // 九宫格斜线 - 黑方（左下角）
-  lines.push(
-    <line key="palace5" x1="38.25%" y1="95%" x2="50%" y2="78%" stroke="#8B4513" strokeWidth="0.8" />,
-    <line key="palace6" x1="50%" y1="95%" x2="38.25%" y2="78%" stroke="#8B4513" strokeWidth="0.8" />
-  );
-
-  // 九宫格斜线 - 黑方（右下角）
-  lines.push(
-    <line key="palace7" x1="61.75%" y1="95%" x2="50%" y2="78%" stroke="#8B4513" strokeWidth="0.8" />,
-    <line key="palace8" x1="50%" y1="95%" x2="61.75%" y2="78%" stroke="#8B4513" strokeWidth="0.8" />
-  );
-
-  // 炮位置标记 - 红方
-  lines.push(
-    <g key="cannon-markers-red">
-      <rect x="14.5%" y="23.5%" width="2%" height="2%" fill="#8B4513" transform="rotate(45 15.5% 24.5%)" />,
-      <rect x="80.5%" y="23.5%" width="2%" height="2%" fill="#8B4513" transform="rotate(45 81.5% 24.5%)" />,
-    </g>
-  );
-
-  // 炮位置标记 - 黑方
-  lines.push(
-    <g key="cannon-markers-black">
-      <rect x="14.5%" y="74.5%" width="2%" height="2%" fill="#8B4513" transform="rotate(45 15.5% 75.5%)" />,
-      <rect x="80.5%" y="74.5%" width="2%" height="2%" fill="#8B4513" transform="rotate(45 81.5% 75.5%)" />,
-    </g>
-  );
-
-  // 兵位置标记 - 红方
-  for (let i = 0; i < 5; i++) {
-    const x = 5 + i * 22.5;
-    lines.push(
-      <g key={`pawn-marker-red-${i}`}>
-        <line x1={`${x - 1}%`} y1="32%" x2={`${x - 1.5}%`} y2="32.5%" stroke="#8B4513" strokeWidth="0.5" />,
-        <line x1={`${x + 1}%`} y1="32%" x2={`${x + 1.5}%`} y2="32.5%" stroke="#8B4513" strokeWidth="0.5" />,
-        <line x1={`${x - 1}%`} y1="35%" x2={`${x - 1.5}%`} y2="34.5%" stroke="#8B4513" strokeWidth="0.5" />,
-        <line x1={`${x + 1}%`} y1="35%" x2={`${x + 1.5}%`} y2="34.5%" stroke="#8B4513" strokeWidth="0.5" />,
-      </g>
-    );
-  }
-
-  // 兵位置标记 - 黑方
-  for (let i = 0; i < 5; i++) {
-    const x = 5 + i * 22.5;
-    lines.push(
-      <g key={`pawn-marker-black-${i}`}>
-        <line x1={`${x - 1}%`} y1="65%" x2={`${x - 1.5}%`} y2="65.5%" stroke="#8B4513" strokeWidth="0.5" />,
-        <line x1={`${x + 1}%`} y1="65%" x2={`${x + 1.5}%`} y2="65.5%" stroke="#8B4513" strokeWidth="0.5" />,
-        <line x1={`${x - 1}%`} y1="68%" x2={`${x - 1.5}%`} y2="67.5%" stroke="#8B4513" strokeWidth="0.5" />,
-        <line x1={`${x + 1}%`} y1="68%" x2={`${x + 1.5}%`} y2="67.5%" stroke="#8B4513" strokeWidth="0.5" />,
-      </g>
-    );
-  }
+  // 楚河汉界区域
+  // 楚河汉界是第5行的空白区域（第5行是楚河，第6行是汉界，但中间是空的）
+  // 实际上楚河汉界是第5行（row=4或row=5）
+  // 标准象棋中，楚河汉界在第5列和第6列之间
 
   return (
     <svg
       width="100%"
       height="100%"
-      style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        transform: flipped ? 'rotate(180deg)' : 'none',
-      }}
+      style={{ position: 'absolute', top: 0, left: 0 }}
+      viewBox="0 0 100 100"
+      preserveAspectRatio="none"
     >
       {lines}
       
-      {/* 楚河汉界文字 */}
+      {/* 楚河文字 */}
       <text
-        x="30%"
-        y="52%"
+        x="22%"
+        y="48%"
         textAnchor="middle"
         dominantBaseline="middle"
         fill="#8B4513"
-        fontSize="14"
+        fontSize="6"
         fontFamily="'SimSun', 'STSong', serif"
         fontWeight="bold"
       >
         楚 河
       </text>
+      {/* 汉界文字 */}
       <text
-        x="70%"
-        y="52%"
+        x="78%"
+        y="48%"
         textAnchor="middle"
         dominantBaseline="middle"
         fill="#8B4513"
-        fontSize="14"
+        fontSize="6"
         fontFamily="'SimSun', 'STSong', serif"
         fontWeight="bold"
       >
@@ -184,31 +166,31 @@ const BoardBackground = ({ flipped }: { flipped: boolean }) => {
 };
 
 // 棋子组件
-const ChessPieceComponent = ({
+const ChessPiece = ({
   piece,
   isSelected,
   isSelectable,
+  flipped,
+  isInValidMoves,
   onClick,
 }: {
   piece: Piece;
   isSelected: boolean;
   isSelectable: boolean;
+  flipped: boolean;
+  isInValidMoves: boolean;
   onClick: () => void;
 }) => {
-  const [col, row] = piece.position;
-  // 计算位置百分比
-  const left = `${5 + col * 11.25 - 5.625}%`;
-  const top = `${5 + row * 9 - 4.5}%`;
-
+  const { left, top } = getPosition(piece.position[0], piece.position[1], flipped);
   const pieceName = PIECE_NAMES[piece.type][piece.side];
 
   return (
     <div
-      className={`piece ${piece.side} ${isSelected ? 'selected' : ''} ${isSelectable ? 'selectable' : 'hidden'}`}
+      className={`piece ${piece.side} ${isSelected ? 'selected' : ''} ${isSelectable || isInValidMoves ? 'selectable' : 'hidden'} ${isInValidMoves ? 'can-capture' : ''}`}
       style={{ left, top }}
-      onClick={isSelectable ? onClick : undefined}
+      onClick={isSelectable || isInValidMoves ? onClick : undefined}
     >
-      <div className="piece-inner">
+      <div className={`piece-inner ${flipped ? 'flipped' : ''}`}>
         {pieceName}
       </div>
     </div>
@@ -219,15 +201,15 @@ const ChessPieceComponent = ({
 const MoveIndicator = ({
   position,
   isCapture,
+  flipped,
   onClick,
 }: {
   position: Position;
   isCapture: boolean;
+  flipped: boolean;
   onClick: () => void;
 }) => {
-  const [col, row] = position;
-  const left = `${5 + col * 11.25 - 5.625}%`;
-  const top = `${5 + row * 9 - 4.5}%`;
+  const { left, top } = getPosition(position[0], position[1], flipped);
 
   return (
     <div
@@ -250,55 +232,59 @@ function ChessBoard({
   onSelectPiece,
   onMovePiece,
 }: ChessBoardProps) {
-  // 检查某个位置是否有可吃的棋子
-  const getPieceAtPosition = (pos: Position): Piece | undefined => {
-    return pieces.find(p => p.position[0] === pos[0] && p.position[1] === pos[1]);
+  // 检查某个位置是否有棋子
+  const getPieceAtPosition = (col: number, row: number): Piece | undefined => {
+    return pieces.find(p => p.position[0] === col && p.position[1] === row);
   };
 
-  const handleCellClick = (col: number, row: number) => {
-    // 检查是否点击了己方棋子
-    const clickedPiece = getPieceAtPosition([col, row]);
-    
-    if (clickedPiece && clickedPiece.side === currentOperatedSide) {
-      onSelectPiece(clickedPiece);
-    } else if (selectedPiece) {
-      // 检查是否是可移动位置
-      const isValid = validMoves.some(m => m[0] === col && m[1] === row);
-      if (isValid) {
-        onMovePiece([col, row]);
-      }
-    }
+  // 检查位置是否是有效移动
+  const isValidMovePosition = (col: number, row: number): boolean => {
+    return validMoves.some(m => m[0] === col && m[1] === row);
   };
 
   return (
-    <div className={`board-container ${flipped ? 'flipped' : ''}`}>
-      <div className="chess-board">
+    <div className="board-container" style={{ transform: 'none' }}>
+      <div className="chess-board" style={{ position: 'relative', width: '100%', height: '100%' }}>
         {/* 棋盘背景 */}
-        <BoardBackground flipped={flipped} />
+        <BoardBackground />
 
         {/* 可移动位置指示 */}
         {selectedPiece && validMoves.map((move, idx) => {
-          const targetPiece = getPieceAtPosition(move);
+          const targetPiece = getPieceAtPosition(move[0], move[1]);
           return (
             <MoveIndicator
               key={`move-${idx}`}
               position={move}
               isCapture={!!targetPiece}
+              flipped={flipped}
               onClick={() => onMovePiece(move)}
             />
           );
         })}
 
         {/* 棋子 */}
-        {pieces.map(piece => (
-          <ChessPieceComponent
-            key={piece.id}
-            piece={piece}
-            isSelected={selectedPiece?.id === piece.id}
-            isSelectable={phase === 'strategy' && piece.side === currentOperatedSide}
-            onClick={() => onSelectPiece(piece)}
-          />
-        ))}
+        {pieces.map(piece => {
+          const isInValidMoves = validMoves.some(
+            m => m[0] === piece.position[0] && m[1] === piece.position[1]
+          );
+          return (
+            <ChessPiece
+              key={piece.id}
+              piece={piece}
+              isSelected={selectedPiece?.id === piece.id}
+              isSelectable={phase === 'strategy' && piece.side === currentOperatedSide}
+              flipped={flipped}
+              isInValidMoves={!!selectedPiece && isInValidMoves && piece.side !== currentOperatedSide}
+              onClick={() => {
+                if (isInValidMoves && selectedPiece) {
+                  onMovePiece(piece.position);
+                } else {
+                  onSelectPiece(piece);
+                }
+              }}
+            />
+          );
+        })}
       </div>
     </div>
   );
