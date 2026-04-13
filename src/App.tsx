@@ -11,6 +11,46 @@ import { getValidMoves, isCheck } from './chessLogic';
 import { checkGameEnd, formatMove } from './gameLogic';
 import ChessBoard from './ChessBoard';
 
+// 判断某个移动是否能成功吃到子
+// 吃的是位置：如果目标位置有敌方棋子且敌方棋子不在同时移动到别处，则吃子成功
+const checkCapture = (
+  move: Move, 
+  pieces: Piece[], 
+  allMoves: { red: Move | null; black: Move | null }
+): { captured: Piece | null } => {
+  const [fromCol, fromRow] = move.from;
+  const [toCol, toRow] = move.to;
+  
+  // 找到目标位置上的棋子
+  const targetPiece = pieces.find(p => p.position[0] === toCol && p.position[1] === toRow);
+  
+  // 如果目标位置没有棋子，不能吃
+  if (!targetPiece) {
+    return { captured: null };
+  }
+  
+  // 找到移动的棋子
+  const movingPiece = pieces.find(p => p.position[0] === fromCol && p.position[1] === fromRow);
+  if (!movingPiece || movingPiece.side === targetPiece.side) {
+    return { captured: null };
+  }
+  
+  // 检查目标位置的敌方棋子是否也在同时移动
+  const opponentSide = movingPiece.side === 'red' ? 'black' : 'red';
+  const opponentMove = opponentSide === 'red' ? allMoves.red : allMoves.black;
+  
+  // 如果敌方棋子也在移动到别处，则扑空（吃不到）
+  if (opponentMove) {
+    // 如果敌方棋子移动的目标不是当前位置，则扑空
+    if (opponentMove.to[0] !== toCol || opponentMove.to[1] !== toRow) {
+      return { captured: null }; // 扑空
+    }
+    // 如果敌方棋子移动到同一位置，这是互吃，后面单独处理
+  }
+  
+  return { captured: targetPiece };
+};
+
 // 初始游戏状态
 const createInitialState = (): GameState => ({
   phase: 'strategy',
@@ -31,6 +71,7 @@ function App() {
   const [gameState, setGameState] = useState<GameState>(createInitialState);
   const [showToast, setShowToast] = useState<string | null>(null);
   const [viewSide, setViewSide] = useState<Side>('red');
+  const [checkStatus, setCheckStatus] = useState<{ red: boolean; black: boolean }>({ red: false, black: false });
 
   // 显示提示
   const showMessage = useCallback((msg: string, duration = 2000) => {
@@ -42,17 +83,14 @@ function App() {
   const handleSelectPiece = useCallback((piece: Piece) => {
     if (gameState.phase !== 'strategy') return;
     
-    // 检查是否在自己的视角下操作
     const isOwnSide = viewSide === piece.side;
     if (!isOwnSide) {
       showMessage('请切换到己方视角操作');
       return;
     }
     
-    // 检查该阵营是否已完成走棋
     const isConfirmed = piece.side === 'red' ? gameState.redConfirmed : gameState.blackConfirmed;
     if (isConfirmed) {
-      // 如果已完成，可以重新走（撤销之前的）
       if (piece.side === 'red') {
         setGameState(prev => ({ ...prev, redConfirmed: false }));
       } else {
@@ -60,7 +98,6 @@ function App() {
       }
     }
 
-    // 如果点击已选中的棋子，取消选中
     if (gameState.selectedPiece?.id === piece.id) {
       setGameState(prev => ({
         ...prev,
@@ -70,7 +107,6 @@ function App() {
       return;
     }
 
-    // 计算有效移动
     const validMoves = getValidMoves(piece, gameState.pieces);
     
     setGameState(prev => ({
@@ -80,14 +116,13 @@ function App() {
     }));
   }, [gameState.phase, gameState.selectedPiece, gameState.pieces, gameState.redConfirmed, gameState.blackConfirmed, viewSide, showMessage]);
 
-  // 移动棋子（走棋即视为完成策略）
+  // 移动棋子
   const handleMovePiece = useCallback((to: Position) => {
     if (!gameState.selectedPiece || gameState.phase !== 'strategy') return;
     
     const selectedPiece = gameState.selectedPiece;
     const side = selectedPiece.side;
     
-    // 走棋即视为完成策略
     const pendingMove: Move = {
       from: selectedPiece.position,
       to,
@@ -95,7 +130,6 @@ function App() {
 
     setGameState(prev => {
       const newState = { ...prev };
-      // 记录移动
       if (side === 'red') {
         newState.redPendingMove = pendingMove;
         newState.redConfirmed = true;
@@ -103,7 +137,6 @@ function App() {
         newState.blackPendingMove = pendingMove;
         newState.blackConfirmed = true;
       }
-      // 清除选中
       newState.selectedPiece = null;
       newState.validMoves = [];
       return newState;
@@ -117,7 +150,6 @@ function App() {
       return;
     }
     
-    // 进入结算阶段
     setGameState(prev => ({
       ...prev,
       phase: 'settlement',
@@ -125,7 +157,7 @@ function App() {
     }));
   }, [gameState.redPendingMove, gameState.blackPendingMove, showMessage]);
 
-  // 重新走棋（撤销之前的走棋）
+  // 重新走棋
   const handleRedoMove = useCallback((side: Side) => {
     if (gameState.phase !== 'strategy') return;
     
@@ -147,65 +179,54 @@ function App() {
     if (gameState.phase !== 'settlement') return;
 
     const doSettlement = async () => {
-      // 延迟一下让用户看到结算动画
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      let finalPieces = gameState.pieces.map(p => ({ ...p }));
+      const pieces = gameState.pieces;
       const redMove = gameState.redPendingMove;
       const blackMove = gameState.blackPendingMove;
+      const allMoves = { red: redMove, black: blackMove };
       
-      // 检查是否互吃（双方同时向对方当前位置移动，擦肩而过）
-      // 例如：红兵在(4,4)，黑卒在(4,5)
-      // 红走(4,4)->(4,5)，黑走(4,5)->(4,4)
-      // 结果：红兵到(4,5)，黑卒到(4,4)（交换位置）
-      const isMutualCapture = redMove && blackMove && 
-        redMove.to[0] === blackMove.to[0] && 
-        redMove.to[1] === blackMove.to[1];
+      let finalPieces = pieces.map(p => ({ ...p }));
+      
+      // 需要移除的棋子（被吃掉的）
+      const toRemove: string[] = [];
 
-      if (isMutualCapture) {
-        // 互吃：双方交换位置（扑空）
-        // 只需要把两个棋子直接交换位置即可
+      // 检查红方是否能成功吃子
+      if (redMove) {
+        const { captured } = checkCapture(redMove, pieces, allMoves);
+        if (captured) {
+          toRemove.push(captured.id);
+        }
+      }
+
+      // 检查黑方是否能成功吃子
+      if (blackMove) {
+        const { captured } = checkCapture(blackMove, pieces, allMoves);
+        if (captured) {
+          toRemove.push(captured.id);
+        }
+      }
+
+      // 移除被吃掉的棋子
+      finalPieces = finalPieces.filter(p => !toRemove.includes(p.id));
+
+      // 执行移动
+      if (redMove) {
         finalPieces = finalPieces.map(p => {
-          if (p.position[0] === redMove!.from[0] && p.position[1] === redMove!.from[1]) {
-            return { ...p, position: [...redMove!.to] as Position };
-          }
-          if (p.position[0] === blackMove!.from[0] && p.position[1] === blackMove!.from[1]) {
-            return { ...p, position: [...blackMove!.to] as Position };
+          if (p.position[0] === redMove.from[0] && p.position[1] === redMove.from[1]) {
+            return { ...p, position: [...redMove.to] as Position };
           }
           return p;
         });
-      } else {
-        // 普通移动：先处理红方，再处理黑方
-        
-        // 执行红方移动
-        if (redMove) {
-          // 先移除目标位置的棋子
-          finalPieces = finalPieces.filter(p => 
-            !(p.position[0] === redMove.to[0] && p.position[1] === redMove.to[1])
-          );
-          // 移动棋子
-          finalPieces = finalPieces.map(p => {
-            if (p.position[0] === redMove.from[0] && p.position[1] === redMove.from[1]) {
-              return { ...p, position: [...redMove.to] as Position };
-            }
-            return p;
-          });
-        }
+      }
 
-        // 执行黑方移动
-        if (blackMove) {
-          // 先移除目标位置的棋子
-          finalPieces = finalPieces.filter(p => 
-            !(p.position[0] === blackMove.to[0] && p.position[1] === blackMove.to[1])
-          );
-          // 移动棋子
-          finalPieces = finalPieces.map(p => {
-            if (p.position[0] === blackMove.from[0] && p.position[1] === blackMove.from[1]) {
-              return { ...p, position: [...blackMove.to] as Position };
-            }
-            return p;
-          });
-        }
+      if (blackMove) {
+        finalPieces = finalPieces.map(p => {
+          if (p.position[0] === blackMove.from[0] && p.position[1] === blackMove.from[1]) {
+            return { ...p, position: [...blackMove.to] as Position };
+          }
+          return p;
+        });
       }
 
       // 检查将帅面对面
@@ -215,7 +236,6 @@ function App() {
       let reason = '';
 
       if (redKing && blackKing && redKing.position[0] === blackKing.position[0]) {
-        // 检查中间是否有棋子
         const between = finalPieces.filter(p => {
           if (p.type === 'king') return false;
           return p.position[0] === redKing.position[0] &&
@@ -224,35 +244,13 @@ function App() {
         });
 
         if (between.length === 0) {
-          // 将帅对面，同时移除
           finalPieces = finalPieces.filter(p => p.type !== 'king');
           winner = 'draw';
           reason = '将帅对面，双方同时被吃';
         }
       }
 
-      // 检查同归于尽（双方移动到同一位置，且不是互吃）
-      if (!winner && redMove && blackMove && !isMutualCapture) {
-        if (redMove.to[0] === blackMove.to[0] &&
-            redMove.to[1] === blackMove.to[1]) {
-          // 移除在目标位置的棋子
-          finalPieces = finalPieces.filter(
-            p => !(p.position[0] === redMove.to[0] && p.position[1] === redMove.to[1])
-          );
-          
-          // 检查是否有将帅被吃
-          const capturedKings = finalPieces.filter(p => p.type === 'king');
-          if (capturedKings.length === 0) {
-            winner = 'draw';
-            reason = '双方棋子同归于尽';
-          } else if (capturedKings.length === 1) {
-            winner = capturedKings[0].side === 'red' ? 'black' : 'red';
-            reason = capturedKings[0].side === 'red' ? '红帅被吃' : '黑将被吃';
-          }
-        }
-      }
-
-      // 如果没有和棋，检查是否有一方将帅被吃
+      // 检查是否有一方将帅被吃
       if (!winner) {
         const { ended, winner: w } = checkGameEnd(finalPieces);
         if (ended) {
@@ -261,28 +259,16 @@ function App() {
         }
       }
 
-      // 检查将军（在最终棋盘状态下）
-      let checkMessage = '';
-      if (!winner) {
-        if (isCheck('red', finalPieces)) {
-          checkMessage = '红帅被将军！';
-        }
-        if (isCheck('black', finalPieces)) {
-          if (checkMessage) {
-            checkMessage += ' 黑将被将军！';
-          } else {
-            checkMessage = '黑将被将军！';
-          }
-        }
-      }
+      // 检查将军状态
+      const redInCheck = isCheck('red', finalPieces);
+      const blackInCheck = isCheck('black', finalPieces);
+      setCheckStatus({ red: redInCheck, black: blackInCheck });
 
-      // 构建消息
+      // 如果没有胜负，显示结算信息
       let finalMessage = '';
       if (winner) {
         const winnerText = winner === 'draw' ? '和棋！' : winner === 'red' ? '红方胜利！' : '黑方胜利！';
         finalMessage = winnerText + (reason ? ' ' + reason : '');
-      } else if (checkMessage) {
-        finalMessage = checkMessage;
       }
 
       setGameState(prev => ({
@@ -324,6 +310,7 @@ function App() {
   const handleReset = useCallback(() => {
     setGameState(createInitialState());
     setViewSide('red');
+    setCheckStatus({ red: false, black: false });
     showMessage('游戏已重置', 1500);
   }, [showMessage]);
 
@@ -332,7 +319,6 @@ function App() {
     return gameState.pieces;
   }, [gameState.pieces]);
 
-  // 判断是否可以看到结算按钮
   const canSettle = gameState.redPendingMove && gameState.blackPendingMove && 
                     gameState.phase === 'strategy';
 
@@ -345,6 +331,7 @@ function App() {
             className={`status-dot red ${gameState.redConfirmed ? 'confirmed' : 'waiting'}`}
           />
           <span>红方</span>
+          {checkStatus.red && <span style={{ color: '#FF4444', fontWeight: 'bold' }}>被将军!</span>}
           {gameState.redPendingMove && (
             <span style={{ fontSize: '10px', color: '#FFD700' }}>
               {formatMove(gameState.redPendingMove)}
@@ -362,6 +349,7 @@ function App() {
             className={`status-dot black ${gameState.blackConfirmed ? 'confirmed' : 'waiting'}`}
           />
           <span>黑方</span>
+          {checkStatus.black && <span style={{ color: '#FF4444', fontWeight: 'bold' }}>被将军!</span>}
           {gameState.blackPendingMove && (
             <span style={{ fontSize: '10px', color: '#FFD700' }}>
               {formatMove(gameState.blackPendingMove)}
@@ -384,7 +372,6 @@ function App() {
 
       {/* 控制面板 */}
       <div className="control-panel">
-        {/* 视角切换 */}
         <div className="view-switch">
           <button
             className={`view-btn ${viewSide === 'red' ? 'active' : ''}`}
@@ -401,7 +388,6 @@ function App() {
         </div>
       </div>
 
-      {/* 操作面板 */}
       <div className="control-panel">
         {viewSide === 'red' && gameState.redPendingMove && !gameState.redConfirmed && (
           <button
@@ -421,7 +407,6 @@ function App() {
         )}
       </div>
 
-      {/* 结算按钮 */}
       <div className="control-panel">
         <button
           className="btn btn-settle"
@@ -435,7 +420,6 @@ function App() {
         </button>
       </div>
 
-      {/* 提示信息 */}
       <div className="control-panel" style={{ fontSize: '12px', color: '#AAA' }}>
         {gameState.phase === 'strategy' && (
           <>
@@ -455,17 +439,14 @@ function App() {
         )}
       </div>
 
-      {/* Toast 提示 */}
       {showToast && <div className="toast">{showToast}</div>}
 
-      {/* 结算遮罩 */}
       {gameState.phase === 'settlement' && (
         <div className="settlement-overlay">
           <div className="settlement-text">结算中...</div>
         </div>
       )}
 
-      {/* 游戏结束弹窗 */}
       {gameState.phase === 'ended' && gameState.winner && (
         <div className="modal-overlay" onClick={handleReset}>
           <div className={`modal-content ${
