@@ -180,9 +180,10 @@ function App() {
       // 需要移除的棋子（被吃掉的）
       const toRemove: string[] = [];
       
-      // 互吃交换的判断：红方到黑方原位置，黑方到红方原位置
+      // 互吃交换的判断：红方到黑方原位置，黑方到红方原位置，且起点位置必须不同
       const isMutualExchange = 
         redMove && blackMove &&
+        !(redMove.from[0] === blackMove.from[0] && redMove.from[1] === blackMove.from[1]) && // 起点位置不同
         redMove.to[0] === blackMove.from[0] && 
         redMove.to[1] === blackMove.from[1] &&
         blackMove.to[0] === redMove.from[0] && 
@@ -196,12 +197,8 @@ function App() {
           const blackPieces = piecesAtPos.filter(p => p.side === 'black');
           
           if (redPieces.length > 0 && blackPieces.length > 0) {
-            if (isMutualExchange) {
-              // 互吃交换：位置互换，双方都存活（已经在上一步移动完成）
-            } else {
-              // 同归于尽：两个都移除
-              piecesAtPos.forEach(p => toRemove.push(p.id));
-            }
+            // 红黑双方在同一位置 = 同归于尽，都移除
+            piecesAtPos.forEach(p => toRemove.push(p.id));
           }
         }
       });
