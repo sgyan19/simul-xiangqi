@@ -147,7 +147,26 @@ function App() {
       
       let finalPieces = pieces.map(p => ({ ...p }));
       
-      // ===== 第一步：执行所有移动 =====
+      // 互吃交换判断：红方去黑方起点，黑方去红方起点，且起点不同
+      const isMutualExchange = 
+        redMove && blackMove &&
+        !(redMove.from[0] === blackMove.from[0] && redMove.from[1] === blackMove.from[1]) &&
+        redMove.to[0] === blackMove.from[0] && 
+        redMove.to[1] === blackMove.from[1] &&
+        blackMove.to[0] === redMove.from[0] && 
+        blackMove.to[1] === redMove.from[1];
+      
+      // 互吃交换时，先移除目标位置的棋子（因为对方已经走了）
+      if (isMutualExchange) {
+        finalPieces = finalPieces.filter(p => 
+          !(p.position[0] === redMove!.to[0] && p.position[1] === redMove!.to[1] && p.side === 'black')
+        );
+        finalPieces = finalPieces.filter(p => 
+          !(p.position[0] === blackMove!.to[0] && p.position[1] === blackMove!.to[1] && p.side === 'red')
+        );
+      }
+      
+      // 执行所有移动
       if (redMove) {
         finalPieces = finalPieces.map(p => {
           if (p.position[0] === redMove.from[0] && p.position[1] === redMove.from[1]) {
@@ -166,17 +185,7 @@ function App() {
         });
       }
       
-      // ===== 第二步：移动后结算 =====
-      // 互吃交换：红方去黑方起点，黑方去红方起点，且起点不同
-      const isMutualExchange = 
-        redMove && blackMove &&
-        !(redMove.from[0] === blackMove.from[0] && redMove.from[1] === blackMove.from[1]) &&
-        redMove.to[0] === blackMove.from[0] && 
-        redMove.to[1] === blackMove.from[1] &&
-        blackMove.to[0] === redMove.from[0] && 
-        blackMove.to[1] === redMove.from[1];
-      
-      // 检查每个位置是否有重叠
+      // 检查重叠（同归于尽：非互吃交换的碰撞）
       const positions: { [key: string]: Piece[] } = {};
       finalPieces.forEach(p => {
         const key = `${p.position[0]},${p.position[1]}`;
@@ -186,40 +195,16 @@ function App() {
         positions[key].push(p);
       });
       
-      // 需要移除的棋子
       const toRemove: string[] = [];
-      // 需要恢复的棋子（互吃交换回原位）
-      const toRestore: Piece[] = [];
-      
       Object.values(positions).forEach(piecesAtPos => {
         const hasRed = piecesAtPos.some(p => p.side === 'red');
         const hasBlack = piecesAtPos.some(p => p.side === 'black');
-        
-        if (hasRed && hasBlack) {
-          if (isMutualExchange) {
-            // 互吃交换：都扑空，移回原位
-            piecesAtPos.forEach(p => {
-              const originalPos = p.side === 'red' ? redMove!.from : blackMove!.from;
-              // 从当前位置移除
-              toRemove.push(p.id);
-              // 创建新棋子放回原位
-              const originalPiece = pieces.find(orig => orig.id === p.id);
-              if (originalPiece) {
-                toRestore.push({ ...originalPiece });
-              }
-            });
-          } else {
-            // 其他重叠（同归于尽）
-            piecesAtPos.forEach(p => toRemove.push(p.id));
-          }
+        if (hasRed && hasBlack && !isMutualExchange) {
+          piecesAtPos.forEach(p => toRemove.push(p.id));
         }
       });
       
-      // 执行移除
       finalPieces = finalPieces.filter(p => !toRemove.includes(p.id));
-      
-      // 恢复扑空的棋子到原位
-      finalPieces.push(...toRestore);
 
       // 检查将帅面对面
       const redKing = finalPieces.find(p => p.type === 'king' && p.side === 'red');
