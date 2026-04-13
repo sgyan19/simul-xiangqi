@@ -6,10 +6,9 @@ import {
   Side,
   Move,
   INITIAL_PIECES,
-  PIECE_NAMES,
 } from './types';
 import { getValidMoves, isCheck } from './chessLogic';
-import { resolveSettlement, checkGameEnd, formatMove } from './gameLogic';
+import { checkGameEnd, formatMove } from './gameLogic';
 import ChessBoard from './ChessBoard';
 
 // 初始游戏状态
@@ -32,26 +31,12 @@ function App() {
   const [gameState, setGameState] = useState<GameState>(createInitialState);
   const [showToast, setShowToast] = useState<string | null>(null);
   const [viewSide, setViewSide] = useState<Side>('red');
-  const [pendingMoves, setPendingMoves] = useState<{ red: { from: Position; to: Position } | null; black: { from: Position; to: Position } | null }>({
-    red: null,
-    black: null,
-  });
 
   // 显示提示
   const showMessage = useCallback((msg: string, duration = 2000) => {
     setShowToast(msg);
     setTimeout(() => setShowToast(null), duration);
   }, []);
-
-  // 检查是否可以操作某方棋子
-  const canOperateSide = useCallback((side: Side): boolean => {
-    // 只有在策略阶段才能操作
-    if (gameState.phase !== 'strategy') return false;
-    // 已确认策略后不能操作
-    if (side === 'red' && gameState.redConfirmed) return false;
-    if (side === 'black' && gameState.blackConfirmed) return false;
-    return true;
-  }, [gameState.phase, gameState.redConfirmed, gameState.blackConfirmed]);
 
   // 选择棋子
   const handleSelectPiece = useCallback((piece: Piece) => {
@@ -64,10 +49,15 @@ function App() {
       return;
     }
     
-    // 检查是否可以操作该阵营
-    if (!canOperateSide(piece.side)) {
-      showMessage('已确认策略，无法修改');
-      return;
+    // 检查该阵营是否已完成走棋
+    const isConfirmed = piece.side === 'red' ? gameState.redConfirmed : gameState.blackConfirmed;
+    if (isConfirmed) {
+      // 如果已完成，可以重新走（撤销之前的）
+      if (piece.side === 'red') {
+        setGameState(prev => ({ ...prev, redConfirmed: false }));
+      } else {
+        setGameState(prev => ({ ...prev, blackConfirmed: false }));
+      }
     }
 
     // 如果点击已选中的棋子，取消选中
@@ -88,29 +78,38 @@ function App() {
       selectedPiece: piece,
       validMoves,
     }));
-  }, [gameState.phase, viewSide, canOperateSide, gameState.selectedPiece, gameState.pieces, showMessage]);
+  }, [gameState.phase, gameState.selectedPiece, gameState.pieces, gameState.redConfirmed, gameState.blackConfirmed, viewSide, showMessage]);
 
-  // 移动棋子（只是记录，不实际移动）
+  // 移动棋子（走棋即视为完成策略）
   const handleMovePiece = useCallback((to: Position) => {
     if (!gameState.selectedPiece || gameState.phase !== 'strategy') return;
     
-    const { selectedPiece } = gameState;
+    const selectedPiece = gameState.selectedPiece;
     const side = selectedPiece.side;
     
-    // 记录待执行移动
-    const move: Move = {
+    // 走棋即视为完成策略
+    const pendingMove: Move = {
       from: selectedPiece.position,
       to,
     };
 
-    // 更新 pendingMoves
-    setPendingMoves(prev => ({
-      ...prev,
-      [side]: { from: selectedPiece.position, to },
-    }));
+    setGameState(prev => {
+      const newState = { ...prev };
+      // 记录移动
+      if (side === 'red') {
+        newState.redPendingMove = pendingMove;
+        newState.redConfirmed = true;
+      } else {
+        newState.blackPendingMove = pendingMove;
+        newState.blackConfirmed = true;
+      }
+      // 清除选中
+      newState.selectedPiece = null;
+      newState.validMoves = [];
+      return newState;
+    });
     
     // 检查将军
-    // 模拟移动后的棋盘
     const piecesCopy = gameState.pieces.map(p => ({ ...p }));
     const pieceToMove = piecesCopy.find(p => p.id === selectedPiece.id);
     if (pieceToMove) {
@@ -120,71 +119,12 @@ function App() {
     if (isCheck(opponentSide, piecesCopy)) {
       showMessage('将军！', 1500);
     }
-    
-    // 清除选中
-    setGameState(prev => ({
-      ...prev,
-      selectedPiece: null,
-      validMoves: [],
-    }));
   }, [gameState.selectedPiece, gameState.phase, gameState.pieces, showMessage]);
-
-  // 确认本方策略
-  const handleConfirm = useCallback((side: Side) => {
-    if (!canOperateSide(side)) {
-      showMessage('无法确认策略');
-      return;
-    }
-    
-    const pendingMove = side === 'red' ? pendingMoves.red : pendingMoves.black;
-    if (!pendingMove) {
-      showMessage('请先选择棋子并移动');
-      return;
-    }
-    
-    setGameState(prev => {
-      const newState = { ...prev };
-      if (side === 'red') {
-        newState.redConfirmed = true;
-      } else {
-        newState.blackConfirmed = true;
-      }
-      return newState;
-    });
-    
-    showMessage(`${side === 'red' ? '红方' : '黑方'}策略已确认`);
-  }, [canOperateSide, pendingMoves, showMessage]);
-
-  // 取消确认（重新走棋）
-  const handleUnconfirm = useCallback((side: Side) => {
-    if (gameState.phase !== 'strategy') return;
-    
-    setGameState(prev => {
-      const newState = { ...prev };
-      if (side === 'red') {
-        newState.redConfirmed = false;
-      } else {
-        newState.blackConfirmed = false;
-      }
-      return newState;
-    });
-    
-    setPendingMoves(prev => ({
-      ...prev,
-      [side]: null,
-    }));
-  }, [gameState.phase]);
 
   // 结算按钮
   const handleSettle = useCallback(() => {
-    if (!pendingMoves.red || !pendingMoves.black) {
+    if (!gameState.redPendingMove || !gameState.blackPendingMove) {
       showMessage('双方都需要先走棋');
-      return;
-    }
-    
-    // 双方都必须确认
-    if (!gameState.redConfirmed || !gameState.blackConfirmed) {
-      showMessage('双方都需要确认策略');
       return;
     }
     
@@ -194,7 +134,24 @@ function App() {
       phase: 'settlement',
       message: '双方策略已锁定，开始结算...',
     }));
-  }, [pendingMoves, gameState.redConfirmed, gameState.blackConfirmed, showMessage]);
+  }, [gameState.redPendingMove, gameState.blackPendingMove, showMessage]);
+
+  // 重新走棋（撤销之前的走棋）
+  const handleRedoMove = useCallback((side: Side) => {
+    if (gameState.phase !== 'strategy') return;
+    
+    setGameState(prev => {
+      const newState = { ...prev };
+      if (side === 'red') {
+        newState.redPendingMove = null;
+        newState.redConfirmed = false;
+      } else {
+        newState.blackPendingMove = null;
+        newState.blackConfirmed = false;
+      }
+      return newState;
+    });
+  }, [gameState.phase]);
 
   // 执行结算
   useEffect(() => {
@@ -208,34 +165,34 @@ function App() {
       let finalPieces = gameState.pieces.map(p => ({ ...p }));
       
       // 执行红方移动
-      if (pendingMoves.red) {
+      if (gameState.redPendingMove) {
         // 先移除目标位置的棋子
         finalPieces = finalPieces.filter(p => 
-          !(p.position[0] === pendingMoves.red!.to[0] &&
-            p.position[1] === pendingMoves.red!.to[1])
+          !(p.position[0] === gameState.redPendingMove!.to[0] &&
+            p.position[1] === gameState.redPendingMove!.to[1])
         );
         // 移动棋子
         finalPieces = finalPieces.map(p => {
-          if (p.position[0] === pendingMoves.red!.from[0] &&
-              p.position[1] === pendingMoves.red!.from[1]) {
-            return { ...p, position: [...pendingMoves.red!.to] as Position };
+          if (p.position[0] === gameState.redPendingMove!.from[0] &&
+              p.position[1] === gameState.redPendingMove!.from[1]) {
+            return { ...p, position: [...gameState.redPendingMove!.to] as Position };
           }
           return p;
         });
       }
 
       // 执行黑方移动
-      if (pendingMoves.black) {
+      if (gameState.blackPendingMove) {
         // 先移除目标位置的棋子
         finalPieces = finalPieces.filter(p => 
-          !(p.position[0] === pendingMoves.black!.to[0] &&
-            p.position[1] === pendingMoves.black!.to[1])
+          !(p.position[0] === gameState.blackPendingMove!.to[0] &&
+            p.position[1] === gameState.blackPendingMove!.to[1])
         );
         // 移动棋子
         finalPieces = finalPieces.map(p => {
-          if (p.position[0] === pendingMoves.black!.from[0] &&
-              p.position[1] === pendingMoves.black!.from[1]) {
-            return { ...p, position: [...pendingMoves.black!.to] as Position };
+          if (p.position[0] === gameState.blackPendingMove!.from[0] &&
+              p.position[1] === gameState.blackPendingMove!.from[1]) {
+            return { ...p, position: [...gameState.blackPendingMove!.to] as Position };
           }
           return p;
         });
@@ -265,13 +222,13 @@ function App() {
       }
 
       // 检查同归于尽（双方移动到同一位置）
-      if (!winner && pendingMoves.red && pendingMoves.black) {
-        if (pendingMoves.red.to[0] === pendingMoves.black.to[0] &&
-            pendingMoves.red.to[1] === pendingMoves.black.to[1]) {
+      if (!winner && gameState.redPendingMove && gameState.blackPendingMove) {
+        if (gameState.redPendingMove.to[0] === gameState.blackPendingMove.to[0] &&
+            gameState.redPendingMove.to[1] === gameState.blackPendingMove.to[1]) {
           // 移除在目标位置的棋子
           finalPieces = finalPieces.filter(
-            p => !(p.position[0] === pendingMoves.red!.to[0] &&
-                   p.position[1] === pendingMoves.red!.to[1])
+            p => !(p.position[0] === gameState.redPendingMove!.to[0] &&
+                   p.position[1] === gameState.redPendingMove!.to[1])
           );
           
           // 检查是否有将帅被吃
@@ -314,9 +271,6 @@ function App() {
         blackPendingMove: null,
       }));
 
-      // 重置待执行移动
-      setPendingMoves({ red: null, black: null });
-
       if (winner) {
         const winnerText = winner === 'draw' ? '和棋！' : winner === 'red' ? '红方胜利！' : '黑方胜利！';
         showMessage(winnerText + (reason ? ' ' + reason : ''), 3000);
@@ -324,12 +278,11 @@ function App() {
     };
 
     doSettlement();
-  }, [gameState.phase, gameState.pieces, pendingMoves, showMessage]);
+  }, [gameState.phase, gameState.pieces, gameState.redPendingMove, gameState.blackPendingMove, showMessage]);
 
   // 切换视角
   const handleSwitchView = useCallback((side: Side) => {
     setViewSide(side);
-    // 自动切换当前操作方
     if (gameState.phase === 'strategy') {
       setGameState(prev => ({ ...prev, currentOperatedSide: side }));
     }
@@ -339,26 +292,17 @@ function App() {
   const handleReset = useCallback(() => {
     setGameState(createInitialState());
     setViewSide('red');
-    setPendingMoves({ red: null, black: null });
     showMessage('游戏已重置', 1500);
   }, [showMessage]);
 
-  // 获取显示用的棋子（有pendingMove时显示预览）
+  // 获取显示用的棋子
   const getDisplayPieces = useCallback((): Piece[] => {
     return gameState.pieces;
   }, [gameState.pieces]);
 
-  // 检查位置是否有可吃的敌方棋子
-  const canCaptureAt = (pos: Position): boolean => {
-    const piece = gameState.pieces.find(p => 
-      p.position[0] === pos[0] && p.position[1] === pos[1]
-    );
-    return !!piece && piece.side !== gameState.currentOperatedSide;
-  };
-
   // 判断是否可以看到结算按钮
-  const canSettle = pendingMoves.red && pendingMoves.black && 
-                    gameState.redConfirmed && gameState.blackConfirmed;
+  const canSettle = gameState.redPendingMove && gameState.blackPendingMove && 
+                    gameState.phase === 'strategy';
 
   return (
     <div className="app-container">
@@ -369,13 +313,10 @@ function App() {
             className={`status-dot red ${gameState.redConfirmed ? 'confirmed' : 'waiting'}`}
           />
           <span>红方</span>
-          {pendingMoves.red && (
+          {gameState.redPendingMove && (
             <span style={{ fontSize: '10px', color: '#FFD700' }}>
-              {formatMove(pendingMoves.red)}
+              {formatMove(gameState.redPendingMove)}
             </span>
-          )}
-          {gameState.redConfirmed && (
-            <span style={{ fontSize: '10px', color: '#4CAF50' }}>已确认</span>
           )}
         </div>
 
@@ -389,13 +330,10 @@ function App() {
             className={`status-dot black ${gameState.blackConfirmed ? 'confirmed' : 'waiting'}`}
           />
           <span>黑方</span>
-          {pendingMoves.black && (
+          {gameState.blackPendingMove && (
             <span style={{ fontSize: '10px', color: '#FFD700' }}>
-              {formatMove(pendingMoves.black)}
+              {formatMove(gameState.blackPendingMove)}
             </span>
-          )}
-          {gameState.blackConfirmed && (
-            <span style={{ fontSize: '10px', color: '#4CAF50' }}>已确认</span>
           )}
         </div>
       </div>
@@ -431,73 +369,23 @@ function App() {
         </div>
       </div>
 
-      {/* 当前操作方控制 */}
+      {/* 操作面板 */}
       <div className="control-panel">
-        {viewSide === 'red' && (
-          <>
-            {!gameState.redConfirmed ? (
-              <>
-                <button
-                  className="btn btn-red"
-                  onClick={() => handleConfirm('red')}
-                  disabled={!pendingMoves.red || gameState.phase !== 'strategy'}
-                >
-                  确认策略
-                </button>
-                {pendingMoves.red && (
-                  <button
-                    className="btn btn-reset"
-                    onClick={() => {
-                      setPendingMoves(prev => ({ ...prev, red: null }));
-                      showMessage('红方已重新走棋');
-                    }}
-                  >
-                    重走
-                  </button>
-                )}
-              </>
-            ) : (
-              <button
-                className="btn btn-reset"
-                onClick={() => handleUnconfirm('red')}
-              >
-                红方取消确认
-              </button>
-            )}
-          </>
+        {viewSide === 'red' && gameState.redPendingMove && !gameState.redConfirmed && (
+          <button
+            className="btn btn-reset"
+            onClick={() => handleRedoMove('red')}
+          >
+            红方重走
+          </button>
         )}
-        {viewSide === 'black' && (
-          <>
-            {!gameState.blackConfirmed ? (
-              <>
-                <button
-                  className="btn btn-black"
-                  onClick={() => handleConfirm('black')}
-                  disabled={!pendingMoves.black || gameState.phase !== 'strategy'}
-                >
-                  确认策略
-                </button>
-                {pendingMoves.black && (
-                  <button
-                    className="btn btn-reset"
-                    onClick={() => {
-                      setPendingMoves(prev => ({ ...prev, black: null }));
-                      showMessage('黑方已重新走棋');
-                    }}
-                  >
-                    重走
-                  </button>
-                )}
-              </>
-            ) : (
-              <button
-                className="btn btn-reset"
-                onClick={() => handleUnconfirm('black')}
-              >
-                黑方取消确认
-              </button>
-            )}
-          </>
+        {viewSide === 'black' && gameState.blackPendingMove && !gameState.blackConfirmed && (
+          <button
+            className="btn btn-reset"
+            onClick={() => handleRedoMove('black')}
+          >
+            黑方重走
+          </button>
         )}
       </div>
 
@@ -506,7 +394,7 @@ function App() {
         <button
           className="btn btn-settle"
           onClick={handleSettle}
-          disabled={!canSettle || gameState.phase !== 'strategy'}
+          disabled={!canSettle}
         >
           结算
         </button>
@@ -526,9 +414,10 @@ function App() {
             }}>
               {viewSide === 'red' ? '红方' : '黑方'}
             </span>
-            {!pendingMoves[viewSide] && ' - 请选择一个棋子移动'}
-            {pendingMoves[viewSide] && ' - ' + formatMove(pendingMoves[viewSide]!)}
-            {!canSettle && ' - 等待双方都走棋并确认'}
+            {!gameState.redPendingMove && !gameState.blackPendingMove && ' - 请选择一个棋子移动'}
+            {viewSide === 'red' && gameState.redPendingMove && ' - 红方已走棋，可切换视角'}
+            {viewSide === 'black' && gameState.blackPendingMove && ' - 黑方已走棋，可切换视角'}
+            {!canSettle && ' - 等待双方都走棋'}
             {canSettle && ' - 可以点击结算'}
           </>
         )}
@@ -558,10 +447,10 @@ function App() {
             <p>
               {gameState.settlementResult?.reason || '游戏结束'}
             </p>
-            {pendingMoves.red && pendingMoves.black && (
+            {gameState.redPendingMove && gameState.blackPendingMove && (
               <p style={{ fontSize: '12px', marginTop: '10px' }}>
-                红方：{formatMove(pendingMoves.red)}<br />
-                黑方：{formatMove(pendingMoves.black)}
+                红方：{formatMove(gameState.redPendingMove)}<br />
+                黑方：{formatMove(gameState.blackPendingMove)}
               </p>
             )}
             <button className="btn btn-confirm" onClick={handleReset}>
