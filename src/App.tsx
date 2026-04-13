@@ -145,6 +145,10 @@ function App() {
       const redMove = gameState.redPendingMove;
       const blackMove = gameState.blackPendingMove;
       
+      console.log('=== 结算开始 ===');
+      console.log('红方移动:', redMove);
+      console.log('黑方移动:', blackMove);
+      
       let finalPieces = pieces.map(p => ({ ...p }));
       
       // 互吃交换判断：红方去黑方起点，黑方去红方起点，且起点不同
@@ -156,8 +160,11 @@ function App() {
         blackMove.to[0] === redMove.from[0] && 
         blackMove.to[1] === redMove.from[1];
       
+      console.log('互吃交换:', isMutualExchange);
+      
       // 互吃交换时，先移除目标位置的棋子（因为对方已经走了）
       if (isMutualExchange) {
+        console.log('执行互吃交换，先移除目标位置棋子');
         finalPieces = finalPieces.filter(p => 
           !(p.position[0] === redMove!.to[0] && p.position[1] === redMove!.to[1] && p.side === 'black')
         );
@@ -185,6 +192,8 @@ function App() {
         });
       }
       
+      console.log('移动后棋子位置:', finalPieces.map(p => ({ id: p.id, side: p.side, type: p.type, pos: p.position })));
+      
       // 检查重叠（同归于尽：非互吃交换的碰撞）
       const positions: { [key: string]: Piece[] } = {};
       finalPieces.forEach(p => {
@@ -195,16 +204,21 @@ function App() {
         positions[key].push(p);
       });
       
+      console.log('位置重叠检查:', positions);
+      
       const toRemove: string[] = [];
-      Object.values(positions).forEach(piecesAtPos => {
+      Object.entries(positions).forEach(([posKey, piecesAtPos]) => {
         const hasRed = piecesAtPos.some(p => p.side === 'red');
         const hasBlack = piecesAtPos.some(p => p.side === 'black');
+        console.log(`位置${posKey}: 红=${hasRed}, 黑=${hasBlack}, 互吃交换=${isMutualExchange}`);
         if (hasRed && hasBlack && !isMutualExchange) {
+          console.log('同归于尽，移除:', piecesAtPos.map(p => p.id));
           piecesAtPos.forEach(p => toRemove.push(p.id));
         }
       });
       
       finalPieces = finalPieces.filter(p => !toRemove.includes(p.id));
+      console.log('最终棋子:', finalPieces.map(p => ({ id: p.id, side: p.side, pos: p.position })));
 
       // 检查将帅面对面
       const redKing = finalPieces.find(p => p.type === 'king' && p.side === 'red');
