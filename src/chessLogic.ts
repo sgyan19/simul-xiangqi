@@ -130,12 +130,13 @@ const getElephantMoves = (piece: Piece, pieces: Piece[]): Position[] => {
   const moves: Position[] = [];
   const [col, row] = piece.position;
   // 象走"田"字，对角线移动，有4个方向
-  // leg是"象眼"位置（蹩象眼的位置），target是目标位置
+  // 田字格的四个顶点：从(col,row)出发，leg是蹩象眼位置，target是目标位置
+  // 田字中心 = (col+±1, row+±1)
   const movesConfig = [
-    { leg: [+1, +1], target: [+2, +2] },   // 右下
-    { leg: [+1, -1], target: [+2, -2] },  // 右上
-    { leg: [-1, +1], target: [-2, +2] },  // 左下
-    { leg: [-1, -1], target: [-2, -2] }, // 左上
+    { leg: [+1, -1], target: [+2, -2] },  // 右上：田字中心(col+1,row-1)，目标(col+2,row-2)
+    { leg: [+1, +1], target: [+2, +2] },  // 右下：田字中心(col+1,row+1)，目标(col+2,row+2)
+    { leg: [-1, -1], target: [-2, -2] },  // 左上：田字中心(col-1,row-1)，目标(col-2,row-2)
+    { leg: [-1, +1], target: [-2, +2] },  // 左下：田字中心(col-1,row+1)，目标(col-2,row+2)
   ];
 
   for (const config of movesConfig) {

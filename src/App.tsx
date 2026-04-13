@@ -108,17 +108,6 @@ function App() {
       newState.validMoves = [];
       return newState;
     });
-    
-    // 检查将军
-    const piecesCopy = gameState.pieces.map(p => ({ ...p }));
-    const pieceToMove = piecesCopy.find(p => p.id === selectedPiece.id);
-    if (pieceToMove) {
-      pieceToMove.position = [...to];
-    }
-    const opponentSide = side === 'red' ? 'black' : 'red';
-    if (isCheck(opponentSide, piecesCopy)) {
-      showMessage('将军！', 1500);
-    }
   }, [gameState.selectedPiece, gameState.phase, gameState.pieces, showMessage]);
 
   // 结算按钮
