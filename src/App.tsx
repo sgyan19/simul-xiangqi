@@ -108,7 +108,7 @@ function App() {
       newState.validMoves = [];
       return newState;
     });
-  }, [gameState.selectedPiece, gameState.phase, gameState.pieces, showMessage]);
+  }, [gameState.selectedPiece, gameState.phase, showMessage]);
 
   // 结算按钮
   const handleSettle = useCallback(() => {
@@ -150,41 +150,62 @@ function App() {
       // 延迟一下让用户看到结算动画
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // 实际执行移动后的棋子状态
       let finalPieces = gameState.pieces.map(p => ({ ...p }));
+      const redMove = gameState.redPendingMove;
+      const blackMove = gameState.blackPendingMove;
       
-      // 执行红方移动
-      if (gameState.redPendingMove) {
-        // 先移除目标位置的棋子
-        finalPieces = finalPieces.filter(p => 
-          !(p.position[0] === gameState.redPendingMove!.to[0] &&
-            p.position[1] === gameState.redPendingMove!.to[1])
-        );
-        // 移动棋子
-        finalPieces = finalPieces.map(p => {
-          if (p.position[0] === gameState.redPendingMove!.from[0] &&
-              p.position[1] === gameState.redPendingMove!.from[1]) {
-            return { ...p, position: [...gameState.redPendingMove!.to] as Position };
-          }
-          return p;
-        });
-      }
+      // 检查是否互吃（双方同时向对方当前位置移动，擦肩而过）
+      // 例如：红兵在(4,4)，黑卒在(4,5)
+      // 红走(4,4)->(4,5)，黑走(4,5)->(4,4)
+      // 结果：红兵到(4,5)，黑卒到(4,4)（交换位置）
+      const isMutualCapture = redMove && blackMove && 
+        redMove.to[0] === blackMove.to[0] && 
+        redMove.to[1] === blackMove.to[1];
 
-      // 执行黑方移动
-      if (gameState.blackPendingMove) {
-        // 先移除目标位置的棋子
-        finalPieces = finalPieces.filter(p => 
-          !(p.position[0] === gameState.blackPendingMove!.to[0] &&
-            p.position[1] === gameState.blackPendingMove!.to[1])
-        );
-        // 移动棋子
+      if (isMutualCapture) {
+        // 互吃：双方交换位置（扑空）
+        // 只需要把两个棋子直接交换位置即可
         finalPieces = finalPieces.map(p => {
-          if (p.position[0] === gameState.blackPendingMove!.from[0] &&
-              p.position[1] === gameState.blackPendingMove!.from[1]) {
-            return { ...p, position: [...gameState.blackPendingMove!.to] as Position };
+          if (p.position[0] === redMove!.from[0] && p.position[1] === redMove!.from[1]) {
+            return { ...p, position: [...redMove!.to] as Position };
+          }
+          if (p.position[0] === blackMove!.from[0] && p.position[1] === blackMove!.from[1]) {
+            return { ...p, position: [...blackMove!.to] as Position };
           }
           return p;
         });
+      } else {
+        // 普通移动：先处理红方，再处理黑方
+        
+        // 执行红方移动
+        if (redMove) {
+          // 先移除目标位置的棋子
+          finalPieces = finalPieces.filter(p => 
+            !(p.position[0] === redMove.to[0] && p.position[1] === redMove.to[1])
+          );
+          // 移动棋子
+          finalPieces = finalPieces.map(p => {
+            if (p.position[0] === redMove.from[0] && p.position[1] === redMove.from[1]) {
+              return { ...p, position: [...redMove.to] as Position };
+            }
+            return p;
+          });
+        }
+
+        // 执行黑方移动
+        if (blackMove) {
+          // 先移除目标位置的棋子
+          finalPieces = finalPieces.filter(p => 
+            !(p.position[0] === blackMove.to[0] && p.position[1] === blackMove.to[1])
+          );
+          // 移动棋子
+          finalPieces = finalPieces.map(p => {
+            if (p.position[0] === blackMove.from[0] && p.position[1] === blackMove.from[1]) {
+              return { ...p, position: [...blackMove.to] as Position };
+            }
+            return p;
+          });
+        }
       }
 
       // 检查将帅面对面
@@ -210,14 +231,13 @@ function App() {
         }
       }
 
-      // 检查同归于尽（双方移动到同一位置）
-      if (!winner && gameState.redPendingMove && gameState.blackPendingMove) {
-        if (gameState.redPendingMove.to[0] === gameState.blackPendingMove.to[0] &&
-            gameState.redPendingMove.to[1] === gameState.blackPendingMove.to[1]) {
+      // 检查同归于尽（双方移动到同一位置，且不是互吃）
+      if (!winner && redMove && blackMove && !isMutualCapture) {
+        if (redMove.to[0] === blackMove.to[0] &&
+            redMove.to[1] === blackMove.to[1]) {
           // 移除在目标位置的棋子
           finalPieces = finalPieces.filter(
-            p => !(p.position[0] === gameState.redPendingMove!.to[0] &&
-                   p.position[1] === gameState.redPendingMove!.to[1])
+            p => !(p.position[0] === redMove.to[0] && p.position[1] === redMove.to[1])
           );
           
           // 检查是否有将帅被吃
@@ -241,6 +261,30 @@ function App() {
         }
       }
 
+      // 检查将军（在最终棋盘状态下）
+      let checkMessage = '';
+      if (!winner) {
+        if (isCheck('red', finalPieces)) {
+          checkMessage = '红帅被将军！';
+        }
+        if (isCheck('black', finalPieces)) {
+          if (checkMessage) {
+            checkMessage += ' 黑将被将军！';
+          } else {
+            checkMessage = '黑将被将军！';
+          }
+        }
+      }
+
+      // 构建消息
+      let finalMessage = '';
+      if (winner) {
+        const winnerText = winner === 'draw' ? '和棋！' : winner === 'red' ? '红方胜利！' : '黑方胜利！';
+        finalMessage = winnerText + (reason ? ' ' + reason : '');
+      } else if (checkMessage) {
+        finalMessage = checkMessage;
+      }
+
       setGameState(prev => ({
         ...prev,
         pieces: finalPieces,
@@ -260,9 +304,8 @@ function App() {
         blackPendingMove: null,
       }));
 
-      if (winner) {
-        const winnerText = winner === 'draw' ? '和棋！' : winner === 'red' ? '红方胜利！' : '黑方胜利！';
-        showMessage(winnerText + (reason ? ' ' + reason : ''), 3000);
+      if (finalMessage) {
+        showMessage(finalMessage, 3000);
       }
     };
 

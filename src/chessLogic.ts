@@ -28,11 +28,12 @@ export const isInPalace = (col: number, row: number, side: Side): boolean => {
 };
 
 // 检查象是否过河（象不能过楚河汉界）
-// 红象在下方（row 7-9），不能过河到 row 5 及以下
-// 黑象在上方（row 0-2），不能过河到 row 4 及以上
+// 楚河汉界在 row 4-5 之间，是分隔双方的"灰色地带"
+// 红方区域：row 5-9（下方）
+// 黑方区域：row 0-4（上方，楚河汉界算黑方这边）
 export const isElephantCrossed = (row: number, side: Side): boolean => {
-  if (side === 'red') return row < 7; // 红方象不能离开下方区域
-  return row > 2; // 黑方象不能离开上方区域
+  if (side === 'red') return row < 5; // 红方象不能离开下方区域（不能过楚河汉界）
+  return row > 4; // 黑方象不能离开上方区域（不能过楚河汉界）
 };
 
 // 获取某位置上的棋子
