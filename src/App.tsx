@@ -152,9 +152,12 @@ function App() {
       let finalPieces = pieces.map(p => ({ ...p }));
       
       // ===== 第一步：执行所有移动 =====
+      console.log('执行前棋子数:', finalPieces.length);
+      
       if (redMove) {
         finalPieces = finalPieces.map(p => {
           if (p.position[0] === redMove.from[0] && p.position[1] === redMove.from[1]) {
+            console.log(`红方棋子 ${p.id} 从 ${redMove.from} 移动到 ${redMove.to}`);
             return { ...p, position: [...redMove.to] as Position };
           }
           return p;
@@ -164,11 +167,15 @@ function App() {
       if (blackMove) {
         finalPieces = finalPieces.map(p => {
           if (p.position[0] === blackMove.from[0] && p.position[1] === blackMove.from[1]) {
+            console.log(`黑方棋子 ${p.id} 从 ${blackMove.from} 移动到 ${blackMove.to}`);
             return { ...p, position: [...blackMove.to] as Position };
           }
           return p;
         });
       }
+      
+      console.log('执行后棋子数:', finalPieces.length);
+      console.log('执行后所有棋子位置:', finalPieces.map(p => `${p.id}:[${p.position}]`));
       
       // ===== 第二步：检查是否有同归于尽 =====
       // 移动后，同一位置有红棋+黑棋 = 同归于尽
@@ -181,16 +188,22 @@ function App() {
         positions[key].push(p);
       });
       
+      console.log('positions映射:', positions);
+      
       const toRemove: string[] = [];
-      Object.values(positions).forEach(piecesAtPos => {
+      Object.entries(positions).forEach(([posKey, piecesAtPos]) => {
         const hasRed = piecesAtPos.some(p => p.side === 'red');
         const hasBlack = piecesAtPos.some(p => p.side === 'black');
+        console.log(`位置 ${posKey}: 红=${hasRed}, 黑=${hasBlack}`);
         if (hasRed && hasBlack) {
+          console.log('发现同归于尽，移除:', piecesAtPos.map(p => p.id));
           piecesAtPos.forEach(p => toRemove.push(p.id));
         }
       });
       
+      console.log('toRemove:', toRemove);
       finalPieces = finalPieces.filter(p => !toRemove.includes(p.id));
+      console.log('最终棋子数:', finalPieces.length);
 
       // 检查将帅面对面
       const redKing = finalPieces.find(p => p.type === 'king' && p.side === 'red');
