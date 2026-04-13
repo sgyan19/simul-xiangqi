@@ -15,8 +15,11 @@ interface ChessBoardProps {
 // 棋盘尺寸常量
 const COLS = 9;
 const ROWS = 10;
-const CELL_WIDTH = 100 / (COLS - 1); // 11.11...%
-const CELL_HEIGHT = 100 / (ROWS - 1); // 11.11...%
+
+// 计算格子中心的百分比位置
+// 每个格子的中心点 = 格子索引 * CELL_PERCENT
+const CELL_WIDTH = 100 / (COLS - 1);
+const CELL_HEIGHT = 100 / (ROWS - 1);
 
 // 坐标转换：逻辑坐标 -> 百分比
 // 红方视角（flipped=false）：col从左到右，row从下到上
