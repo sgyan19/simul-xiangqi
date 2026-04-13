@@ -147,62 +147,7 @@ function App() {
       
       let finalPieces = pieces.map(p => ({ ...p }));
       
-      // 需要移除的棋子（被吃掉的）
-      const toRemove: string[] = [];
-      
-      // ===== 第一步：基于原始棋盘判断吃子结果 =====
-      // 互吃交换的判断：双方都想去对方的位置
-      const isMutualExchange = 
-        redMove && blackMove &&
-        redMove.to[0] === blackMove.from[0] && 
-        redMove.to[1] === blackMove.from[1] &&
-        blackMove.to[0] === redMove.from[0] && 
-        blackMove.to[1] === redMove.from[1];
-      
-      // 检查红方吃子
-      if (redMove) {
-        const [toCol, toRow] = redMove.to;
-        // 原始棋盘上，目标位置是否有黑棋？
-        const targetPiece = pieces.find(p => 
-          p.position[0] === toCol && 
-          p.position[1] === toRow && 
-          p.side === 'black'
-        );
-        
-        if (targetPiece) {
-          if (isMutualExchange) {
-            // 互吃交换：位置互换，双方都不移除
-          } else {
-            // 普通吃子：移除目标棋子
-            toRemove.push(targetPiece.id);
-          }
-        }
-      }
-      
-      // 检查黑方吃子
-      if (blackMove) {
-        const [toCol, toRow] = blackMove.to;
-        // 原始棋盘上，目标位置是否有红棋？
-        const targetPiece = pieces.find(p => 
-          p.position[0] === toCol && 
-          p.position[1] === toRow && 
-          p.side === 'red'
-        );
-        
-        if (targetPiece) {
-          if (isMutualExchange) {
-            // 互吃交换：位置互换，双方都不移除
-          } else {
-            // 普通吃子：移除目标棋子
-            toRemove.push(targetPiece.id);
-          }
-        }
-      }
-      
-      // ===== 第二步：移除被吃的棋子 =====
-      finalPieces = finalPieces.filter(p => !toRemove.includes(p.id));
-      
-      // ===== 第三步：执行所有移动 =====
+      // ===== 第一步：执行所有移动（不考虑是否有棋子）=====
       if (redMove) {
         finalPieces = finalPieces.map(p => {
           if (p.position[0] === redMove.from[0] && p.position[1] === redMove.from[1]) {
@@ -220,6 +165,49 @@ function App() {
           return p;
         });
       }
+      
+      // ===== 第二步：移动后判断吃子结果 =====
+      // 检查是否有同归于尽（两个棋子在同一位置）
+      const piecesAfterMove: { [key: string]: Piece[] } = {};
+      finalPieces.forEach(p => {
+        const key = `${p.position[0]},${p.position[1]}`;
+        if (!piecesAfterMove[key]) {
+          piecesAfterMove[key] = [];
+        }
+        piecesAfterMove[key].push(p);
+      });
+      
+      // 需要移除的棋子（被吃掉的）
+      const toRemove: string[] = [];
+      
+      // 互吃交换的判断：红方到黑方原位置，黑方到红方原位置
+      const isMutualExchange = 
+        redMove && blackMove &&
+        redMove.to[0] === blackMove.from[0] && 
+        redMove.to[1] === blackMove.from[1] &&
+        blackMove.to[0] === redMove.from[0] && 
+        blackMove.to[1] === redMove.from[1];
+      
+      // 检查每个位置的棋子
+      Object.entries(piecesAfterMove).forEach(([posKey, piecesAtPos]) => {
+        if (piecesAtPos.length >= 2) {
+          // 同一位置有多个棋子
+          const redPieces = piecesAtPos.filter(p => p.side === 'red');
+          const blackPieces = piecesAtPos.filter(p => p.side === 'black');
+          
+          if (redPieces.length > 0 && blackPieces.length > 0) {
+            if (isMutualExchange) {
+              // 互吃交换：位置互换，双方都存活（已经在上一步移动完成）
+            } else {
+              // 同归于尽：两个都移除
+              piecesAtPos.forEach(p => toRemove.push(p.id));
+            }
+          }
+        }
+      });
+      
+      // ===== 第三步：移除被吃的棋子 =====
+      finalPieces = finalPieces.filter(p => !toRemove.includes(p.id));
 
       // 检查将帅面对面
       const redKing = finalPieces.find(p => p.type === 'king' && p.side === 'red');
