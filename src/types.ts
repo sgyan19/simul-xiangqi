@@ -68,41 +68,48 @@ export const PIECE_NAMES: Record<PieceType, Record<Side, string>> = {
 
 // 初始棋子位置
 // 注意：row 0 在顶部，row 9 在底部
-// 红方在下方（row 7-9），黑方在上方（row 0-2）
+// 红方在下方（row 6-9），黑方在上方（row 0-3）
+// 标准象棋布局
 export const INITIAL_PIECES: Piece[] = [
-  // 红方（下方，row 7-9）
-  { type: 'chariot', side: 'red', position: [0, 7], id: 'red-chariot-0' },
-  { type: 'horse', side: 'red', position: [1, 7], id: 'red-horse-0' },
-  { type: 'elephant', side: 'red', position: [2, 7], id: 'red-elephant-0' },
+  // 红方（下方，row 6-9）
+  // 底线 row 9：车马象士将士象马车
+  { type: 'chariot', side: 'red', position: [0, 9], id: 'red-chariot-0' },
+  { type: 'horse', side: 'red', position: [1, 9], id: 'red-horse-0' },
+  { type: 'elephant', side: 'red', position: [2, 9], id: 'red-elephant-0' },
   { type: 'advisor', side: 'red', position: [3, 8], id: 'red-advisor-0' },
-  { type: 'king', side: 'red', position: [4, 8], id: 'red-king' },
+  { type: 'king', side: 'red', position: [4, 9], id: 'red-king' },
   { type: 'advisor', side: 'red', position: [5, 8], id: 'red-advisor-1' },
-  { type: 'elephant', side: 'red', position: [6, 7], id: 'red-elephant-1' },
-  { type: 'horse', side: 'red', position: [7, 7], id: 'red-horse-1' },
-  { type: 'chariot', side: 'red', position: [8, 7], id: 'red-chariot-1' },
-  { type: 'cannon', side: 'red', position: [1, 5], id: 'red-cannon-0' },
-  { type: 'cannon', side: 'red', position: [7, 5], id: 'red-cannon-1' },
-  { type: 'pawn', side: 'red', position: [0, 4], id: 'red-pawn-0' },
-  { type: 'pawn', side: 'red', position: [2, 4], id: 'red-pawn-1' },
-  { type: 'pawn', side: 'red', position: [4, 4], id: 'red-pawn-2' },
-  { type: 'pawn', side: 'red', position: [6, 4], id: 'red-pawn-3' },
-  { type: 'pawn', side: 'red', position: [8, 4], id: 'red-pawn-4' },
+  { type: 'elephant', side: 'red', position: [6, 9], id: 'red-elephant-1' },
+  { type: 'horse', side: 'red', position: [7, 9], id: 'red-horse-1' },
+  { type: 'chariot', side: 'red', position: [8, 9], id: 'red-chariot-1' },
+  // 炮 row 7
+  { type: 'cannon', side: 'red', position: [1, 7], id: 'red-cannon-0' },
+  { type: 'cannon', side: 'red', position: [7, 7], id: 'red-cannon-1' },
+  // 兵 row 6
+  { type: 'pawn', side: 'red', position: [0, 6], id: 'red-pawn-0' },
+  { type: 'pawn', side: 'red', position: [2, 6], id: 'red-pawn-1' },
+  { type: 'pawn', side: 'red', position: [4, 6], id: 'red-pawn-2' },
+  { type: 'pawn', side: 'red', position: [6, 6], id: 'red-pawn-3' },
+  { type: 'pawn', side: 'red', position: [8, 6], id: 'red-pawn-4' },
 
-  // 黑方（上方，row 0-2）
-  { type: 'chariot', side: 'black', position: [0, 2], id: 'black-chariot-0' },
-  { type: 'horse', side: 'black', position: [1, 2], id: 'black-horse-0' },
-  { type: 'elephant', side: 'black', position: [2, 2], id: 'black-elephant-0' },
+  // 黑方（上方，row 0-3）
+  // 底线 row 0：车马象士将士象马车
+  { type: 'chariot', side: 'black', position: [0, 0], id: 'black-chariot-0' },
+  { type: 'horse', side: 'black', position: [1, 0], id: 'black-horse-0' },
+  { type: 'elephant', side: 'black', position: [2, 0], id: 'black-elephant-0' },
   { type: 'advisor', side: 'black', position: [3, 1], id: 'black-advisor-0' },
-  { type: 'king', side: 'black', position: [4, 1], id: 'black-king' },
+  { type: 'king', side: 'black', position: [4, 0], id: 'black-king' },
   { type: 'advisor', side: 'black', position: [5, 1], id: 'black-advisor-1' },
-  { type: 'elephant', side: 'black', position: [6, 2], id: 'black-elephant-1' },
-  { type: 'horse', side: 'black', position: [7, 2], id: 'black-horse-1' },
-  { type: 'chariot', side: 'black', position: [8, 2], id: 'black-chariot-1' },
-  { type: 'cannon', side: 'black', position: [1, 4], id: 'black-cannon-0' },
-  { type: 'cannon', side: 'black', position: [7, 4], id: 'black-cannon-1' },
-  { type: 'pawn', side: 'black', position: [0, 5], id: 'black-pawn-0' },
-  { type: 'pawn', side: 'black', position: [2, 5], id: 'black-pawn-1' },
-  { type: 'pawn', side: 'black', position: [4, 5], id: 'black-pawn-2' },
-  { type: 'pawn', side: 'black', position: [6, 5], id: 'black-pawn-3' },
-  { type: 'pawn', side: 'black', position: [8, 5], id: 'black-pawn-4' },
+  { type: 'elephant', side: 'black', position: [6, 0], id: 'black-elephant-1' },
+  { type: 'horse', side: 'black', position: [7, 0], id: 'black-horse-1' },
+  { type: 'chariot', side: 'black', position: [8, 0], id: 'black-chariot-1' },
+  // 炮 row 2
+  { type: 'cannon', side: 'black', position: [1, 2], id: 'black-cannon-0' },
+  { type: 'cannon', side: 'black', position: [7, 2], id: 'black-cannon-1' },
+  // 卒 row 3
+  { type: 'pawn', side: 'black', position: [0, 3], id: 'black-pawn-0' },
+  { type: 'pawn', side: 'black', position: [2, 3], id: 'black-pawn-1' },
+  { type: 'pawn', side: 'black', position: [4, 3], id: 'black-pawn-2' },
+  { type: 'pawn', side: 'black', position: [6, 3], id: 'black-pawn-3' },
+  { type: 'pawn', side: 'black', position: [8, 3], id: 'black-pawn-4' },
 ];
