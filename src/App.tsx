@@ -151,7 +151,29 @@ function App() {
       
       let finalPieces = pieces.map(p => ({ ...p }));
       
-      // ===== 第一步：验证并执行所有移动 =====
+      // ===== 第一步：移除被吃的棋子 =====
+      // 如果移动目标位置有敌方棋子，先移除
+      if (redMove) {
+        finalPieces = finalPieces.filter(p => {
+          if (p.side === 'black' && p.position[0] === redMove.to[0] && p.position[1] === redMove.to[1]) {
+            console.log(`红方吃掉黑棋 ${p.id}`);
+            return false;
+          }
+          return true;
+        });
+      }
+      
+      if (blackMove) {
+        finalPieces = finalPieces.filter(p => {
+          if (p.side === 'red' && p.position[0] === blackMove.to[0] && p.position[1] === blackMove.to[1]) {
+            console.log(`黑方吃掉红棋 ${p.id}`);
+            return false;
+          }
+          return true;
+        });
+      }
+      
+      // ===== 第二步：执行移动 =====
       console.log('执行前棋子数:', finalPieces.length);
       
       // 验证红方移动
