@@ -151,16 +151,16 @@ function App() {
       
       let finalPieces = pieces.map(p => ({ ...p }));
       
-      // ===== 第一步：记录原始位置 =====
-      const originalPositions: { [key: string]: Piece | null } = {};
-      finalPieces.forEach(p => {
+      console.log('执行前棋子数:', finalPieces.length);
+      
+      // ===== 第一步：记录每个位置的原始棋子 =====
+      const originalPieceAt: { [key: string]: Piece | null } = {};
+      pieces.forEach(p => {
         const key = `${p.position[0]},${p.position[1]}`;
-        originalPositions[key] = p;
+        originalPieceAt[key] = p;
       });
       
       // ===== 第二步：执行所有移动 =====
-      console.log('执行前棋子数:', finalPieces.length);
-      
       if (redMove) {
         const redPiece = finalPieces.find(p => 
           p.side === 'red' && p.position[0] === redMove.from[0] && p.position[1] === redMove.from[1]
@@ -193,36 +193,22 @@ function App() {
       
       console.log('执行后棋子数:', finalPieces.length);
       
-      // ===== 第三步：处理重叠/吃子 =====
-      // 规则：
-      // - 目标位置原本有敌方棋子 → 敌方被吃，自己的存活
-      // - 目标位置原本是空的，双方都移动到这里 → 同归于尽
+      // ===== 第三步：检查吃子 =====
+      // 规则：只有目标位置的原始敌方棋子仍然在棋盘上时，才吃子
+      // 如果原始敌方棋子已经移动走了（互吃），则不吃
       const toRemove: string[] = [];
       
       // 检查红方移动目标
       if (redMove) {
         const targetKey = `${redMove.to[0]},${redMove.to[1]}`;
-        const originalAtTarget = originalPositions[targetKey];
+        const originalAtTarget = originalPieceAt[targetKey];
         
-        if (originalAtTarget) {
-          // 目标位置原本有棋子
-          if (originalAtTarget.side === 'black') {
-            // 吃子：移除原有棋子
+        // 如果目标位置原本有黑棋，且这个黑棋还在棋盘上 → 吃子
+        if (originalAtTarget && originalAtTarget.side === 'black') {
+          const stillExists = finalPieces.some(p => p.id === originalAtTarget.id);
+          if (stillExists) {
             console.log(`红方吃掉黑棋 ${originalAtTarget.id}`);
             toRemove.push(originalAtTarget.id);
-          }
-        } else {
-          // 目标位置原本是空的，检查是否有黑棋也移动到这里
-          const blackPieceAtTarget = finalPieces.find(p => 
-            p.side === 'black' && p.position[0] === redMove.to[0] && p.position[1] === redMove.to[1]
-          );
-          if (blackPieceAtTarget) {
-            // 双方都移动到这个空位，同归于尽
-            const redPiece = finalPieces.find(p => 
-              p.side === 'red' && p.position[0] === redMove.to[0] && p.position[1] === redMove.to[1]
-            );
-            console.log(`同归于尽：红${redPiece?.id} 和 黑${blackPieceAtTarget.id}`);
-            toRemove.push(redPiece?.id, blackPieceAtTarget.id);
           }
         }
       }
@@ -230,27 +216,14 @@ function App() {
       // 检查黑方移动目标
       if (blackMove) {
         const targetKey = `${blackMove.to[0]},${blackMove.to[1]}`;
-        const originalAtTarget = originalPositions[targetKey];
+        const originalAtTarget = originalPieceAt[targetKey];
         
-        if (originalAtTarget) {
-          // 目标位置原本有棋子
-          if (originalAtTarget.side === 'red') {
-            // 吃子：移除原有棋子
+        // 如果目标位置原本有红棋，且这个红棋还在棋盘上 → 吃子
+        if (originalAtTarget && originalAtTarget.side === 'red') {
+          const stillExists = finalPieces.some(p => p.id === originalAtTarget.id);
+          if (stillExists) {
             console.log(`黑方吃掉红棋 ${originalAtTarget.id}`);
             toRemove.push(originalAtTarget.id);
-          }
-        } else {
-          // 目标位置原本是空的，检查是否有红棋也移动到这里
-          const redPieceAtTarget = finalPieces.find(p => 
-            p.side === 'red' && p.position[0] === blackMove.to[0] && p.position[1] === blackMove.to[1]
-          );
-          if (redPieceAtTarget) {
-            // 双方都移动到这个空位，同归于尽
-            const blackPiece = finalPieces.find(p => 
-              p.side === 'black' && p.position[0] === blackMove.to[0] && p.position[1] === blackMove.to[1]
-            );
-            console.log(`同归于尽：红${redPieceAtTarget.id} 和 黑${blackPiece?.id}`);
-            toRemove.push(redPieceAtTarget.id, blackPiece?.id);
           }
         }
       }
