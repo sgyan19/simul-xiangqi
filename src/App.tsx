@@ -151,10 +151,16 @@ function App() {
       
       let finalPieces = pieces.map(p => ({ ...p }));
       
-      // ===== 第一步：执行所有移动 =====
+      // ===== 第一步：记录原始位置 =====
+      const originalPositions: { [key: string]: Piece | null } = {};
+      finalPieces.forEach(p => {
+        const key = `${p.position[0]},${p.position[1]}`;
+        originalPositions[key] = p;
+      });
+      
+      // ===== 第二步：执行所有移动 =====
       console.log('执行前棋子数:', finalPieces.length);
       
-      // 先执行所有移动（不管目标位置有没有棋子）
       if (redMove) {
         const redPiece = finalPieces.find(p => 
           p.side === 'red' && p.position[0] === redMove.from[0] && p.position[1] === redMove.from[1]
@@ -186,34 +192,68 @@ function App() {
       }
       
       console.log('执行后棋子数:', finalPieces.length);
-      console.log('执行后所有棋子位置:', finalPieces.map(p => `${p.id}:[${p.position}]`));
       
-      console.log('执行后棋子数:', finalPieces.length);
-      console.log('执行后所有棋子位置:', finalPieces.map(p => `${p.id}:[${p.position}]`));
-      
-      // ===== 第二步：检查是否有同归于尽 =====
-      // 移动后，同一位置有红棋+黑棋 = 同归于尽
-      const positions: { [key: string]: Piece[] } = {};
-      finalPieces.forEach(p => {
-        const key = `${p.position[0]},${p.position[1]}`;
-        if (!positions[key]) {
-          positions[key] = [];
-        }
-        positions[key].push(p);
-      });
-      
-      console.log('positions映射:', positions);
-      
+      // ===== 第三步：处理重叠/吃子 =====
+      // 规则：
+      // - 目标位置原本有敌方棋子 → 敌方被吃，自己的存活
+      // - 目标位置原本是空的，双方都移动到这里 → 同归于尽
       const toRemove: string[] = [];
-      Object.entries(positions).forEach(([posKey, piecesAtPos]) => {
-        const hasRed = piecesAtPos.some(p => p.side === 'red');
-        const hasBlack = piecesAtPos.some(p => p.side === 'black');
-        console.log(`位置 ${posKey}: 红=${hasRed}, 黑=${hasBlack}`);
-        if (hasRed && hasBlack) {
-          console.log('发现同归于尽，移除:', piecesAtPos.map(p => p.id));
-          piecesAtPos.forEach(p => toRemove.push(p.id));
+      
+      // 检查红方移动目标
+      if (redMove) {
+        const targetKey = `${redMove.to[0]},${redMove.to[1]}`;
+        const originalAtTarget = originalPositions[targetKey];
+        
+        if (originalAtTarget) {
+          // 目标位置原本有棋子
+          if (originalAtTarget.side === 'black') {
+            // 吃子：移除原有棋子
+            console.log(`红方吃掉黑棋 ${originalAtTarget.id}`);
+            toRemove.push(originalAtTarget.id);
+          }
+        } else {
+          // 目标位置原本是空的，检查是否有黑棋也移动到这里
+          const blackPieceAtTarget = finalPieces.find(p => 
+            p.side === 'black' && p.position[0] === redMove.to[0] && p.position[1] === redMove.to[1]
+          );
+          if (blackPieceAtTarget) {
+            // 双方都移动到这个空位，同归于尽
+            const redPiece = finalPieces.find(p => 
+              p.side === 'red' && p.position[0] === redMove.to[0] && p.position[1] === redMove.to[1]
+            );
+            console.log(`同归于尽：红${redPiece?.id} 和 黑${blackPieceAtTarget.id}`);
+            toRemove.push(redPiece?.id, blackPieceAtTarget.id);
+          }
         }
-      });
+      }
+      
+      // 检查黑方移动目标
+      if (blackMove) {
+        const targetKey = `${blackMove.to[0]},${blackMove.to[1]}`;
+        const originalAtTarget = originalPositions[targetKey];
+        
+        if (originalAtTarget) {
+          // 目标位置原本有棋子
+          if (originalAtTarget.side === 'red') {
+            // 吃子：移除原有棋子
+            console.log(`黑方吃掉红棋 ${originalAtTarget.id}`);
+            toRemove.push(originalAtTarget.id);
+          }
+        } else {
+          // 目标位置原本是空的，检查是否有红棋也移动到这里
+          const redPieceAtTarget = finalPieces.find(p => 
+            p.side === 'red' && p.position[0] === blackMove.to[0] && p.position[1] === blackMove.to[1]
+          );
+          if (redPieceAtTarget) {
+            // 双方都移动到这个空位，同归于尽
+            const blackPiece = finalPieces.find(p => 
+              p.side === 'black' && p.position[0] === blackMove.to[0] && p.position[1] === blackMove.to[1]
+            );
+            console.log(`同归于尽：红${redPieceAtTarget.id} 和 黑${blackPiece?.id}`);
+            toRemove.push(redPieceAtTarget.id, blackPiece?.id);
+          }
+        }
+      }
       
       console.log('toRemove:', toRemove);
       finalPieces = finalPieces.filter(p => !toRemove.includes(p.id));
