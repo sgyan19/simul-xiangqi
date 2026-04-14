@@ -358,6 +358,8 @@ function App() {
         currentOperatedSide={viewSide}
         phase={gameState.phase}
         flipped={viewSide === 'black'}
+        redPendingMove={gameState.redPendingMove}
+        blackPendingMove={gameState.blackPendingMove}
         onSelectPiece={handleSelectPiece}
         onMovePiece={handleMovePiece}
       />

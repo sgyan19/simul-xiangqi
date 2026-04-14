@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import { Piece, Position, Side, GamePhase, PIECE_NAMES } from './types';
+import { Piece, Position, Side, GamePhase, PIECE_NAMES, Move } from './types';
 
 interface ChessBoardProps {
   pieces: Piece[];
@@ -8,6 +8,8 @@ interface ChessBoardProps {
   currentOperatedSide: Side;
   phase: GamePhase;
   flipped: boolean;
+  redPendingMove: Move | null;
+  blackPendingMove: Move | null;
   onSelectPiece: (piece: Piece) => void;
   onMovePiece: (to: Position) => void;
 }
@@ -225,6 +227,79 @@ const MoveIndicator = ({
   );
 };
 
+// 箭头组件
+const MoveArrow = ({
+  move,
+  side,
+  flipped,
+}: {
+  move: Move;
+  side: 'red' | 'black';
+  flipped: boolean;
+}) => {
+  const from = getPosition(move.from[0], move.from[1], flipped);
+  const to = getPosition(move.to[0], move.to[1], flipped);
+  
+  // 将百分比转换为数值计算
+  const fromX = parseFloat(from.left);
+  const fromY = parseFloat(from.top);
+  const toX = parseFloat(to.left);
+  const toY = parseFloat(to.top);
+  
+  // 计算箭头参数
+  const dx = toX - fromX;
+  const dy = toY - fromY;
+  const length = Math.sqrt(dx * dx + dy * dy);
+  
+  // 箭头头部大小（相对于线长）
+  const headSize = 3;
+  const headAngle = 25; // 度数
+  
+  // 计算箭头头部点
+  const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+  const angle1 = (angle + 180 + headAngle) * Math.PI / 180;
+  const angle2 = (angle + 180 - headAngle) * Math.PI / 180;
+  
+  const head1X = toX + headSize * Math.cos(angle1);
+  const head1Y = toY + headSize * Math.sin(angle1);
+  const head2X = toX + headSize * Math.cos(angle2);
+  const head2Y = toY + headSize * Math.sin(angle2);
+  
+  const color = side === 'red' ? '#e74c3c' : '#2c3e50';
+  const id = `arrow-${side}-${move.from[0]}-${move.from[1]}-${move.to[0]}-${move.to[1]}`;
+  
+  return (
+    <svg
+      style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 5 }}
+      viewBox="0 0 100 100"
+      preserveAspectRatio="none"
+    >
+      <defs>
+        <marker
+          id={id}
+          markerWidth="4"
+          markerHeight="4"
+          refX="3"
+          refY="2"
+          orient="auto"
+        >
+          <path d={`M0,0 L0,4 L4,2 Z`} fill={color} />
+        </marker>
+      </defs>
+      <line
+        x1={`${fromX}%`}
+        y1={`${fromY}%`}
+        x2={`${toX - (dx / length) * headSize}%`}
+        y2={`${toY - (dy / length) * headSize}%`}
+        stroke={color}
+        strokeWidth="1.5"
+        markerEnd={`url(#${id})`}
+        opacity="0.8"
+      />
+    </svg>
+  );
+};
+
 function ChessBoard({
   pieces,
   selectedPiece,
@@ -232,6 +307,8 @@ function ChessBoard({
   currentOperatedSide,
   phase,
   flipped,
+  redPendingMove,
+  blackPendingMove,
   onSelectPiece,
   onMovePiece,
 }: ChessBoardProps) {
@@ -250,6 +327,16 @@ function ChessBoard({
       <div className="chess-board" style={{ position: 'relative', width: '100%', height: '100%' }}>
         {/* 棋盘背景 */}
         <BoardBackground />
+
+        {/* 移动箭头 - 红方 */}
+        {redPendingMove && (
+          <MoveArrow move={redPendingMove} side="red" flipped={flipped} />
+        )}
+
+        {/* 移动箭头 - 黑方 */}
+        {blackPendingMove && (
+          <MoveArrow move={blackPendingMove} side="black" flipped={flipped} />
+        )}
 
         {/* 可移动位置指示 */}
         {selectedPiece && validMoves.map((move, idx) => {
