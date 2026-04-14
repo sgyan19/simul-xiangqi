@@ -322,6 +322,12 @@ export const getValidMoves = (piece: Piece, pieces: Piece[]): Position[] => {
   }
 };
 
+// 检查某个移动是否合法（用于结算时验证）
+export const isValidMove = (piece: Piece, to: Position, pieces: Piece[]): boolean => {
+  const validMoves = getValidMoves(piece, pieces);
+  return validMoves.some(m => m[0] === to[0] && m[1] === to[1]);
+};
+
 // 检查是否将军
 export const isCheck = (side: Side, pieces: Piece[]): boolean => {
   const king = pieces.find(p => p.type === 'king' && p.side === side);

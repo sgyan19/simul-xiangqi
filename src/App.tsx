@@ -7,7 +7,7 @@ import {
   Move,
   INITIAL_PIECES,
 } from './types';
-import { getValidMoves, isCheck } from './chessLogic';
+import { getValidMoves, isCheck, isValidMove } from './chessLogic';
 import { checkGameEnd, formatMove } from './gameLogic';
 import ChessBoard from './ChessBoard';
 
@@ -151,27 +151,43 @@ function App() {
       
       let finalPieces = pieces.map(p => ({ ...p }));
       
-      // ===== 第一步：执行所有移动 =====
+      // ===== 第一步：验证并执行所有移动 =====
       console.log('执行前棋子数:', finalPieces.length);
       
+      // 验证红方移动
       if (redMove) {
-        finalPieces = finalPieces.map(p => {
-          if (p.position[0] === redMove.from[0] && p.position[1] === redMove.from[1]) {
-            console.log(`红方棋子 ${p.id} 从 ${redMove.from} 移动到 ${redMove.to}`);
-            return { ...p, position: [...redMove.to] as Position };
-          }
-          return p;
-        });
+        const redPiece = finalPieces.find(p => 
+          p.side === 'red' && p.position[0] === redMove.from[0] && p.position[1] === redMove.from[1]
+        );
+        if (redPiece && isValidMove(redPiece, redMove.to, finalPieces)) {
+          console.log(`红方棋子 ${redPiece.id} 从 ${redMove.from} 移动到 ${redMove.to}`);
+          finalPieces = finalPieces.map(p => {
+            if (p.id === redPiece.id) {
+              return { ...p, position: [...redMove.to] as Position };
+            }
+            return p;
+          });
+        } else {
+          console.log(`红方棋子 ${redPiece?.id || 'unknown'} 移动无效（扑空）`);
+        }
       }
       
+      // 验证黑方移动
       if (blackMove) {
-        finalPieces = finalPieces.map(p => {
-          if (p.position[0] === blackMove.from[0] && p.position[1] === blackMove.from[1]) {
-            console.log(`黑方棋子 ${p.id} 从 ${blackMove.from} 移动到 ${blackMove.to}`);
-            return { ...p, position: [...blackMove.to] as Position };
-          }
-          return p;
-        });
+        const blackPiece = finalPieces.find(p => 
+          p.side === 'black' && p.position[0] === blackMove.from[0] && p.position[1] === blackMove.from[1]
+        );
+        if (blackPiece && isValidMove(blackPiece, blackMove.to, finalPieces)) {
+          console.log(`黑方棋子 ${blackPiece.id} 从 ${blackMove.from} 移动到 ${blackMove.to}`);
+          finalPieces = finalPieces.map(p => {
+            if (p.id === blackPiece.id) {
+              return { ...p, position: [...blackMove.to] as Position };
+            }
+            return p;
+          });
+        } else {
+          console.log(`黑方棋子 ${blackPiece?.id || 'unknown'} 移动无效（扑空）`);
+        }
       }
       
       console.log('执行后棋子数:', finalPieces.length);
