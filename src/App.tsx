@@ -405,93 +405,125 @@ function App() {
     </div>
   );
 
-  // 渲染本地模式
+  // 渲染本地模式 - 与在线模式一致的简洁布局
   const renderLocalMode = () => (
-    <div className="app local-mode">
-      {/* 模式切换 */}
-      <div className="mode-switch">
-        <button 
-          className={gameMode === 'local' ? 'active' : ''} 
-          onClick={() => setGameMode('local')}
-        >
-          本地模式
-        </button>
-        <button 
-          className={gameMode === 'online' ? 'active' : ''} 
-          onClick={() => setGameMode('online')}
-        >
-          在线模式
-        </button>
-      </div>
-
-      {/* 状态栏 */}
-      <div className="status-bar">
-        <div className="confirm-status">
-          <span className={`red ${localState.redConfirmed ? 'confirmed' : ''}`}>
-            红方 {localState.redConfirmed ? '✓' : '○'}
-          </span>
-          <span className={`black ${localState.blackConfirmed ? 'confirmed' : ''}`}>
-            黑方 {localState.blackConfirmed ? '✓' : '○'}
-          </span>
-        </div>
-        {localState.redPendingMove && !localState.redConfirmed && (
+    <div className="online-mode">
+      {/* 顶部：模式切换 */}
+      <div className="online-topbar">
+        <div className="mode-switch">
           <button 
-            className="undo-btn red" 
-            onClick={() => handleUndoMoveLocal('red')}
+            className={gameMode === 'local' ? 'active' : ''} 
+            onClick={() => setGameMode('local')}
           >
-            红方重新走
+            本地
           </button>
-        )}
-        {localState.blackPendingMove && !localState.blackConfirmed && (
           <button 
-            className="undo-btn black" 
-            onClick={() => handleUndoMoveLocal('black')}
+            className={gameMode === 'online' ? 'active' : ''} 
+            onClick={() => setGameMode('online')}
           >
-            黑方重新走
-          </button>
-        )}
-      </div>
-
-      {/* 棋盘 */}
-      <ChessBoard
-        pieces={localState.pieces}
-        selectedPiece={localState.selectedPiece}
-        validMoves={localState.validMoves}
-        currentOperatedSide={viewSide}
-        phase={localState.phase}
-        flipped={viewSide === 'black'}
-        redPendingMove={localState.redPendingMove}
-        blackPendingMove={localState.blackPendingMove}
-        onSelectPiece={handleSelectPieceLocal}
-        onMovePiece={handleMovePieceLocal}
-      />
-
-      {/* 控制面板 */}
-      <div className="control-panel">
-        <div className="view-switch">
-          <button
-            className={`view-btn ${viewSide === 'red' ? 'active' : ''}`}
-            onClick={() => setViewSide('red')}
-          >
-            红方视角
-          </button>
-          <button
-            className={`view-btn ${viewSide === 'black' ? 'active' : ''}`}
-            onClick={() => setViewSide('black')}
-          >
-            黑方视角
+            联机
           </button>
         </div>
         
-        <div className="game-controls">
-          <button 
-            className="settle-btn"
-            onClick={handleSettleLocal}
-            disabled={!localState.redPendingMove || !localState.blackPendingMove}
-          >
-            结算
-          </button>
+        {/* 状态指示 */}
+        <div className="conn-indicator">
+          {localState.phase === 'strategy' && (
+            <>
+              <span className={`player-tag ${localState.redConfirmed ? 'done' : 'red'}`}>
+                红{localState.redConfirmed ? '✓' : '○'}
+              </span>
+              <span className={`player-tag ${localState.blackConfirmed ? 'done' : 'black'}`}>
+                黑{localState.blackConfirmed ? '✓' : '○'}
+              </span>
+            </>
+          )}
+          {localState.phase === 'settlement' && '结算中...'}
+          {localState.phase === 'ended' && localState.winner && (
+            <span className="winner">
+              {localState.winner === 'red' ? '红方胜' : localState.winner === 'black' ? '黑方胜' : '平局'}
+            </span>
+          )}
         </div>
+      </div>
+
+      {/* 棋盘 - 最大化显示 */}
+      <div className="board-section">
+        <ChessBoard
+          pieces={localState.pieces}
+          selectedPiece={localState.selectedPiece}
+          validMoves={localState.validMoves}
+          currentOperatedSide={viewSide}
+          phase={localState.phase}
+          flipped={viewSide === 'black'}
+          redPendingMove={localState.redPendingMove}
+          blackPendingMove={localState.blackPendingMove}
+          onSelectPiece={handleSelectPieceLocal}
+          onMovePiece={handleMovePieceLocal}
+        />
+      </div>
+
+      {/* 底部操作栏 */}
+      <div className="online-statusbar">
+        {/* 重新走棋按钮 */}
+        <div className="action-row">
+          {localState.redPendingMove && !localState.redConfirmed && (
+            <button className="red-btn" onClick={() => handleUndoMoveLocal('red')}>
+              红重走
+            </button>
+          )}
+          {localState.blackPendingMove && !localState.blackConfirmed && (
+            <button className="black-btn" onClick={() => handleUndoMoveLocal('black')}>
+              黑重走
+            </button>
+          )}
+        </div>
+
+        {/* 主要操作 */}
+        <div className="action-row">
+          {localState.phase === 'strategy' && (
+            <button 
+              className="start-btn" 
+              onClick={handleSettleLocal}
+              disabled={!localState.redPendingMove || !localState.blackPendingMove}
+            >
+              结算
+            </button>
+          )}
+          {localState.phase === 'ended' && (
+            <button 
+              className="start-btn" 
+              onClick={() => setLocalState({
+                phase: 'strategy',
+                redConfirmed: false,
+                blackConfirmed: false,
+                pieces: INITIAL_PIECES.map(p => ({ ...p })),
+                redPendingMove: null,
+                blackPendingMove: null,
+                winner: null,
+                selectedPiece: null,
+                validMoves: [],
+              })}
+            >
+              重开
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* 视角切换 */}
+      <div className="view-row">
+        <button 
+          className={`view-btn ${viewSide === 'red' ? 'active red' : ''}`}
+          onClick={() => setViewSide('red')}
+        >
+          红视角
+        </button>
+        <button 
+          className={`view-btn ${viewSide === 'black' ? 'active black' : ''}`}
+          onClick={() => setViewSide('black')}
+        >
+          黑视角
+        </button>
       </div>
 
       {/* Toast */}

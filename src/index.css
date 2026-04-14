@@ -567,7 +567,7 @@ body {
   gap: 8px;
 }
 
-/* 顶部栏：紧凑 */
+/* 顶部栏 */
 .online-mode .online-topbar {
   display: flex;
   align-items: center;
@@ -602,19 +602,40 @@ body {
 }
 
 .online-mode .conn-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 12px;
-  padding: 6px 12px;
+}
+
+.online-mode .winner {
+  padding: 4px 12px;
   border-radius: 12px;
+  background: rgba(255, 215, 0, 0.2);
+  color: var(--highlight);
+  font-weight: 600;
 }
 
-.online-mode .conn-indicator.online {
-  background: rgba(76, 175, 80, 0.2);
+.online-mode .conn-indicator .player-tag {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.online-mode .conn-indicator .player-tag.red {
+  background: rgba(196, 30, 58, 0.3);
+  color: var(--piece-red);
+}
+
+.online-mode .conn-indicator .player-tag.black {
+  background: rgba(100, 100, 100, 0.3);
+  color: #aaa;
+}
+
+.online-mode .conn-indicator .player-tag.done {
+  background: rgba(76, 175, 80, 0.3);
   color: var(--success);
-}
-
-.online-mode .conn-indicator.offline {
-  background: rgba(255, 68, 68, 0.2);
-  color: var(--danger);
 }
 
 /* 棋盘区域 - 最大化 */
@@ -628,7 +649,7 @@ body {
 
 .online-mode .board-section .board-container {
   width: 100%;
-  max-width: min(100%, calc(100vh - 180px));
+  max-width: min(100%, calc(100vh - 160px));
   aspect-ratio: 9 / 10;
 }
 
@@ -641,6 +662,91 @@ body {
   flex-shrink: 0;
 }
 
+/* 操作按钮行 */
+.online-mode .action-row {
+  display: flex;
+  gap: 6px;
+}
+
+.online-mode .action-row button {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.online-mode .action-row .red-btn {
+  background: linear-gradient(135deg, #C41E3A, #8B0000);
+  color: white;
+}
+
+.online-mode .action-row .black-btn {
+  background: #333;
+  color: white;
+  border: 1px solid #555;
+}
+
+.online-mode .action-row .start-btn {
+  background: var(--highlight);
+  color: #222;
+}
+
+.online-mode .action-row .undo-btn {
+  background: #666;
+  color: white;
+}
+
+.online-mode .action-row .leave-btn {
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--text-muted);
+}
+
+.online-mode .action-row button:active {
+  transform: scale(0.95);
+}
+
+.online-mode .action-row button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 视角切换行 */
+.online-mode .view-row {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.online-mode .view-btn {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-muted);
+  transition: all 0.2s ease;
+}
+
+.online-mode .view-btn.active {
+  color: white;
+}
+
+.online-mode .view-btn.active.red {
+  background: var(--piece-red);
+}
+
+.online-mode .view-btn.active.black {
+  background: #444;
+  border: 1px solid #666;
+}
+
+/* 房间状态相关 */
 .online-mode .room-info {
   display: flex;
   align-items: center;
@@ -736,88 +842,15 @@ body {
   color: white;
 }
 
-/* 操作按钮行 */
-.online-mode .action-row {
-  display: flex;
-  gap: 6px;
+/* 连接状态 */
+.online-mode .conn-indicator.online {
+  background: rgba(76, 175, 80, 0.2);
+  color: var(--success);
 }
 
-.online-mode .action-row button {
-  padding: 8px 12px;
-  border: none;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.online-mode .action-row .red-btn {
-  background: linear-gradient(135deg, #C41E3A, #8B0000);
-  color: white;
-}
-
-.online-mode .action-row .black-btn {
-  background: #333;
-  color: white;
-  border: 1px solid #555;
-}
-
-.online-mode .action-row .start-btn {
-  background: var(--highlight);
-  color: #222;
-}
-
-.online-mode .action-row .undo-btn {
-  background: #666;
-  color: white;
-}
-
-.online-mode .action-row .leave-btn {
-  background: rgba(255, 255, 255, 0.15);
-  color: var(--text-muted);
-}
-
-.online-mode .action-row button:active {
-  transform: scale(0.95);
-}
-
-.online-mode .action-row button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* 视角切换行 */
-.online-mode .view-row {
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.online-mode .view-btn {
-  padding: 8px 20px;
-  border: none;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--text-muted);
-  transition: all 0.2s ease;
-}
-
-.online-mode .view-btn.active {
-  color: white;
-}
-
-.online-mode .view-btn.active.red {
-  background: var(--piece-red);
-}
-
-.online-mode .view-btn.active.black {
-  background: #444;
-  border: 1px solid #666;
+.online-mode .conn-indicator.offline {
+  background: rgba(255, 68, 68, 0.2);
+  color: var(--danger);
 }
 
 /* 移除旧的样式 */
