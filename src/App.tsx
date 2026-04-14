@@ -219,15 +219,10 @@ function App() {
   const handleSelectPieceLocal = useCallback((piece: Piece) => {
     if (localState.phase !== 'strategy') return;
     
-    const isOwnSide = viewSide === piece.side;
-    if (!isOwnSide) {
-      showMessage('请切换到己方视角操作');
-      return;
-    }
-    
+    // 本地双人模式：检查该方是否已确认走棋
     const isConfirmed = piece.side === 'red' ? localState.redConfirmed : localState.blackConfirmed;
     if (isConfirmed) {
-      showMessage('本回合已走棋，点击"重新走"可撤销');
+      showMessage('本回合已走棋，点击"重走"可撤销');
       return;
     }
 
@@ -236,10 +231,9 @@ function App() {
       return;
     }
 
-    // 计算有效移动
-    const moves: Position[] = [];
-    setLocalState(prev => ({ ...prev, selectedPiece: piece, validMoves: moves }));
-  }, [localState.phase, localState.redConfirmed, localState.blackConfirmed, localState.selectedPiece, viewSide, showMessage]);
+    // 本地模式：选择棋子即可移动（无需切换视角）
+    setLocalState(prev => ({ ...prev, selectedPiece: piece, validMoves: [] }));
+  }, [localState.phase, localState.redConfirmed, localState.blackConfirmed, localState.selectedPiece, showMessage]);
 
   // 本地模式：移动棋子
   const handleMovePieceLocal = useCallback((to: Position) => {
@@ -459,6 +453,7 @@ function App() {
           blackPendingMove={localState.blackPendingMove}
           onSelectPiece={handleSelectPieceLocal}
           onMovePiece={handleMovePieceLocal}
+          selectableSides={['red', 'black']} // 本地模式允许选择双方
         />
       </div>
 
