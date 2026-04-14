@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Piece, Position, Side, Move, INITIAL_PIECES, GamePhase } from './types';
 import { wsClient, RoomState } from './wsClient';
-import { getValidMoves } from './chessLogic';
+import { getValidMoves, isValidMove } from './chessLogic';
 import ChessBoard from './ChessBoard';
 
 // 在线游戏状态
@@ -277,11 +277,23 @@ function App() {
       return;
     }
     
+    // 验证红方移动合法性（蹩马腿、塞象眼等）
+    const redPiece = pieces.find(p => p.side === 'red' && p.position[0] === redPendingMove.from[0] && p.position[1] === redPendingMove.from[1]);
+    const blackPiece = pieces.find(p => p.side === 'black' && p.position[0] === blackPendingMove.from[0] && p.position[1] === blackPendingMove.from[1]);
+    
+    if (redPiece && !isValidMove(redPiece, redPendingMove.to, pieces)) {
+      showMessage('红方移动无效（蹩马腿/塞象眼等），请重新走棋');
+      return;
+    }
+    if (blackPiece && !isValidMove(blackPiece, blackPendingMove.to, pieces)) {
+      showMessage('黑方移动无效（蹩马腿/塞象眼等），请重新走棋');
+      return;
+    }
+    
     // 执行移动（模拟双方同时移动）
     let newPieces = [...pieces];
     
     // 执行红方移动
-    const redPiece = newPieces.find(p => p.id === pieces.find(o => o.position[0] === redPendingMove.from[0] && o.position[1] === redPendingMove.from[1] && o.side === 'red')?.id);
     if (redPiece) {
       // 移除被吃的黑棋
       newPieces = newPieces.filter(p => !(p.side === 'black' && p.position[0] === redPendingMove.to[0] && p.position[1] === redPendingMove.to[1]));
@@ -290,12 +302,12 @@ function App() {
     }
     
     // 执行黑方移动
-    const blackPiece = newPieces.find(p => p.side === 'black' && p.position[0] === blackPendingMove.from[0] && p.position[1] === blackPendingMove.from[1]);
-    if (blackPiece) {
+    const updatedBlackPiece = newPieces.find(p => p.side === 'black' && p.position[0] === blackPendingMove.from[0] && p.position[1] === blackPendingMove.from[1]);
+    if (updatedBlackPiece) {
       // 移除被吃的红棋
       newPieces = newPieces.filter(p => !(p.side === 'red' && p.position[0] === blackPendingMove.to[0] && p.position[1] === blackPendingMove.to[1]));
       // 移动黑棋
-      newPieces = newPieces.map(p => p.id === blackPiece.id ? { ...p, position: blackPendingMove.to } : p);
+      newPieces = newPieces.map(p => p.id === updatedBlackPiece.id ? { ...p, position: blackPendingMove.to } : p);
     }
     
     // 检查将帅是否还在
