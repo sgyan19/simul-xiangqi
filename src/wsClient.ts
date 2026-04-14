@@ -118,6 +118,11 @@ class WebSocketClient {
     this.send('join_room', { roomId });
   }
 
+  // 选择阵营（创建房间后调用）
+  chooseSide(side: 'red' | 'black'): void {
+    this.send('choose_side', { side });
+  }
+
   // 离开房间
   leaveRoom(): void {
     this.send('leave_room');

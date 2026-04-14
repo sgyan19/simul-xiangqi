@@ -71,7 +71,60 @@ const handleMessage = (ws: WebSocket, message: WSMessage): void => {
   switch (message.type) {
     case 'create_room': {
       const newRoom = createRoom(generateRoomId());
+      // 创建房间后，玩家进入房间但未选择阵营
+      const player = clients.get(ws);
+      if (player) {
+        player.roomId = newRoom.id;
+        player.side = null; // 尚未选择阵营
+        clients.set(ws, player);
+      }
+      // 发送房间创建成功消息，不分配阵营
       sendToClient(ws, { type: 'room_created', payload: { roomId: newRoom.id } });
+      break;
+    }
+
+    case 'choose_side': {
+      const { side } = message.payload as { side: 'red' | 'black' };
+      const player = clients.get(ws);
+      if (!player || !player.roomId) {
+        sendToClient(ws, { type: 'error', payload: { message: '你不在任何房间中' } });
+        return;
+      }
+      
+      const room = getRoom(player.roomId);
+      if (!room) {
+        sendToClient(ws, { type: 'error', payload: { message: '房间不存在' } });
+        return;
+      }
+      
+      // 检查选择的阵营是否可用
+      if (side === 'red' && room.redPlayer) {
+        sendToClient(ws, { type: 'error', payload: { message: '红方已有玩家' } });
+        return;
+      }
+      if (side === 'black' && room.blackPlayer) {
+        sendToClient(ws, { type: 'error', payload: { message: '黑方已有玩家' } });
+        return;
+      }
+      
+      // 检查是否已经在其他阵营
+      if (player.side) {
+        // 离开之前的阵营
+        if (player.side === 'red') room.redPlayer = null;
+        else room.blackPlayer = null;
+      }
+      
+      // 加入新阵营
+      if (side === 'red') {
+        room.redPlayer = ws.toString();
+      } else {
+        room.blackPlayer = ws.toString();
+      }
+      player.side = side;
+      clients.set(ws, player);
+      
+      sendToClient(ws, { type: 'joined', payload: { roomId: player.roomId, side } });
+      broadcastRoomUpdate(room);
       break;
     }
 
@@ -79,6 +132,8 @@ const handleMessage = (ws: WebSocket, message: WSMessage): void => {
       const { roomId } = message.payload as { roomId: string };
       const playerId = ws.toString();
       const room = getRoom(roomId);
+      const player = clients.get(ws);
+      if (!player) return;
       
       if (!room) {
         sendToClient(ws, { type: 'error', payload: { message: '房间不存在' } });
