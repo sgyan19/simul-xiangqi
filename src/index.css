@@ -559,14 +559,9 @@ body {
 /* ===== 在线模式样式 - 紧凑布局 ===== */
 
 .online-mode {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 8px;
+  justify-content: flex-start;
+  padding-top: 8px;
   gap: 8px;
-  overflow-y: auto;
 }
 
 .online-mode .mode-switch {
@@ -574,7 +569,6 @@ body {
   max-width: 360px;
   display: flex;
   gap: 4px;
-  flex-shrink: 0;
 }
 
 .online-mode .mode-switch button {
@@ -604,7 +598,6 @@ body {
   border-radius: 12px;
   font-size: 11px;
   color: var(--text-muted);
-  flex-shrink: 0;
 }
 
 .online-mode .room-header {
@@ -617,7 +610,6 @@ body {
   background: rgba(255, 255, 255, 0.08);
   border-radius: 8px;
   font-size: 12px;
-  flex-shrink: 0;
 }
 
 .online-mode .room-header .room-id {
@@ -816,25 +808,6 @@ body {
   font-size: 12px;
   color: var(--highlight);
   text-align: center;
-}
-
-/* 在线模式下棋盘容器居中 */
-.online-mode .board-container {
-  flex-shrink: 0;
-  margin: 0 auto;
-}
-
-/* 在线模式下控制面板居中 */
-.online-mode .control-panel {
-  flex-shrink: 0;
-}
-
-/* 确保所有子元素在在线模式下正确居中 */
-.online-mode .action-bar,
-.online-mode .join-form,
-.online-mode .waiting-area,
-.online-mode .choose-side {
-  flex-shrink: 0;
 }
 
 /* 本地模式确认状态 */
