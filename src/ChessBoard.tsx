@@ -12,8 +12,6 @@ interface ChessBoardProps {
   blackPendingMove: Move | null;
   onSelectPiece: (piece: Piece) => void;
   onMovePiece: (to: Position) => void;
-  redConfirmed?: boolean;
-  blackConfirmed?: boolean;
 }
 
 // 棋盘尺寸常量
@@ -313,8 +311,6 @@ function ChessBoard({
   blackPendingMove,
   onSelectPiece,
   onMovePiece,
-  redConfirmed,
-  blackConfirmed,
 }: ChessBoardProps) {
   // 检查某个位置是否有棋子
   const getPieceAtPosition = (col: number, row: number): Piece | undefined => {
@@ -361,28 +357,18 @@ function ChessBoard({
           const isInValidMoves = validMoves.some(
             m => m[0] === piece.position[0] && m[1] === piece.position[1]
           );
-          // 本地模式：只能选当前视角阵营的棋子，且该方未走棋
-          const isSelectable = phase === 'strategy' && piece.side === currentOperatedSide && (
-            redConfirmed !== undefined 
-              ? (piece.side === 'red' ? !redConfirmed : !blackConfirmed)
-              : true
-          );
-          // 敌方棋子在有效移动位置时可被点击（用于吃子）
-          const isTargetable = selectedPiece && isInValidMoves && piece.side !== selectedPiece.side;
           return (
             <ChessPiece
               key={piece.id}
               piece={piece}
               isSelected={selectedPiece?.id === piece.id}
-              isSelectable={isSelectable || isTargetable}
+              isSelectable={phase === 'strategy' && piece.side === currentOperatedSide}
               flipped={flipped}
-              isInValidMoves={isTargetable}
+              isInValidMoves={!!selectedPiece && isInValidMoves && piece.side !== currentOperatedSide}
               onClick={() => {
-                if (isTargetable && selectedPiece) {
-                  // 点击敌方棋子 - 执行移动/吃子
+                if (isInValidMoves && selectedPiece) {
                   onMovePiece(piece.position);
-                } else if (isSelectable) {
-                  // 点击己方棋子 - 选择棋子
+                } else {
                   onSelectPiece(piece);
                 }
               }}

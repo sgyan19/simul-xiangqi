@@ -1,49 +1,37 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
-import { Piece, Position, Side, Move, INITIAL_PIECES, GamePhase } from './types';
-import { wsClient, RoomState } from './wsClient';
-import { getValidMoves, isValidMove } from './chessLogic';
+import { useState, useCallback, useEffect } from 'react';
+import {
+  GameState,
+  Piece,
+  Position,
+  Side,
+  Move,
+  INITIAL_PIECES,
+} from './types';
+import { getValidMoves, isCheck, isValidMove } from './chessLogic';
+import { checkGameEnd, formatMove } from './gameLogic';
 import ChessBoard from './ChessBoard';
 
-// 在线游戏状态
-interface OnlineGameState {
-  connected: boolean;
-  roomId: string | null;
-  side: Side | null;
-  pieces: Piece[];
-  phase: GamePhase;
-  redConfirmed: boolean;
-  blackConfirmed: boolean;
-  redPendingMove: Move | null;
-  blackPendingMove: Move | null;
-  winner: Side | 'draw' | null;
-  redOnline: boolean;
-  blackOnline: boolean;
-  message: string;
-}
+// 初始游戏状态
+const createInitialState = (): GameState => ({
+  phase: 'strategy',
+  currentOperatedSide: 'red',
+  redConfirmed: false,
+  blackConfirmed: false,
+  pieces: INITIAL_PIECES.map(p => ({ ...p })),
+  redPendingMove: null,
+  blackPendingMove: null,
+  selectedPiece: null,
+  validMoves: [],
+  winner: null,
+  settlementResult: null,
+  message: '',
+});
 
 function App() {
-  const [onlineState, setOnlineState] = useState<OnlineGameState>({
-    connected: false,
-    roomId: null,
-    side: null,
-    pieces: INITIAL_PIECES.map(p => ({ ...p })),
-    phase: 'waiting',
-    redConfirmed: false,
-    blackConfirmed: false,
-    redPendingMove: null,
-    blackPendingMove: null,
-    winner: null,
-    redOnline: false,
-    blackOnline: false,
-    message: '',
-  });
-
-  const [viewSide, setViewSide] = useState<Side>('red');
-  const [selectedPiece, setSelectedPiece] = useState<Piece | null>(null);
-  const [validMoves, setValidMoves] = useState<Position[]>([]);
+  const [gameState, setGameState] = useState<GameState>(createInitialState);
   const [showToast, setShowToast] = useState<string | null>(null);
-  const [roomInput, setRoomInput] = useState('');
-  const [gameMode, setGameMode] = useState<'local' | 'online'>('local');
+  const [viewSide, setViewSide] = useState<Side>('red');
+  const [checkStatus, setCheckStatus] = useState<{ red: boolean; black: boolean }>({ red: false, black: false });
 
   // 显示提示
   const showMessage = useCallback((msg: string, duration = 2000) => {
@@ -51,545 +39,435 @@ function App() {
     setTimeout(() => setShowToast(null), duration);
   }, []);
 
-  // WebSocket 连接
-  useEffect(() => {
-    if (gameMode !== 'online') return;
+  // 选择棋子
+  const handleSelectPiece = useCallback((piece: Piece) => {
+    if (gameState.phase !== 'strategy') return;
+    
+    const isOwnSide = viewSide === piece.side;
+    if (!isOwnSide) {
+      showMessage('请切换到己方视角操作');
+      return;
+    }
+    
+    const isConfirmed = piece.side === 'red' ? gameState.redConfirmed : gameState.blackConfirmed;
+    if (isConfirmed) {
+      if (piece.side === 'red') {
+        setGameState(prev => ({ ...prev, redConfirmed: false }));
+      } else {
+        setGameState(prev => ({ ...prev, blackConfirmed: false }));
+      }
+    }
 
-    wsClient.connect()
-      .then(() => {
-        setOnlineState(prev => ({ ...prev, connected: true, message: '已连接到服务器' }));
-      })
-      .catch(() => {
-        showMessage('连接服务器失败', 3000);
-      });
-
-    // 监听消息
-    wsClient.on('connected', () => {
-      setOnlineState(prev => ({ ...prev, connected: true }));
-    });
-
-    wsClient.on('room_created', (payload: unknown) => {
-      const { roomId } = payload as { roomId: string };
-      setOnlineState(prev => ({ ...prev, roomId, message: `房间已创建: ${roomId}` }));
-      showMessage(`房间号: ${roomId}`, 3000);
-    });
-
-    wsClient.on('joined', (payload: unknown) => {
-      const { roomId, side } = payload as { roomId: string; side: Side };
-      setOnlineState(prev => ({ 
-        ...prev, 
-        roomId, 
-        side, 
-        message: `你是${side === 'red' ? '红方' : '黑方'}` 
-      }));
-      showMessage(`已加入${side === 'red' ? '红方' : '黑方'}`, 2000);
-    });
-
-    wsClient.on('room_state', (payload: unknown) => {
-      const state = payload as RoomState;
-      setOnlineState(prev => ({
+    if (gameState.selectedPiece?.id === piece.id) {
+      setGameState(prev => ({
         ...prev,
-        pieces: state.pieces as Piece[],
-        phase: state.phase as GamePhase,
-        redConfirmed: state.redConfirmed,
-        blackConfirmed: state.blackConfirmed,
-        redPendingMove: state.redPendingMove,
-        blackPendingMove: state.blackPendingMove,
-        winner: state.winner as Side | 'draw' | null,
-        redOnline: state.redOnline,
-        blackOnline: state.blackOnline,
-        side: state.side || prev.side,
-        message: state.phase === 'waiting' ? '等待玩家加入...' : '',
+        selectedPiece: null,
+        validMoves: [],
       }));
-    });
-
-    wsClient.on('error', (payload: unknown) => {
-      const { message } = payload as { message: string };
-      showMessage(message, 2000);
-    });
-
-    wsClient.on('left_room', () => {
-      setOnlineState({
-        connected: true,
-        roomId: null,
-        side: null,
-        pieces: INITIAL_PIECES.map(p => ({ ...p })),
-        phase: 'strategy',
-        redConfirmed: false,
-        blackConfirmed: false,
-        redPendingMove: null,
-        blackPendingMove: null,
-        winner: null,
-        redOnline: false,
-        blackOnline: false,
-        message: '',
-      });
-      setSelectedPiece(null);
-      setValidMoves([]);
-    });
-
-    return () => {
-      wsClient.disconnect();
-    };
-  }, [gameMode, showMessage]);
-
-  // 在线模式：选择棋子
-  const handleSelectPieceOnline = useCallback((piece: Piece) => {
-    if (onlineState.phase !== 'strategy') return;
-    if (!onlineState.side || piece.side !== onlineState.side) return;
-
-    // 检查是否已经确认
-    const isConfirmed = piece.side === 'red' ? onlineState.redConfirmed : onlineState.blackConfirmed;
-    if (isConfirmed) {
-      showMessage('本回合已走棋，点击"重新走棋"可撤销', 2000);
       return;
     }
 
-    if (selectedPiece?.id === piece.id) {
-      setSelectedPiece(null);
-      setValidMoves([]);
-      return;
-    }
-
-    // 简单的移动验证（实际验证在服务端）
-    setSelectedPiece(piece);
-    // 这里应该调用服务端的 getValidMoves，但目前简化为所有空格
-    const moves: Position[] = [];
-    setValidMoves(moves);
-  }, [onlineState.phase, onlineState.side, onlineState.redConfirmed, onlineState.blackConfirmed, selectedPiece, showMessage]);
-
-  // 在线模式：移动棋子
-  const handleMovePieceOnline = useCallback((to: Position) => {
-    if (!selectedPiece || !onlineState.roomId) return;
-
-    const from = selectedPiece.position;
-    wsClient.submitMove(from as [number, number], to as [number, number]);
-    setSelectedPiece(null);
-    setValidMoves([]);
-  }, [selectedPiece, onlineState.roomId]);
-
-  // 创建房间
-  const handleCreateRoom = useCallback(() => {
-    wsClient.createRoom();
-  }, []);
-
-  // 加入房间
-  const handleJoinRoom = useCallback(() => {
-    if (!roomInput.trim()) {
-      showMessage('请输入房间号', 2000);
-      return;
-    }
-    wsClient.joinRoom(roomInput.trim().toUpperCase());
-    setRoomInput('');
-  }, [roomInput, showMessage]);
-
-  // 离开房间
-  const handleLeaveRoom = useCallback(() => {
-    wsClient.leaveRoom();
-  }, []);
-
-  // 开始游戏
-  const handleStartGame = useCallback(() => {
-    wsClient.startGame();
-  }, []);
-
-  // 重新走棋（撤销）
-  const handleUndoMove = useCallback(() => {
-    wsClient.undoMove();
-  }, []);
-
-  // 重置游戏
-  const handleResetGame = useCallback(() => {
-    wsClient.resetGame();
-  }, []);
-
-  // 本地模式的状态
-  const [localState, setLocalState] = useState({
-    phase: 'strategy' as GamePhase,
-    redConfirmed: false,
-    blackConfirmed: false,
-    pieces: INITIAL_PIECES.map(p => ({ ...p })),
-    redPendingMove: null as Move | null,
-    blackPendingMove: null as Move | null,
-    winner: null as Side | 'draw' | null,
-    selectedPiece: null as Piece | null,
-    validMoves: [] as Position[],
-  });
-
-  // 本地模式：选择棋子
-  const handleSelectPieceLocal = useCallback((piece: Piece) => {
-    if (localState.phase !== 'strategy') return;
+    const validMoves = getValidMoves(piece, gameState.pieces);
     
-    // 检查该方是否已走棋
-    const isRed = piece.side === 'red';
-    const isConfirmed = isRed ? localState.redConfirmed : localState.blackConfirmed;
-    if (isConfirmed) {
-      showMessage('本回合已走棋，点击"重走"可撤销');
-      return;
-    }
+    setGameState(prev => ({
+      ...prev,
+      selectedPiece: piece,
+      validMoves,
+    }));
+  }, [gameState.phase, gameState.selectedPiece, gameState.pieces, gameState.redConfirmed, gameState.blackConfirmed, viewSide, showMessage]);
 
-    if (localState.selectedPiece?.id === piece.id) {
-      setLocalState(prev => ({ ...prev, selectedPiece: null, validMoves: [] }));
-      return;
-    }
-
-    // 计算有效移动
-    const moves = getValidMoves(piece, localState.pieces);
-    setLocalState(prev => ({ ...prev, selectedPiece: piece, validMoves: moves }));
-  }, [localState.phase, localState.redConfirmed, localState.blackConfirmed, localState.selectedPiece, localState.pieces, showMessage]);
-
-  // 本地模式：移动棋子（策略阶段只记录，不实际移动）
-  const handleMovePieceLocal = useCallback((to: Position) => {
-    if (!localState.selectedPiece) return;
-    if (localState.phase !== 'strategy') return;
+  // 移动棋子
+  const handleMovePiece = useCallback((to: Position) => {
+    if (!gameState.selectedPiece || gameState.phase !== 'strategy') return;
     
-    const selectedPiece = localState.selectedPiece;
+    const selectedPiece = gameState.selectedPiece;
     const side = selectedPiece.side;
     
-    // 只记录 pending move，不实际移动棋子
-    const pendingMove: Move = { from: selectedPiece.position, to };
-    
-    setLocalState(prev => ({
-      ...prev,
-      redPendingMove: side === 'red' ? pendingMove : prev.redPendingMove,
-      blackPendingMove: side === 'black' ? pendingMove : prev.blackPendingMove,
-      selectedPiece: null,
-      validMoves: [],
-    }));
-  }, [localState.selectedPiece, localState.phase]);
+    const pendingMove: Move = {
+      from: selectedPiece.position,
+      to,
+    };
 
-  // 重新走棋（本地）- 只清空pending move
-  const handleUndoMoveLocal = useCallback((side: Side) => {
-    setLocalState(prev => ({
-      ...prev,
-      redPendingMove: side === 'red' ? null : prev.redPendingMove,
-      blackPendingMove: side === 'black' ? null : prev.blackPendingMove,
-    }));
-  }, []);
+    setGameState(prev => {
+      const newState = { ...prev };
+      if (side === 'red') {
+        newState.redPendingMove = pendingMove;
+        newState.redConfirmed = true;
+      } else {
+        newState.blackPendingMove = pendingMove;
+        newState.blackConfirmed = true;
+      }
+      newState.selectedPiece = null;
+      newState.validMoves = [];
+      return newState;
+    });
+  }, [gameState.selectedPiece, gameState.phase, showMessage]);
 
-  // 结算 - 执行移动并判定胜负
-  const handleSettleLocal = useCallback(() => {
-    const { redPendingMove, blackPendingMove, pieces } = localState;
-    
-    // 双方都要走棋后才能结算
-    if (!redPendingMove || !blackPendingMove) {
-      showMessage('请红黑双方都走棋后再结算');
+  // 结算按钮
+  const handleSettle = useCallback(() => {
+    if (!gameState.redPendingMove || !gameState.blackPendingMove) {
+      showMessage('双方都需要先走棋');
       return;
     }
     
-    // 验证红方移动合法性（蹩马腿、塞象眼等）
-    const redPiece = pieces.find(p => p.side === 'red' && p.position[0] === redPendingMove.from[0] && p.position[1] === redPendingMove.from[1]);
-    const blackPiece = pieces.find(p => p.side === 'black' && p.position[0] === blackPendingMove.from[0] && p.position[1] === blackPendingMove.from[1]);
+    setGameState(prev => ({
+      ...prev,
+      phase: 'settlement',
+      message: '双方策略已锁定，开始结算...',
+    }));
+  }, [gameState.redPendingMove, gameState.blackPendingMove, showMessage]);
+
+  // 重新走棋
+  const handleRedoMove = useCallback((side: Side) => {
+    if (gameState.phase !== 'strategy') return;
     
-    if (redPiece && !isValidMove(redPiece, redPendingMove.to, pieces)) {
-      showMessage('红方移动无效（蹩马腿/塞象眼等），请重新走棋');
-      return;
-    }
-    if (blackPiece && !isValidMove(blackPiece, blackPendingMove.to, pieces)) {
-      showMessage('黑方移动无效（蹩马腿/塞象眼等），请重新走棋');
-      return;
-    }
-    
-    // 执行移动（模拟双方同时移动）
-    let newPieces = [...pieces];
-    
-    // 执行红方移动
-    if (redPiece) {
-      // 移除被吃的黑棋
-      newPieces = newPieces.filter(p => !(p.side === 'black' && p.position[0] === redPendingMove.to[0] && p.position[1] === redPendingMove.to[1]));
-      // 移动红棋
-      newPieces = newPieces.map(p => p.id === redPiece.id ? { ...p, position: redPendingMove.to } : p);
-    }
-    
-    // 执行黑方移动
-    const updatedBlackPiece = newPieces.find(p => p.side === 'black' && p.position[0] === blackPendingMove.from[0] && p.position[1] === blackPendingMove.from[1]);
-    if (updatedBlackPiece) {
-      // 移除被吃的红棋
-      newPieces = newPieces.filter(p => !(p.side === 'red' && p.position[0] === blackPendingMove.to[0] && p.position[1] === blackPendingMove.to[1]));
-      // 移动黑棋
-      newPieces = newPieces.map(p => p.id === updatedBlackPiece.id ? { ...p, position: blackPendingMove.to } : p);
-    }
-    
-    // 检查将帅是否还在
-    const redGeneral = newPieces.find(p => p.type === 'king' && p.side === 'red');
-    const blackGeneral = newPieces.find(p => p.type === 'king' && p.side === 'black');
-    
-    let winner: Side | 'draw' | null = null;
-    
-    if (!redGeneral && !blackGeneral) {
-      winner = 'draw'; // 同归于尽
-    } else if (!redGeneral) {
-      winner = 'black'; // 红将被吃，黑胜
-    } else if (!blackGeneral) {
-      winner = 'red'; // 黑将被吃，红胜
-    }
-    
-    if (winner) {
-      // 游戏结束
-      setLocalState(prev => ({ 
-        ...prev, 
-        phase: 'ended',
+    setGameState(prev => {
+      const newState = { ...prev };
+      if (side === 'red') {
+        newState.redPendingMove = null;
+        newState.redConfirmed = false;
+      } else {
+        newState.blackPendingMove = null;
+        newState.blackConfirmed = false;
+      }
+      return newState;
+    });
+  }, [gameState.phase]);
+
+  // 执行结算
+  useEffect(() => {
+    if (gameState.phase !== 'settlement') return;
+
+    const doSettlement = async () => {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      const pieces = gameState.pieces;
+      const redMove = gameState.redPendingMove;
+      const blackMove = gameState.blackPendingMove;
+      
+      console.log('=== 结算开始 ===');
+      console.log('红方移动:', redMove);
+      console.log('黑方移动:', blackMove);
+      
+      let finalPieces = pieces.map(p => ({ ...p }));
+      
+      console.log('执行前棋子数:', finalPieces.length);
+      
+      // ===== 第二步：执行所有移动 =====
+      if (redMove) {
+        const redPiece = finalPieces.find(p => 
+          p.side === 'red' && p.position[0] === redMove.from[0] && p.position[1] === redMove.from[1]
+        );
+        if (redPiece) {
+          console.log(`红方棋子 ${redPiece.id} 从 ${redMove.from} 移动到 ${redMove.to}`);
+          finalPieces = finalPieces.map(p => {
+            if (p.id === redPiece.id) {
+              return { ...p, position: [...redMove.to] as Position };
+            }
+            return p;
+          });
+        }
+      }
+      
+      if (blackMove) {
+        const blackPiece = finalPieces.find(p => 
+          p.side === 'black' && p.position[0] === blackMove.from[0] && p.position[1] === blackMove.from[1]
+        );
+        if (blackPiece) {
+          console.log(`黑方棋子 ${blackPiece.id} 从 ${blackMove.from} 移动到 ${blackMove.to}`);
+          finalPieces = finalPieces.map(p => {
+            if (p.id === blackPiece.id) {
+              return { ...p, position: [...blackMove.to] as Position };
+            }
+            return p;
+          });
+        }
+      }
+      
+      console.log('执行后棋子数:', finalPieces.length);
+      
+      // ===== 第三步：检查吃子 =====
+      // 规则：移动后，如果目标位置有敌方棋子 → 吃子
+      // 注意：是移动后的最终状态，不是原始状态
+      const toRemove: string[] = [];
+      
+      // 检查红方移动目标
+      if (redMove) {
+        const targetKey = `${redMove.to[0]},${redMove.to[1]}`;
+        // 移动后，目标位置是否有黑棋
+        const enemyAtTarget = finalPieces.find(p => 
+          p.side === 'black' && p.position[0] === redMove.to[0] && p.position[1] === redMove.to[1]
+        );
+        if (enemyAtTarget) {
+          console.log(`红方吃掉黑棋 ${enemyAtTarget.id}`);
+          toRemove.push(enemyAtTarget.id);
+        }
+      }
+      
+      // 检查黑方移动目标
+      if (blackMove) {
+        const targetKey = `${blackMove.to[0]},${blackMove.to[1]}`;
+        // 移动后，目标位置是否有红棋
+        const enemyAtTarget = finalPieces.find(p => 
+          p.side === 'red' && p.position[0] === blackMove.to[0] && p.position[1] === blackMove.to[1]
+        );
+        if (enemyAtTarget) {
+          console.log(`黑方吃掉红棋 ${enemyAtTarget.id}`);
+          toRemove.push(enemyAtTarget.id);
+        }
+      }
+      
+      console.log('toRemove:', toRemove);
+      finalPieces = finalPieces.filter(p => !toRemove.includes(p.id));
+      console.log('最终棋子数:', finalPieces.length);
+
+      // 检查将帅面对面
+      const redKing = finalPieces.find(p => p.type === 'king' && p.side === 'red');
+      const blackKing = finalPieces.find(p => p.type === 'king' && p.side === 'black');
+      let winner: 'red' | 'black' | 'draw' | null = null;
+      let reason = '';
+
+      if (redKing && blackKing && redKing.position[0] === blackKing.position[0]) {
+        const between = finalPieces.filter(p => {
+          if (p.type === 'king') return false;
+          return p.position[0] === redKing.position[0] &&
+                 p.position[1] > Math.min(redKing.position[1], blackKing.position[1]) &&
+                 p.position[1] < Math.max(redKing.position[1], blackKing.position[1]);
+        });
+
+        if (between.length === 0) {
+          finalPieces = finalPieces.filter(p => p.type !== 'king');
+          winner = 'draw';
+          reason = '将帅对面，双方同时被吃';
+        }
+      }
+
+      // 检查是否有一方将帅被吃
+      if (!winner) {
+        const { ended, winner: w } = checkGameEnd(finalPieces);
+        if (ended) {
+          winner = w;
+          reason = w === 'red' ? '红帅被吃，黑方获胜' : w === 'black' ? '黑将被吃，红方获胜' : '和棋';
+        }
+      }
+
+      // 检查将军状态
+      const redInCheck = isCheck('red', finalPieces);
+      const blackInCheck = isCheck('black', finalPieces);
+      setCheckStatus({ red: redInCheck, black: blackInCheck });
+
+      // 如果没有胜负，显示结算信息
+      let finalMessage = '';
+      if (winner) {
+        const winnerText = winner === 'draw' ? '和棋！' : winner === 'red' ? '红方胜利！' : '黑方胜利！';
+        finalMessage = winnerText + (reason ? ' ' + reason : '');
+      }
+
+      setGameState(prev => ({
+        ...prev,
+        pieces: finalPieces,
+        phase: winner ? 'ended' : 'strategy',
         winner,
-        pieces: newPieces,
-        redConfirmed: true,
-        blackConfirmed: true,
-      }));
-    } else {
-      // 无人获胜，进入下一回合
-      setLocalState(prev => ({ 
-        ...prev, 
-        phase: 'strategy',
-        pieces: newPieces,
+        settlementResult: winner ? { 
+          redMove: prev.redPendingMove, 
+          blackMove: prev.blackPendingMove, 
+          captures: { red: [], black: [] },
+          winner,
+          reason 
+        } : null,
+        currentOperatedSide: winner ? prev.currentOperatedSide : 'red',
         redConfirmed: false,
         blackConfirmed: false,
         redPendingMove: null,
         blackPendingMove: null,
       }));
+
+      if (finalMessage) {
+        showMessage(finalMessage, 3000);
+      }
+    };
+
+    doSettlement();
+  }, [gameState.phase, gameState.pieces, gameState.redPendingMove, gameState.blackPendingMove, showMessage]);
+
+  // 切换视角
+  const handleSwitchView = useCallback((side: Side) => {
+    setViewSide(side);
+    if (gameState.phase === 'strategy') {
+      setGameState(prev => ({ ...prev, currentOperatedSide: side }));
     }
-  }, [localState.pieces, localState.redPendingMove, localState.blackPendingMove, showMessage]);
+  }, [gameState.phase]);
 
-  // 渲染在线模式 - 简洁聚焦布局
-  const renderOnlineMode = () => (
-    <div className="online-mode">
-      {/* 顶部：紧凑模式切换 */}
-      <div className="online-topbar">
-        <div className="mode-switch">
-          <button 
-            className={gameMode === 'local' ? 'active' : ''} 
-            onClick={() => setGameMode('local')}
-          >
-            本地
-          </button>
-          <button 
-            className={gameMode === 'online' ? 'active' : ''} 
-            onClick={() => setGameMode('online')}
-          >
-            联机
-          </button>
+  // 重置游戏
+  const handleReset = useCallback(() => {
+    setGameState(createInitialState());
+    setViewSide('red');
+    setCheckStatus({ red: false, black: false });
+    showMessage('游戏已重置', 1500);
+  }, [showMessage]);
+
+  // 获取显示用的棋子
+  const getDisplayPieces = useCallback((): Piece[] => {
+    return gameState.pieces;
+  }, [gameState.pieces]);
+
+  const canSettle = gameState.redPendingMove && gameState.blackPendingMove && 
+                    gameState.phase === 'strategy';
+
+  return (
+    <div className="app-container">
+      {/* 顶部状态栏 */}
+      <div className="status-bar">
+        <div className="status-item">
+          <span
+            className={`status-dot red ${gameState.redConfirmed ? 'confirmed' : 'waiting'}`}
+          />
+          <span>红方</span>
+          {checkStatus.red && <span style={{ color: '#FF4444', fontWeight: 'bold' }}>被将军!</span>}
+          {gameState.redPendingMove && (
+            <span style={{ fontSize: '10px', color: '#FFD700' }}>
+              {formatMove(gameState.redPendingMove)}
+            </span>
+          )}
         </div>
-        
-        {/* 连接状态 */}
-        <div className={`conn-indicator ${onlineState.connected ? 'online' : 'offline'}`}>
-          {onlineState.connected ? '已连接' : '未连接'}
+
+        <span className={`phase-badge ${gameState.phase}`}>
+          {gameState.phase === 'strategy' ? '策略阶段' : 
+           gameState.phase === 'settlement' ? '结算中' : '结束'}
+        </span>
+
+        <div className="status-item">
+          <span
+            className={`status-dot black ${gameState.blackConfirmed ? 'confirmed' : 'waiting'}`}
+          />
+          <span>黑方</span>
+          {checkStatus.black && <span style={{ color: '#FF4444', fontWeight: 'bold' }}>被将军!</span>}
+          {gameState.blackPendingMove && (
+            <span style={{ fontSize: '10px', color: '#FFD700' }}>
+              {formatMove(gameState.blackPendingMove)}
+            </span>
+          )}
         </div>
       </div>
 
-      {/* 棋盘 - 最大化显示 */}
-      <div className="board-section">
-        <ChessBoard
-          pieces={onlineState.pieces}
-          selectedPiece={selectedPiece}
-          validMoves={validMoves}
-          currentOperatedSide={viewSide}
-          phase={onlineState.phase}
-          flipped={viewSide === 'black'}
-          redPendingMove={onlineState.redPendingMove}
-          blackPendingMove={onlineState.blackPendingMove}
-          onSelectPiece={handleSelectPieceOnline}
-          onMovePiece={handleMovePieceOnline}
-        />
+      {/* 棋盘 */}
+      <ChessBoard
+        pieces={getDisplayPieces()}
+        selectedPiece={gameState.selectedPiece}
+        validMoves={gameState.validMoves}
+        currentOperatedSide={viewSide}
+        phase={gameState.phase}
+        flipped={viewSide === 'black'}
+        redPendingMove={gameState.redPendingMove}
+        blackPendingMove={gameState.blackPendingMove}
+        onSelectPiece={handleSelectPiece}
+        onMovePiece={handleMovePiece}
+      />
+
+      {/* 控制面板 */}
+      <div className="control-panel">
+        <div className="view-switch">
+          <button
+            className={`view-btn ${viewSide === 'red' ? 'active' : ''}`}
+            onClick={() => handleSwitchView('red')}
+          >
+            红方视角
+          </button>
+          <button
+            className={`view-btn ${viewSide === 'black' ? 'active' : ''}`}
+            onClick={() => handleSwitchView('black')}
+          >
+            黑方视角
+          </button>
+        </div>
       </div>
 
-      {/* 底部信息栏 */}
-      <div className="online-statusbar">
-        {/* 房间/玩家状态 */}
-        {onlineState.roomId ? (
-          <div className="room-info">
-            <span className="room-code">{onlineState.roomId}</span>
-            <span className="divider">|</span>
-            <span className={`player-tag ${onlineState.side}`}>
-              {onlineState.side === 'red' ? '红方' : onlineState.side === 'black' ? '黑方' : '待加入'}
-            </span>
-            <span className="players">
-              <span className={`dot ${onlineState.redOnline ? 'online' : ''}`}>红</span>
-              <span className={`dot ${onlineState.blackOnline ? 'online' : ''}`}>黑</span>
-            </span>
-          </div>
-        ) : (
-          <div className="join-area">
-            <input
-              type="text"
-              placeholder="房间号"
-              value={roomInput}
-              onChange={(e) => setRoomInput(e.target.value.toUpperCase())}
-              maxLength={6}
-            />
-            <button className="join-btn" onClick={handleJoinRoom}>加入</button>
-          </div>
+      <div className="control-panel">
+        {viewSide === 'red' && gameState.redPendingMove && !gameState.redConfirmed && (
+          <button
+            className="btn btn-reset"
+            onClick={() => handleRedoMove('red')}
+          >
+            红方重走
+          </button>
         )}
-
-        {/* 操作按钮 */}
-        <div className="action-row">
-          {onlineState.roomId && !onlineState.side && (
-            <>
-              <button className="red-btn" onClick={() => wsClient.chooseSide('red')}>选红</button>
-              <button className="black-btn" onClick={() => wsClient.chooseSide('black')}>选黑</button>
-            </>
-          )}
-          {onlineState.roomId && onlineState.side && onlineState.phase === 'waiting' && (
-            <button className="start-btn" onClick={handleStartGame} disabled={!onlineState.redOnline || !onlineState.blackOnline}>
-              开始
-            </button>
-          )}
-          {onlineState.phase === 'strategy' && (
-            <button className="undo-btn" onClick={handleUndoMove}>重走</button>
-          )}
-          {onlineState.roomId && (
-            <button className="leave-btn" onClick={handleLeaveRoom}>离开</button>
-          )}
-        </div>
+        {viewSide === 'black' && gameState.blackPendingMove && !gameState.blackConfirmed && (
+          <button
+            className="btn btn-reset"
+            onClick={() => handleRedoMove('black')}
+          >
+            黑方重走
+          </button>
+        )}
       </div>
 
-      {/* 视角切换 */}
-      <div className="view-row">
-        <button 
-          className={`view-btn ${viewSide === 'red' ? 'active red' : ''}`}
-          onClick={() => setViewSide('red')}
+      <div className="control-panel">
+        <button
+          className="btn btn-settle"
+          onClick={handleSettle}
+          disabled={!canSettle}
         >
-          红视角
+          结算
         </button>
-        <button 
-          className={`view-btn ${viewSide === 'black' ? 'active black' : ''}`}
-          onClick={() => setViewSide('black')}
-        >
-          黑视角
+        <button className="btn btn-reset" onClick={handleReset}>
+          重置
         </button>
       </div>
 
-      {/* Toast */}
-      {showToast && <div className="toast">{showToast}</div>}
-    </div>
-  );
-
-  // 渲染本地模式 - 与在线模式一致的简洁布局
-  const renderLocalMode = () => (
-    <div className="online-mode">
-      {/* 顶部：模式切换 */}
-      <div className="online-topbar">
-        <div className="mode-switch">
-          <button 
-            className={gameMode === 'local' ? 'active' : ''} 
-            onClick={() => setGameMode('local')}
-          >
-            本地
-          </button>
-          <button 
-            className={gameMode === 'online' ? 'active' : ''} 
-            onClick={() => setGameMode('online')}
-          >
-            联机
-          </button>
-        </div>
-        
-        {/* 状态指示 */}
-        <div className="conn-indicator">
-          {localState.phase === 'strategy' && (
-            <>
-              <span className={`player-tag ${localState.redConfirmed ? 'done' : 'red'}`}>
-                红{localState.redConfirmed ? '✓' : '○'}
-              </span>
-              <span className={`player-tag ${localState.blackConfirmed ? 'done' : 'black'}`}>
-                黑{localState.blackConfirmed ? '✓' : '○'}
-              </span>
-            </>
-          )}
-          {localState.phase === 'settlement' && '结算中...'}
-          {localState.phase === 'ended' && localState.winner && (
-            <span className="winner">
-              {localState.winner === 'red' ? '红方胜' : localState.winner === 'black' ? '黑方胜' : '平局'}
+      <div className="control-panel" style={{ fontSize: '12px', color: '#AAA' }}>
+        {gameState.phase === 'strategy' && (
+          <>
+            当前视角：
+            <span style={{ 
+              color: viewSide === 'red' ? '#C41E3A' : '#666',
+              fontWeight: 'bold'
+            }}>
+              {viewSide === 'red' ? '红方' : '黑方'}
             </span>
-          )}
-        </div>
+            {!gameState.redPendingMove && !gameState.blackPendingMove && ' - 请选择一个棋子移动'}
+            {viewSide === 'red' && gameState.redPendingMove && ' - 红方已走棋，可切换视角'}
+            {viewSide === 'black' && gameState.blackPendingMove && ' - 黑方已走棋，可切换视角'}
+            {!canSettle && ' - 等待双方都走棋'}
+            {canSettle && ' - 可以点击结算'}
+          </>
+        )}
       </div>
 
-      {/* 棋盘 - 最大化显示 */}
-      <div className="board-section">
-        <ChessBoard
-          pieces={localState.pieces}
-          selectedPiece={localState.selectedPiece}
-          validMoves={localState.validMoves}
-          currentOperatedSide={viewSide}
-          phase={localState.phase}
-          flipped={viewSide === 'black'}
-          redPendingMove={localState.redPendingMove}
-          blackPendingMove={localState.blackPendingMove}
-          onSelectPiece={handleSelectPieceLocal}
-          onMovePiece={handleMovePieceLocal}
-          redConfirmed={localState.redConfirmed}
-          blackConfirmed={localState.blackConfirmed}
-        />
-      </div>
-
-      {/* 底部操作栏 */}
-      <div className="online-statusbar">
-        {/* 重新走棋按钮 */}
-        <div className="action-row">
-          {localState.redPendingMove && !localState.redConfirmed && (
-            <button className="red-btn" onClick={() => handleUndoMoveLocal('red')}>
-              红重走
-            </button>
-          )}
-          {localState.blackPendingMove && !localState.blackConfirmed && (
-            <button className="black-btn" onClick={() => handleUndoMoveLocal('black')}>
-              黑重走
-            </button>
-          )}
-        </div>
-
-        {/* 主要操作 */}
-        <div className="action-row">
-          {localState.phase === 'strategy' && (
-            <button 
-              className="start-btn" 
-              onClick={handleSettleLocal}
-              disabled={!localState.redPendingMove || !localState.blackPendingMove}
-            >
-              结算
-            </button>
-          )}
-          {localState.phase === 'ended' && (
-            <button 
-              className="start-btn" 
-              onClick={() => setLocalState({
-                phase: 'strategy',
-                redConfirmed: false,
-                blackConfirmed: false,
-                pieces: INITIAL_PIECES.map(p => ({ ...p })),
-                redPendingMove: null,
-                blackPendingMove: null,
-                winner: null,
-                selectedPiece: null,
-                validMoves: [],
-              })}
-            >
-              重开
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* 视角切换 */}
-      <div className="view-row">
-        <button 
-          className={`view-btn ${viewSide === 'red' ? 'active red' : ''}`}
-          onClick={() => setViewSide('red')}
-        >
-          红视角
-        </button>
-        <button 
-          className={`view-btn ${viewSide === 'black' ? 'active black' : ''}`}
-          onClick={() => setViewSide('black')}
-        >
-          黑视角
-        </button>
-      </div>
-
-      {/* Toast */}
       {showToast && <div className="toast">{showToast}</div>}
+
+      {gameState.phase === 'settlement' && (
+        <div className="settlement-overlay">
+          <div className="settlement-text">结算中...</div>
+        </div>
+      )}
+
+      {gameState.phase === 'ended' && gameState.winner && (
+        <div className="modal-overlay" onClick={handleReset}>
+          <div className={`modal-content ${
+            gameState.winner === 'red' ? 'red-wins' :
+            gameState.winner === 'black' ? 'black-wins' : 'draw'
+          }`}>
+            <h2>
+              {gameState.winner === 'red' ? '红方胜利！' :
+               gameState.winner === 'black' ? '黑方胜利！' : '和棋！'}
+            </h2>
+            <p>
+              {gameState.settlementResult?.reason || '游戏结束'}
+            </p>
+            {gameState.redPendingMove && gameState.blackPendingMove && (
+              <p style={{ fontSize: '12px', marginTop: '10px' }}>
+                红方：{formatMove(gameState.redPendingMove)}<br />
+                黑方：{formatMove(gameState.blackPendingMove)}
+              </p>
+            )}
+            <button className="btn btn-confirm" onClick={handleReset}>
+              重新开始
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
-
-  return gameMode === 'online' ? renderOnlineMode() : renderLocalMode();
 }
 
 export default App;
