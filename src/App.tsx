@@ -114,7 +114,7 @@ function App() {
         roomId: null,
         side: null,
         pieces: INITIAL_PIECES.map(p => ({ ...p })),
-        phase: 'waiting',
+        phase: 'strategy',
         redConfirmed: false,
         blackConfirmed: false,
         redPendingMove: null,
@@ -220,8 +220,9 @@ function App() {
   const handleSelectPieceLocal = useCallback((piece: Piece) => {
     if (localState.phase !== 'strategy') return;
     
-    // 本地双人模式：检查该方是否已确认走棋
-    const isConfirmed = piece.side === 'red' ? localState.redConfirmed : localState.blackConfirmed;
+    // 检查该方是否已走棋
+    const isRed = piece.side === 'red';
+    const isConfirmed = isRed ? localState.redConfirmed : localState.blackConfirmed;
     if (isConfirmed) {
       showMessage('本回合已走棋，点击"重走"可撤销');
       return;
@@ -244,7 +245,7 @@ function App() {
     const selectedPiece = localState.selectedPiece;
     const side = selectedPiece.side;
     
-    // 直接移动棋子
+    // 直接移动棋子，记录pending move但不标记已确认
     setLocalState(prev => {
       const newPieces = prev.pieces.map(p => {
         if (p.id === selectedPiece.id) {
@@ -257,17 +258,16 @@ function App() {
         return p;
       }).filter(Boolean) as Piece[];
       
-      const newState: typeof prev = {
+      const pendingMove: Move = { from: selectedPiece.position, to };
+      
+      return {
         ...prev,
         pieces: newPieces,
-        redPendingMove: side === 'red' ? { from: selectedPiece.position, to } : null,
-        blackPendingMove: side === 'black' ? { from: selectedPiece.position, to } : null,
-        redConfirmed: side === 'red' ? true : prev.redConfirmed,
-        blackConfirmed: side === 'black' ? true : prev.blackConfirmed,
+        redPendingMove: side === 'red' ? pendingMove : prev.redPendingMove,
+        blackPendingMove: side === 'black' ? pendingMove : prev.blackPendingMove,
         selectedPiece: null,
         validMoves: [],
       };
-      return newState;
     });
   }, [localState.selectedPiece]);
 
@@ -276,14 +276,14 @@ function App() {
     const pendingMove = side === 'red' ? localState.redPendingMove : localState.blackPendingMove;
     if (!pendingMove) return;
     
-    // 找到被吃掉的棋子来恢复
-    const capturedPiece = INITIAL_PIECES.find(p => 
-      p.side !== side && 
-      p.position[0] === pendingMove.to[0] && 
-      p.position[1] === pendingMove.to[1]
-    );
-    
     setLocalState(prev => {
+      // 找到被吃掉的棋子来恢复
+      const capturedPiece = INITIAL_PIECES.find(p => 
+        p.side !== side && 
+        p.position[0] === pendingMove.to[0] && 
+        p.position[1] === pendingMove.to[1]
+      );
+      
       // 恢复棋子位置
       const newPieces = prev.pieces.map(p => {
         if (p.side === side && p.position[0] === pendingMove.to[0] && p.position[1] === pendingMove.to[1]) {
@@ -302,17 +302,23 @@ function App() {
         pieces: newPieces,
         redPendingMove: side === 'red' ? null : prev.redPendingMove,
         blackPendingMove: side === 'black' ? null : prev.blackPendingMove,
-        redConfirmed: side === 'red' ? false : prev.redConfirmed,
-        blackConfirmed: side === 'black' ? false : prev.blackConfirmed,
       };
     });
   }, [localState.redPendingMove, localState.blackPendingMove]);
 
   // 结算 - 判定胜负
   const handleSettleLocal = useCallback(() => {
+    const { redPendingMove, blackPendingMove } = localState;
+    
+    // 双方都要走棋后才能结算
+    if (!redPendingMove || !blackPendingMove) {
+      showMessage('请红黑双方都走棋后再结算');
+      return;
+    }
+    
     // 检查将帅是否还在
-    const redGeneral = localState.pieces.find(p => p.type === 'general' && p.side === 'red');
-    const blackGeneral = localState.pieces.find(p => p.type === 'general' && p.side === 'black');
+    const redGeneral = localState.pieces.find(p => p.type === 'king' && p.side === 'red');
+    const blackGeneral = localState.pieces.find(p => p.type === 'king' && p.side === 'black');
     
     let winner: Side | 'draw' | null = null;
     
@@ -324,12 +330,27 @@ function App() {
       winner = 'red'; // 黑将被吃，红胜
     }
     
-    setLocalState(prev => ({ 
-      ...prev, 
-      phase: 'ended',
-      winner,
-    }));
-  }, [localState.pieces]);
+    if (winner) {
+      // 游戏结束
+      setLocalState(prev => ({ 
+        ...prev, 
+        phase: 'ended',
+        winner,
+        redConfirmed: true,
+        blackConfirmed: true,
+      }));
+    } else {
+      // 无人获胜，进入下一回合
+      setLocalState(prev => ({ 
+        ...prev, 
+        phase: 'strategy',
+        redConfirmed: false,
+        blackConfirmed: false,
+        redPendingMove: null,
+        blackPendingMove: null,
+      }));
+    }
+  }, [localState.pieces, localState.redPendingMove, localState.blackPendingMove, showMessage]);
 
   // 渲染在线模式 - 简洁聚焦布局
   const renderOnlineMode = () => (
@@ -498,7 +519,8 @@ function App() {
           blackPendingMove={localState.blackPendingMove}
           onSelectPiece={handleSelectPieceLocal}
           onMovePiece={handleMovePieceLocal}
-          selectableSides={['red', 'black']} // 本地模式允许选择双方
+          redConfirmed={localState.redConfirmed}
+          blackConfirmed={localState.blackConfirmed}
         />
       </div>
 

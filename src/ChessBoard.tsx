@@ -12,7 +12,8 @@ interface ChessBoardProps {
   blackPendingMove: Move | null;
   onSelectPiece: (piece: Piece) => void;
   onMovePiece: (to: Position) => void;
-  selectableSides?: Side[]; // 本地模式可选择多个阵营
+  redConfirmed?: boolean;
+  blackConfirmed?: boolean;
 }
 
 // 棋盘尺寸常量
@@ -312,7 +313,8 @@ function ChessBoard({
   blackPendingMove,
   onSelectPiece,
   onMovePiece,
-  selectableSides,
+  redConfirmed,
+  blackConfirmed,
 }: ChessBoardProps) {
   // 检查某个位置是否有棋子
   const getPieceAtPosition = (col: number, row: number): Piece | undefined => {
@@ -359,10 +361,12 @@ function ChessBoard({
           const isInValidMoves = validMoves.some(
             m => m[0] === piece.position[0] && m[1] === piece.position[1]
           );
-          // 本地模式：selectableSides指定可选阵营；在线模式：仅currentOperatedSide可选
+          // 可选择：如果当前是 strategy 阶段
+          // - 如果传入了 redConfirmed/blackConfirmed（本地方向），则只能选未确认的那方
+          // - 否则只能选 currentOperatedSide
           const isSelectable = phase === 'strategy' && (
-            selectableSides 
-              ? selectableSides.includes(piece.side)
+            (redConfirmed !== undefined && blackConfirmed !== undefined)
+              ? (piece.side === 'red' ? !redConfirmed : !blackConfirmed)
               : piece.side === currentOperatedSide
           );
           return (

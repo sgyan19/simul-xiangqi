@@ -22,7 +22,7 @@ export interface Move {
 }
 
 // 游戏阶段
-export type GamePhase = 'strategy' | 'settlement' | 'ended';
+export type GamePhase = 'waiting' | 'strategy' | 'settlement' | 'ended';
 
 // 胜负结果
 export type Winner = Side | 'draw' | null;
