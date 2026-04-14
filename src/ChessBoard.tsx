@@ -362,23 +362,29 @@ function ChessBoard({
             m => m[0] === piece.position[0] && m[1] === piece.position[1]
           );
           // 本地模式：只能选当前视角阵营的棋子，且该方未走棋
-          // 在线模式：只能选 currentOperatedSide
           const isSelectable = phase === 'strategy' && piece.side === currentOperatedSide && (
             redConfirmed !== undefined 
               ? (piece.side === 'red' ? !redConfirmed : !blackConfirmed)
               : true
           );
+          // 敌方棋子在有效移动位置时可被点击（用于吃子）
+          const isTargetable = selectedPiece && isInValidMoves && piece.side !== selectedPiece.side;
           return (
             <ChessPiece
               key={piece.id}
               piece={piece}
               isSelected={selectedPiece?.id === piece.id}
-              isSelectable={isSelectable}
+              isSelectable={isSelectable || isTargetable}
               flipped={flipped}
-              isInValidMoves={false} // 策略阶段不允许吃子
+              isInValidMoves={isTargetable}
               onClick={() => {
-                if (!isSelectable) return;
-                onSelectPiece(piece);
+                if (isTargetable && selectedPiece) {
+                  // 点击敌方棋子 - 执行移动/吃子
+                  onMovePiece(piece.position);
+                } else if (isSelectable) {
+                  // 点击己方棋子 - 选择棋子
+                  onSelectPiece(piece);
+                }
               }}
             />
           );
