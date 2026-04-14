@@ -238,77 +238,38 @@ function App() {
     setLocalState(prev => ({ ...prev, selectedPiece: piece, validMoves: moves }));
   }, [localState.phase, localState.redConfirmed, localState.blackConfirmed, localState.selectedPiece, localState.pieces, showMessage]);
 
-  // 本地模式：移动棋子
+  // 本地模式：移动棋子（策略阶段只记录，不实际移动）
   const handleMovePieceLocal = useCallback((to: Position) => {
     if (!localState.selectedPiece) return;
+    if (localState.phase !== 'strategy') return;
     
     const selectedPiece = localState.selectedPiece;
     const side = selectedPiece.side;
     
-    // 直接移动棋子，记录pending move但不标记已确认
-    setLocalState(prev => {
-      const newPieces = prev.pieces.map(p => {
-        if (p.id === selectedPiece.id) {
-          return { ...p, position: to };
-        }
-        // 如果吃子，移除目标位置的棋子
-        if (p.position[0] === to[0] && p.position[1] === to[1] && p.side !== side) {
-          return null as unknown as Piece;
-        }
-        return p;
-      }).filter(Boolean) as Piece[];
-      
-      const pendingMove: Move = { from: selectedPiece.position, to };
-      
-      return {
-        ...prev,
-        pieces: newPieces,
-        redPendingMove: side === 'red' ? pendingMove : prev.redPendingMove,
-        blackPendingMove: side === 'black' ? pendingMove : prev.blackPendingMove,
-        selectedPiece: null,
-        validMoves: [],
-      };
-    });
-  }, [localState.selectedPiece]);
-
-  // 重新走棋（本地）- 需要恢复棋子位置
-  const handleUndoMoveLocal = useCallback((side: Side) => {
-    const pendingMove = side === 'red' ? localState.redPendingMove : localState.blackPendingMove;
-    if (!pendingMove) return;
+    // 只记录 pending move，不实际移动棋子
+    const pendingMove: Move = { from: selectedPiece.position, to };
     
-    setLocalState(prev => {
-      // 找到被吃掉的棋子来恢复
-      const capturedPiece = INITIAL_PIECES.find(p => 
-        p.side !== side && 
-        p.position[0] === pendingMove.to[0] && 
-        p.position[1] === pendingMove.to[1]
-      );
-      
-      // 恢复棋子位置
-      const newPieces = prev.pieces.map(p => {
-        if (p.side === side && p.position[0] === pendingMove.to[0] && p.position[1] === pendingMove.to[1]) {
-          return { ...p, position: pendingMove.from };
-        }
-        return p;
-      });
-      
-      // 如果有被吃掉的棋子，恢复它
-      if (capturedPiece && !newPieces.find(p => p.id === capturedPiece.id)) {
-        newPieces.push({ ...capturedPiece });
-      }
-      
-      return {
-        ...prev,
-        pieces: newPieces,
-        redPendingMove: side === 'red' ? null : prev.redPendingMove,
-        blackPendingMove: side === 'black' ? null : prev.blackPendingMove,
-      };
-    });
-  }, [localState.redPendingMove, localState.blackPendingMove]);
+    setLocalState(prev => ({
+      ...prev,
+      redPendingMove: side === 'red' ? pendingMove : prev.redPendingMove,
+      blackPendingMove: side === 'black' ? pendingMove : prev.blackPendingMove,
+      selectedPiece: null,
+      validMoves: [],
+    }));
+  }, [localState.selectedPiece, localState.phase]);
 
-  // 结算 - 判定胜负
+  // 重新走棋（本地）- 只清空pending move
+  const handleUndoMoveLocal = useCallback((side: Side) => {
+    setLocalState(prev => ({
+      ...prev,
+      redPendingMove: side === 'red' ? null : prev.redPendingMove,
+      blackPendingMove: side === 'black' ? null : prev.blackPendingMove,
+    }));
+  }, []);
+
+  // 结算 - 执行移动并判定胜负
   const handleSettleLocal = useCallback(() => {
-    const { redPendingMove, blackPendingMove } = localState;
+    const { redPendingMove, blackPendingMove, pieces } = localState;
     
     // 双方都要走棋后才能结算
     if (!redPendingMove || !blackPendingMove) {
@@ -316,9 +277,30 @@ function App() {
       return;
     }
     
+    // 执行移动（模拟双方同时移动）
+    let newPieces = [...pieces];
+    
+    // 执行红方移动
+    const redPiece = newPieces.find(p => p.id === pieces.find(o => o.position[0] === redPendingMove.from[0] && o.position[1] === redPendingMove.from[1] && o.side === 'red')?.id);
+    if (redPiece) {
+      // 移除被吃的黑棋
+      newPieces = newPieces.filter(p => !(p.side === 'black' && p.position[0] === redPendingMove.to[0] && p.position[1] === redPendingMove.to[1]));
+      // 移动红棋
+      newPieces = newPieces.map(p => p.id === redPiece.id ? { ...p, position: redPendingMove.to } : p);
+    }
+    
+    // 执行黑方移动
+    const blackPiece = newPieces.find(p => p.side === 'black' && p.position[0] === blackPendingMove.from[0] && p.position[1] === blackPendingMove.from[1]);
+    if (blackPiece) {
+      // 移除被吃的红棋
+      newPieces = newPieces.filter(p => !(p.side === 'red' && p.position[0] === blackPendingMove.to[0] && p.position[1] === blackPendingMove.to[1]));
+      // 移动黑棋
+      newPieces = newPieces.map(p => p.id === blackPiece.id ? { ...p, position: blackPendingMove.to } : p);
+    }
+    
     // 检查将帅是否还在
-    const redGeneral = localState.pieces.find(p => p.type === 'king' && p.side === 'red');
-    const blackGeneral = localState.pieces.find(p => p.type === 'king' && p.side === 'black');
+    const redGeneral = newPieces.find(p => p.type === 'king' && p.side === 'red');
+    const blackGeneral = newPieces.find(p => p.type === 'king' && p.side === 'black');
     
     let winner: Side | 'draw' | null = null;
     
@@ -336,6 +318,7 @@ function App() {
         ...prev, 
         phase: 'ended',
         winner,
+        pieces: newPieces,
         redConfirmed: true,
         blackConfirmed: true,
       }));
@@ -344,6 +327,7 @@ function App() {
       setLocalState(prev => ({ 
         ...prev, 
         phase: 'strategy',
+        pieces: newPieces,
         redConfirmed: false,
         blackConfirmed: false,
         redPendingMove: null,

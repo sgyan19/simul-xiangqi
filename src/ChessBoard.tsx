@@ -361,13 +361,12 @@ function ChessBoard({
           const isInValidMoves = validMoves.some(
             m => m[0] === piece.position[0] && m[1] === piece.position[1]
           );
-          // 可选择：如果当前是 strategy 阶段
-          // - 如果传入了 redConfirmed/blackConfirmed（本地方向），则只能选未确认的那方
-          // - 否则只能选 currentOperatedSide
-          const isSelectable = phase === 'strategy' && (
-            (redConfirmed !== undefined && blackConfirmed !== undefined)
+          // 本地模式：只能选当前视角阵营的棋子，且该方未走棋
+          // 在线模式：只能选 currentOperatedSide
+          const isSelectable = phase === 'strategy' && piece.side === currentOperatedSide && (
+            redConfirmed !== undefined 
               ? (piece.side === 'red' ? !redConfirmed : !blackConfirmed)
-              : piece.side === currentOperatedSide
+              : true
           );
           return (
             <ChessPiece
@@ -376,13 +375,10 @@ function ChessBoard({
               isSelected={selectedPiece?.id === piece.id}
               isSelectable={isSelectable}
               flipped={flipped}
-              isInValidMoves={!!selectedPiece && isInValidMoves && piece.side !== currentOperatedSide}
+              isInValidMoves={false} // 策略阶段不允许吃子
               onClick={() => {
-                if (isInValidMoves && selectedPiece) {
-                  onMovePiece(piece.position);
-                } else {
-                  onSelectPiece(piece);
-                }
+                if (!isSelectable) return;
+                onSelectPiece(piece);
               }}
             />
           );
