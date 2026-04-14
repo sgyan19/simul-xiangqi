@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Piece, Position, Side, Move, INITIAL_PIECES, GamePhase } from './types';
 import { wsClient, RoomState } from './wsClient';
+import { getValidMoves } from './chessLogic';
 import ChessBoard from './ChessBoard';
 
 // 在线游戏状态
@@ -231,9 +232,10 @@ function App() {
       return;
     }
 
-    // 本地模式：选择棋子即可移动（无需切换视角）
-    setLocalState(prev => ({ ...prev, selectedPiece: piece, validMoves: [] }));
-  }, [localState.phase, localState.redConfirmed, localState.blackConfirmed, localState.selectedPiece, showMessage]);
+    // 计算有效移动
+    const moves = getValidMoves(piece, localState.pieces);
+    setLocalState(prev => ({ ...prev, selectedPiece: piece, validMoves: moves }));
+  }, [localState.phase, localState.redConfirmed, localState.blackConfirmed, localState.selectedPiece, localState.pieces, showMessage]);
 
   // 本地模式：移动棋子
   const handleMovePieceLocal = useCallback((to: Position) => {
@@ -242,49 +244,92 @@ function App() {
     const selectedPiece = localState.selectedPiece;
     const side = selectedPiece.side;
     
-    const pendingMove: Move = {
-      from: selectedPiece.position,
-      to,
-    };
-
+    // 直接移动棋子
     setLocalState(prev => {
-      const newState = { ...prev };
-      if (side === 'red') {
-        newState.redPendingMove = pendingMove;
-        newState.redConfirmed = true;
-      } else {
-        newState.blackPendingMove = pendingMove;
-        newState.blackConfirmed = true;
-      }
-      newState.selectedPiece = null;
-      newState.validMoves = [];
+      const newPieces = prev.pieces.map(p => {
+        if (p.id === selectedPiece.id) {
+          return { ...p, position: to };
+        }
+        // 如果吃子，移除目标位置的棋子
+        if (p.position[0] === to[0] && p.position[1] === to[1] && p.side !== side) {
+          return null as unknown as Piece;
+        }
+        return p;
+      }).filter(Boolean) as Piece[];
+      
+      const newState: typeof prev = {
+        ...prev,
+        pieces: newPieces,
+        redPendingMove: side === 'red' ? { from: selectedPiece.position, to } : null,
+        blackPendingMove: side === 'black' ? { from: selectedPiece.position, to } : null,
+        redConfirmed: side === 'red' ? true : prev.redConfirmed,
+        blackConfirmed: side === 'black' ? true : prev.blackConfirmed,
+        selectedPiece: null,
+        validMoves: [],
+      };
       return newState;
     });
   }, [localState.selectedPiece]);
 
-  // 重新走棋（本地）
+  // 重新走棋（本地）- 需要恢复棋子位置
   const handleUndoMoveLocal = useCallback((side: Side) => {
+    const pendingMove = side === 'red' ? localState.redPendingMove : localState.blackPendingMove;
+    if (!pendingMove) return;
+    
+    // 找到被吃掉的棋子来恢复
+    const capturedPiece = INITIAL_PIECES.find(p => 
+      p.side !== side && 
+      p.position[0] === pendingMove.to[0] && 
+      p.position[1] === pendingMove.to[1]
+    );
+    
     setLocalState(prev => {
-      const newState = { ...prev };
-      if (side === 'red') {
-        newState.redPendingMove = null;
-        newState.redConfirmed = false;
-      } else {
-        newState.blackPendingMove = null;
-        newState.blackConfirmed = false;
+      // 恢复棋子位置
+      const newPieces = prev.pieces.map(p => {
+        if (p.side === side && p.position[0] === pendingMove.to[0] && p.position[1] === pendingMove.to[1]) {
+          return { ...p, position: pendingMove.from };
+        }
+        return p;
+      });
+      
+      // 如果有被吃掉的棋子，恢复它
+      if (capturedPiece && !newPieces.find(p => p.id === capturedPiece.id)) {
+        newPieces.push({ ...capturedPiece });
       }
-      return newState;
+      
+      return {
+        ...prev,
+        pieces: newPieces,
+        redPendingMove: side === 'red' ? null : prev.redPendingMove,
+        blackPendingMove: side === 'black' ? null : prev.blackPendingMove,
+        redConfirmed: side === 'red' ? false : prev.redConfirmed,
+        blackConfirmed: side === 'black' ? false : prev.blackConfirmed,
+      };
     });
-  }, []);
+  }, [localState.redPendingMove, localState.blackPendingMove]);
 
-  // 结算
+  // 结算 - 判定胜负
   const handleSettleLocal = useCallback(() => {
-    if (!localState.redPendingMove || !localState.blackPendingMove) {
-      showMessage('双方都需要先走棋');
-      return;
+    // 检查将帅是否还在
+    const redGeneral = localState.pieces.find(p => p.type === 'general' && p.side === 'red');
+    const blackGeneral = localState.pieces.find(p => p.type === 'general' && p.side === 'black');
+    
+    let winner: Side | 'draw' | null = null;
+    
+    if (!redGeneral && !blackGeneral) {
+      winner = 'draw'; // 同归于尽
+    } else if (!redGeneral) {
+      winner = 'black'; // 红将被吃，黑胜
+    } else if (!blackGeneral) {
+      winner = 'red'; // 黑将被吃，红胜
     }
-    setLocalState(prev => ({ ...prev, phase: 'settlement' }));
-  }, [localState.redPendingMove, localState.blackPendingMove, showMessage]);
+    
+    setLocalState(prev => ({ 
+      ...prev, 
+      phase: 'ended',
+      winner,
+    }));
+  }, [localState.pieces]);
 
   // 渲染在线模式 - 简洁聚焦布局
   const renderOnlineMode = () => (
