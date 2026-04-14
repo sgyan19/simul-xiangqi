@@ -556,24 +556,31 @@ body {
   100% { opacity: 1; transform: scale(1); }
 }
 
-/* ===== 在线模式样式 - 紧凑布局 ===== */
+/* ===== 在线模式样式 - 棋盘居中布局 ===== */
 
 .online-mode {
   justify-content: flex-start;
   padding-top: 8px;
+  gap: 10px;
+}
+
+/* 顶部栏：模式切换 + 连接状态 + 房间胶囊 */
+.online-mode .online-topbar {
+  width: 100%;
+  max-width: 360px;
+  display: flex;
+  align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .online-mode .mode-switch {
-  width: 100%;
-  max-width: 360px;
   display: flex;
   gap: 4px;
 }
 
 .online-mode .mode-switch button {
-  flex: 1;
-  padding: 8px 12px;
+  padding: 8px 14px;
   border: none;
   border-radius: 8px;
   font-size: 13px;
@@ -593,120 +600,96 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 10px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 12px;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
   font-size: 11px;
   color: var(--text-muted);
 }
 
-.online-mode .room-header {
-  width: 100%;
-  max-width: 360px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 12px;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  font-size: 12px;
+.online-mode .status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
 }
 
-.online-mode .room-header .room-id {
+.online-mode .status-dot.connected {
+  background: var(--success);
+}
+
+.online-mode .status-dot.disconnected {
+  background: var(--danger);
+}
+
+/* 房间胶囊 - 紧凑横向 */
+.online-mode .room-pill {
   display: flex;
   align-items: center;
   gap: 6px;
+  padding: 6px 10px;
+  background: rgba(255, 215, 0, 0.15);
+  border-radius: 16px;
+  font-size: 11px;
+  white-space: nowrap;
 }
 
-.online-mode .room-header .room-id strong {
-  font-size: 15px;
+.online-mode .room-pill .room-id {
   color: var(--highlight);
-  letter-spacing: 2px;
+  font-weight: bold;
+  letter-spacing: 1px;
 }
 
-.online-mode .room-header .player-side {
-  color: var(--text-muted);
+.online-mode .room-pill .divider {
+  color: rgba(255, 255, 255, 0.3);
 }
 
-.online-mode .room-header .player-side strong.red {
+.online-mode .room-pill .player-side.red {
   color: var(--piece-red);
 }
 
-.online-mode .room-header .player-side strong.black {
+.online-mode .room-pill .player-side.black {
   color: #888;
 }
 
-.online-mode .room-header .player-side strong.observer {
+.online-mode .room-pill .player-side.observer {
   color: var(--text-muted);
   font-style: italic;
 }
 
-.online-mode .room-header .player-status {
-  display: flex;
-  gap: 10px;
-  font-size: 11px;
-}
-
-.online-mode .room-header .player-status .online {
+.online-mode .room-pill .player-status .online {
   color: var(--success);
 }
 
-.online-mode .room-header .player-status .offline {
+.online-mode .room-pill .player-status .offline {
   color: var(--text-muted);
 }
 
-.online-mode .action-bar {
+/* 加入房间区域 */
+.online-mode .online-join-section {
   width: 100%;
   max-width: 360px;
   display: flex;
-  gap: 8px;
-  justify-content: center;
-  flex-wrap: wrap;
-}
-
-.online-mode .action-bar button {
-  padding: 8px 14px;
-  border: none;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  background: var(--highlight);
-  color: #333;
-  transition: all 0.2s ease;
-}
-
-.online-mode .action-bar button.secondary {
-  background: rgba(255, 255, 255, 0.15);
-  color: var(--text-primary);
-}
-
-.online-mode .action-bar button:hover:not(:disabled) {
-  transform: scale(1.03);
-}
-
-.online-mode .action-bar button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
 }
 
 .online-mode .join-form {
-  width: 100%;
-  max-width: 360px;
   display: flex;
   gap: 8px;
   justify-content: center;
+  width: 100%;
 }
 
 .online-mode .join-form input {
   flex: 1;
-  max-width: 160px;
+  max-width: 140px;
   padding: 10px 12px;
   border: 2px solid rgba(255, 255, 255, 0.2);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.1);
   color: white;
-  font-size: 14px;
+  font-size: 13px;
   text-align: center;
   letter-spacing: 2px;
   text-transform: uppercase;
@@ -724,43 +707,67 @@ body {
 }
 
 .online-mode .join-form button {
-  padding: 10px 18px;
+  padding: 10px 16px;
   border: none;
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   background: var(--success);
   color: white;
 }
 
-.online-mode .choose-side {
+.online-mode .create-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-muted);
+  transition: all 0.2s ease;
+}
+
+.online-mode .create-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+/* 选择阵营区域 */
+.online-mode .online-choose-section {
   width: 100%;
   max-width: 360px;
   display: flex;
   flex-direction: column;
   gap: 10px;
   padding: 14px;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
   text-align: center;
 }
 
-.online-mode .choose-side p {
-  font-size: 12px;
+.online-mode .online-choose-section p {
+  font-size: 13px;
   color: var(--text-muted);
+  margin: 0;
 }
 
-.online-mode .choose-side .side-buttons {
+.online-mode .online-choose-section strong {
+  color: var(--highlight);
+  letter-spacing: 2px;
+}
+
+.online-mode .side-buttons {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   justify-content: center;
 }
 
-.online-mode .choose-side .side-buttons button {
+.online-mode .side-buttons button {
   flex: 1;
   max-width: 120px;
-  padding: 10px 16px;
+  padding: 12px 16px;
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -769,45 +776,68 @@ body {
   transition: all 0.2s ease;
 }
 
-.online-mode .choose-side .side-buttons button.red-btn {
+.online-mode .side-buttons button.red-btn {
   background: linear-gradient(135deg, #C41E3A, #8B0000);
   color: white;
 }
 
-.online-mode .choose-side .side-buttons button.black-btn {
+.online-mode .side-buttons button.black-btn {
   background: linear-gradient(135deg, #444, #222);
   color: white;
   border: 1px solid #666;
 }
 
-.online-mode .choose-side .side-buttons button:hover {
+.online-mode .side-buttons button:hover {
   transform: scale(1.03);
 }
 
-.online-mode .waiting-area {
+/* 棋盘包装器 - 确保居中 */
+.online-mode .board-wrapper {
   width: 100%;
   max-width: 360px;
-  padding: 12px;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
-  text-align: center;
+  display: flex;
+  justify-content: center;
 }
 
-.online-mode .waiting-area p {
-  font-size: 12px;
-  color: var(--text-muted);
-  margin-bottom: 8px;
-}
-
-.online-mode .message {
+/* 底部栏：视角切换 + 操作按钮 */
+.online-mode .online-bottombar {
   width: 100%;
   max-width: 360px;
-  padding: 6px 12px;
-  background: rgba(255, 215, 0, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.online-mode .action-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.online-mode .action-buttons button {
+  padding: 8px 14px;
+  border: none;
   border-radius: 6px;
   font-size: 12px;
-  color: var(--highlight);
-  text-align: center;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--highlight);
+  color: #333;
+  transition: all 0.2s ease;
+}
+
+.online-mode .action-buttons button.secondary {
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--text-primary);
+}
+
+.online-mode .action-buttons button:hover:not(:disabled) {
+  transform: scale(1.03);
+}
+
+.online-mode .action-buttons button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* 本地模式确认状态 */

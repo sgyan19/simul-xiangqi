@@ -292,73 +292,69 @@ function App() {
     setLocalState(prev => ({ ...prev, phase: 'settlement' }));
   }, [localState.redPendingMove, localState.blackPendingMove, showMessage]);
 
-  // 渲染在线模式 - 棋盘为主的布局
+  // 渲染在线模式 - 棋盘居中布局
   const renderOnlineMode = () => (
     <div className="online-mode">
-      {/* 顶部：模式切换 + 连接状态 */}
-      <div className="mode-switch">
-        <button 
-          className={gameMode === 'local' ? 'active' : ''} 
-          onClick={() => setGameMode('local')}
-        >
-          本地模式
-        </button>
-        <button 
-          className={gameMode === 'online' ? 'active' : ''} 
-          onClick={() => setGameMode('online')}
-        >
-          在线模式
-        </button>
-      </div>
-
-      <div className="connection-status">
-        <span className={`status-dot ${onlineState.connected ? 'connected' : 'disconnected'}`} />
-        {onlineState.connected ? '已连接' : '未连接'}
-      </div>
-
-      {/* 房间已创建/已加入：紧凑头部 */}
-      {onlineState.roomId && (
-        <div className="room-header">
-          <div className="room-id">
-            <span>房间:</span>
-            <strong>{onlineState.roomId}</strong>
-          </div>
-          <div className="player-side">
-            <span>你是:</span>
-            <strong className={onlineState.side || 'observer'}>
-              {onlineState.side === 'red' ? '红方' : onlineState.side === 'black' ? '黑方' : '等待加入...'}
-            </strong>
-          </div>
-          <div className="player-status">
-            <span className={onlineState.redOnline ? 'online' : 'offline'}>
-              红{onlineState.redOnline ? '●' : '○'}
-            </span>
-            <span className={onlineState.blackOnline ? 'online' : 'offline'}>
-              黑{onlineState.blackOnline ? '●' : '○'}
-            </span>
-          </div>
+      {/* 顶部：模式切换 + 连接状态 + 房间信息（同一行） */}
+      <div className="online-topbar">
+        <div className="mode-switch">
+          <button 
+            className={gameMode === 'local' ? 'active' : ''} 
+            onClick={() => setGameMode('local')}
+          >
+            本地模式
+          </button>
+          <button 
+            className={gameMode === 'online' ? 'active' : ''} 
+            onClick={() => setGameMode('online')}
+          >
+            在线模式
+          </button>
         </div>
-      )}
 
-      {/* 操作按钮行 */}
-      {onlineState.roomId && onlineState.side && (
-        <div className="action-bar">
-          {onlineState.phase === 'waiting' && (
-            <button onClick={handleStartGame} disabled={!onlineState.redOnline || !onlineState.blackOnline}>
-              开始游戏
-            </button>
-          )}
-          {onlineState.phase === 'strategy' && (
-            <button onClick={handleUndoMove}>重新走棋</button>
-          )}
-          <button onClick={handleLeaveRoom} className="secondary">离开</button>
+        <div className="connection-status">
+          <span className={`status-dot ${onlineState.connected ? 'connected' : 'disconnected'}`} />
+          {onlineState.connected ? '已连接' : '未连接'}
+        </div>
+
+        {/* 房间信息（紧凑胶囊） */}
+        {onlineState.roomId && (
+          <div className="room-pill">
+            <span className="room-id">{onlineState.roomId}</span>
+            <span className="divider">|</span>
+            <span className={`player-side ${onlineState.side || 'observer'}`}>
+              {onlineState.side === 'red' ? '红方' : onlineState.side === 'black' ? '黑方' : '待加入'}
+            </span>
+            <span className="divider">|</span>
+            <span className={`player-status`}>
+              <span className={onlineState.redOnline ? 'online' : 'offline'}>红</span>
+              <span className={onlineState.blackOnline ? 'online' : 'offline'}>黑</span>
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* 加入房间/选择阵营区域 */}
+      {!onlineState.roomId && (
+        <div className="online-join-section">
+          <div className="join-form">
+            <input
+              type="text"
+              placeholder="房间号"
+              value={roomInput}
+              onChange={(e) => setRoomInput(e.target.value.toUpperCase())}
+              maxLength={6}
+            />
+            <button onClick={handleJoinRoom}>加入</button>
+          </div>
+          <button className="create-btn" onClick={handleCreateRoom}>创建房间</button>
         </div>
       )}
 
       {/* 选择阵营（创建房间后显示） */}
       {onlineState.roomId && !onlineState.side && (
-        <div className="choose-side">
-          <p>选择你的阵营:</p>
+        <div className="online-choose-section">
+          <p>房间 <strong>{onlineState.roomId}</strong> 已创建，请选择阵营:</p>
           <div className="side-buttons">
             <button className="red-btn" onClick={() => wsClient.chooseSide('red')}>红方</button>
             <button className="black-btn" onClick={() => wsClient.chooseSide('black')}>黑方</button>
@@ -366,47 +362,24 @@ function App() {
         </div>
       )}
 
-      {/* 等待加入（创建房间后未选择阵营前显示） */}
-      {!onlineState.roomId && (
-        <>
-          <div className="join-form">
-            <input
-              type="text"
-              placeholder="输入房间号"
-              value={roomInput}
-              onChange={(e) => setRoomInput(e.target.value.toUpperCase())}
-              maxLength={6}
-            />
-            <button onClick={handleJoinRoom}>加入</button>
-          </div>
-          <div className="waiting-area">
-            <p>或创建一个新房间:</p>
-            <button onClick={handleCreateRoom}>创建房间</button>
-          </div>
-        </>
-      )}
+      {/* 棋盘 - 主要显示区域（始终居中） */}
+      <div className="board-wrapper">
+        <ChessBoard
+          pieces={onlineState.pieces}
+          selectedPiece={selectedPiece}
+          validMoves={validMoves}
+          currentOperatedSide={viewSide}
+          phase={onlineState.phase}
+          flipped={viewSide === 'black'}
+          redPendingMove={onlineState.redPendingMove}
+          blackPendingMove={onlineState.blackPendingMove}
+          onSelectPiece={handleSelectPieceOnline}
+          onMovePiece={handleMovePieceOnline}
+        />
+      </div>
 
-      {/* 提示信息 */}
-      {onlineState.message && !onlineState.roomId && (
-        <div className="message">{onlineState.message}</div>
-      )}
-
-      {/* 棋盘 - 主要显示区域 */}
-      <ChessBoard
-        pieces={onlineState.pieces}
-        selectedPiece={selectedPiece}
-        validMoves={validMoves}
-        currentOperatedSide={viewSide}
-        phase={onlineState.phase}
-        flipped={viewSide === 'black'}
-        redPendingMove={onlineState.redPendingMove}
-        blackPendingMove={onlineState.blackPendingMove}
-        onSelectPiece={handleSelectPieceOnline}
-        onMovePiece={handleMovePieceOnline}
-      />
-
-      {/* 控制面板 */}
-      <div className="control-panel">
+      {/* 底部：视角切换 + 操作按钮 */}
+      <div className="online-bottombar">
         <div className="view-switch">
           <button
             className={`view-btn ${viewSide === 'red' ? 'active' : ''}`}
@@ -421,6 +394,21 @@ function App() {
             黑方视角
           </button>
         </div>
+
+        {/* 游戏操作按钮 */}
+        {onlineState.roomId && onlineState.side && (
+          <div className="action-buttons">
+            {onlineState.phase === 'waiting' && (
+              <button onClick={handleStartGame} disabled={!onlineState.redOnline || !onlineState.blackOnline}>
+                开始游戏
+              </button>
+            )}
+            {onlineState.phase === 'strategy' && (
+              <button onClick={handleUndoMove}>重新走棋</button>
+            )}
+            <button onClick={handleLeaveRoom} className="secondary">离开</button>
+          </div>
+        )}
       </div>
 
       {/* Toast 提示 */}
