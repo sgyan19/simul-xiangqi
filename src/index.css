@@ -114,6 +114,7 @@ body {
   width: 100%;
   max-width: 360px;
   aspect-ratio: 9 / 10;
+  margin: 0 auto;
 }
 
 /* 棋盘 */
@@ -794,9 +795,14 @@ body {
 /* 棋盘包装器 - 确保居中 */
 .online-mode .board-wrapper {
   width: 100%;
+  display: block;
+}
+
+.online-mode .board-wrapper .board-container {
+  width: 100%;
   max-width: 360px;
-  display: flex;
-  justify-content: center;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 /* 底部栏：视角切换 + 操作按钮 */
