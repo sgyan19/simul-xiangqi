@@ -153,13 +153,6 @@ function App() {
       
       console.log('执行前棋子数:', finalPieces.length);
       
-      // ===== 第一步：记录每个位置的原始棋子 =====
-      const originalPieceAt: { [key: string]: Piece | null } = {};
-      pieces.forEach(p => {
-        const key = `${p.position[0]},${p.position[1]}`;
-        originalPieceAt[key] = p;
-      });
-      
       // ===== 第二步：执行所有移动 =====
       if (redMove) {
         const redPiece = finalPieces.find(p => 
@@ -194,37 +187,33 @@ function App() {
       console.log('执行后棋子数:', finalPieces.length);
       
       // ===== 第三步：检查吃子 =====
-      // 规则：只有目标位置的原始敌方棋子仍然在棋盘上时，才吃子
-      // 如果原始敌方棋子已经移动走了（互吃），则不吃
+      // 规则：移动后，如果目标位置有敌方棋子 → 吃子
+      // 注意：是移动后的最终状态，不是原始状态
       const toRemove: string[] = [];
       
       // 检查红方移动目标
       if (redMove) {
         const targetKey = `${redMove.to[0]},${redMove.to[1]}`;
-        const originalAtTarget = originalPieceAt[targetKey];
-        
-        // 如果目标位置原本有黑棋，且这个黑棋还在棋盘上 → 吃子
-        if (originalAtTarget && originalAtTarget.side === 'black') {
-          const stillExists = finalPieces.some(p => p.id === originalAtTarget.id);
-          if (stillExists) {
-            console.log(`红方吃掉黑棋 ${originalAtTarget.id}`);
-            toRemove.push(originalAtTarget.id);
-          }
+        // 移动后，目标位置是否有黑棋
+        const enemyAtTarget = finalPieces.find(p => 
+          p.side === 'black' && p.position[0] === redMove.to[0] && p.position[1] === redMove.to[1]
+        );
+        if (enemyAtTarget) {
+          console.log(`红方吃掉黑棋 ${enemyAtTarget.id}`);
+          toRemove.push(enemyAtTarget.id);
         }
       }
       
       // 检查黑方移动目标
       if (blackMove) {
         const targetKey = `${blackMove.to[0]},${blackMove.to[1]}`;
-        const originalAtTarget = originalPieceAt[targetKey];
-        
-        // 如果目标位置原本有红棋，且这个红棋还在棋盘上 → 吃子
-        if (originalAtTarget && originalAtTarget.side === 'red') {
-          const stillExists = finalPieces.some(p => p.id === originalAtTarget.id);
-          if (stillExists) {
-            console.log(`黑方吃掉红棋 ${originalAtTarget.id}`);
-            toRemove.push(originalAtTarget.id);
-          }
+        // 移动后，目标位置是否有红棋
+        const enemyAtTarget = finalPieces.find(p => 
+          p.side === 'red' && p.position[0] === blackMove.to[0] && p.position[1] === blackMove.to[1]
+        );
+        if (enemyAtTarget) {
+          console.log(`黑方吃掉红棋 ${enemyAtTarget.id}`);
+          toRemove.push(enemyAtTarget.id);
         }
       }
       
