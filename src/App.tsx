@@ -151,37 +151,15 @@ function App() {
       
       let finalPieces = pieces.map(p => ({ ...p }));
       
-      // ===== 第一步：移除被吃的棋子 =====
-      // 如果移动目标位置有敌方棋子，先移除
-      if (redMove) {
-        finalPieces = finalPieces.filter(p => {
-          if (p.side === 'black' && p.position[0] === redMove.to[0] && p.position[1] === redMove.to[1]) {
-            console.log(`红方吃掉黑棋 ${p.id}`);
-            return false;
-          }
-          return true;
-        });
-      }
-      
-      if (blackMove) {
-        finalPieces = finalPieces.filter(p => {
-          if (p.side === 'red' && p.position[0] === blackMove.to[0] && p.position[1] === blackMove.to[1]) {
-            console.log(`黑方吃掉红棋 ${p.id}`);
-            return false;
-          }
-          return true;
-        });
-      }
-      
-      // ===== 第二步：执行移动 =====
+      // ===== 第一步：执行所有移动 =====
       console.log('执行前棋子数:', finalPieces.length);
       
-      // 验证红方移动
+      // 先执行所有移动（不管目标位置有没有棋子）
       if (redMove) {
         const redPiece = finalPieces.find(p => 
           p.side === 'red' && p.position[0] === redMove.from[0] && p.position[1] === redMove.from[1]
         );
-        if (redPiece && isValidMove(redPiece, redMove.to, finalPieces)) {
+        if (redPiece) {
           console.log(`红方棋子 ${redPiece.id} 从 ${redMove.from} 移动到 ${redMove.to}`);
           finalPieces = finalPieces.map(p => {
             if (p.id === redPiece.id) {
@@ -189,17 +167,14 @@ function App() {
             }
             return p;
           });
-        } else {
-          console.log(`红方棋子 ${redPiece?.id || 'unknown'} 移动无效（扑空）`);
         }
       }
       
-      // 验证黑方移动
       if (blackMove) {
         const blackPiece = finalPieces.find(p => 
           p.side === 'black' && p.position[0] === blackMove.from[0] && p.position[1] === blackMove.from[1]
         );
-        if (blackPiece && isValidMove(blackPiece, blackMove.to, finalPieces)) {
+        if (blackPiece) {
           console.log(`黑方棋子 ${blackPiece.id} 从 ${blackMove.from} 移动到 ${blackMove.to}`);
           finalPieces = finalPieces.map(p => {
             if (p.id === blackPiece.id) {
@@ -207,10 +182,11 @@ function App() {
             }
             return p;
           });
-        } else {
-          console.log(`黑方棋子 ${blackPiece?.id || 'unknown'} 移动无效（扑空）`);
         }
       }
+      
+      console.log('执行后棋子数:', finalPieces.length);
+      console.log('执行后所有棋子位置:', finalPieces.map(p => `${p.id}:[${p.position}]`));
       
       console.log('执行后棋子数:', finalPieces.length);
       console.log('执行后所有棋子位置:', finalPieces.map(p => `${p.id}:[${p.position}]`));
