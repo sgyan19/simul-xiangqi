@@ -555,3 +555,290 @@ body {
   50% { transform: scale(1.2); }
   100% { opacity: 1; transform: scale(1); }
 }
+
+/* ===== 在线模式样式 ===== */
+
+.mode-switch {
+  display: flex;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 25px;
+  padding: 4px;
+  gap: 4px;
+}
+
+.mode-switch button {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  background: transparent;
+  color: var(--text-muted);
+  transition: all 0.2s ease;
+}
+
+.mode-switch button.active {
+  background: var(--highlight);
+  color: #333;
+}
+
+.connection-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  font-size: 14px;
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.status-dot.connected {
+  background: var(--success);
+}
+
+.status-dot.disconnected {
+  background: var(--danger);
+}
+
+.status-dot.online {
+  background: var(--success);
+}
+
+.status-dot.offline {
+  background: var(--text-muted);
+}
+
+.room-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 15px;
+}
+
+.room-actions button {
+  padding: 12px 30px;
+  border: none;
+  border-radius: 25px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--highlight);
+  color: #333;
+  transition: all 0.2s ease;
+}
+
+.room-actions button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
+}
+
+.join-room {
+  display: flex;
+  gap: 10px;
+}
+
+.join-room input {
+  padding: 10px 15px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: 16px;
+  font-family: monospace;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  text-align: center;
+  width: 150px;
+}
+
+.join-room input::placeholder {
+  color: var(--text-muted);
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.join-room button {
+  padding: 10px 20px;
+  background: var(--success);
+  color: white;
+}
+
+.room-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 15px 25px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 15px;
+}
+
+.room-id {
+  font-size: 18px;
+  color: var(--text-muted);
+}
+
+.room-id strong {
+  color: var(--highlight);
+  font-family: monospace;
+  font-size: 24px;
+  letter-spacing: 3px;
+  margin-left: 10px;
+}
+
+.player-side {
+  font-size: 16px;
+}
+
+.player-side strong.red {
+  color: var(--piece-red);
+}
+
+.player-side strong.black {
+  color: #888;
+}
+
+.player-status {
+  display: flex;
+  gap: 20px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.player-status span {
+  padding: 4px 12px;
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.player-status span.online {
+  color: var(--success);
+}
+
+.player-status span.offline {
+  color: var(--text-muted);
+}
+
+.action-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.action-buttons button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--highlight);
+  color: #333;
+  transition: all 0.2s ease;
+}
+
+.action-buttons button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.action-buttons button.secondary {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.message {
+  padding: 10px 20px;
+  background: rgba(255, 215, 0, 0.2);
+  border-radius: 20px;
+  font-size: 14px;
+  color: var(--highlight);
+  text-align: center;
+}
+
+/* 本地模式确认状态 */
+.confirm-status {
+  display: flex;
+  gap: 15px;
+  font-size: 14px;
+}
+
+.confirm-status span {
+  padding: 4px 10px;
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.confirm-status span.red {
+  color: var(--piece-red);
+}
+
+.confirm-status span.black {
+  color: #888;
+}
+
+.confirm-status span.confirmed {
+  background: rgba(76, 175, 80, 0.3);
+  color: var(--success);
+}
+
+.undo-btn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 15px;
+  font-size: 12px;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-muted);
+  transition: all 0.2s ease;
+}
+
+.undo-btn.red {
+  border: 2px solid var(--piece-red);
+  color: var(--piece-red);
+}
+
+.undo-btn.black {
+  border: 2px solid #666;
+  color: #888;
+}
+
+.undo-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.game-controls {
+  margin-top: 10px;
+}
+
+.settle-btn {
+  padding: 12px 30px;
+  border: none;
+  border-radius: 25px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  background: linear-gradient(135deg, var(--highlight), #FFA500);
+  color: #333;
+  transition: all 0.2s ease;
+}
+
+.settle-btn:hover:not(:disabled) {
+  transform: scale(1.05);
+  box-shadow: 0 4px 20px rgba(255, 215, 0, 0.6);
+}
+
+.settle-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

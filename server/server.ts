@@ -5,6 +5,7 @@ import { createServer, type Server } from 'http';
 import express from 'express';
 import router from './routes/index';
 import { setupVite } from './vite';
+import { initWebSocket } from './websocket';
 
 const isDev = process.env.COZE_PROJECT_ENV !== 'PROD';
 const port = parseInt(process.env.PORT || '5000', 10);
@@ -33,6 +34,9 @@ async function startServer(): Promise<Server> {
   // 注册 API 路由
   app.use(router);
 
+  // 初始化 WebSocket 服务
+  initWebSocket(server);
+
   // 集成 Vite（开发模式）或静态文件服务（生产模式）
   await setupVite(app);
 
@@ -53,6 +57,7 @@ async function startServer(): Promise<Server> {
 
   server.listen(port, () => {
     console.log(`\n✨ Server running at http://${hostname}:${port}`);
+    console.log(`📝 WebSocket available at ws://${hostname}:${port}/ws`);
     console.log(`📝 Environment: ${isDev ? 'development' : 'production'}\n`);
   });
 
