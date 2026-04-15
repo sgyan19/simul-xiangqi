@@ -410,7 +410,7 @@ const canPieceCaptureAt = (piece: Piece, targetPos: Position, pieces: Piece[]): 
       return false;
     
     case 'cannon':
-      // 炮吃子需要炮台
+      // 炮吃子需要炮台（保护判定时不需要检查目标阵营）
       if (pCol !== tCol && pRow !== tRow) return false;
       
       const dc = pCol === tCol ? 0 : (tCol - pCol) / Math.abs(tCol - pCol);
@@ -432,9 +432,8 @@ const canPieceCaptureAt = (piece: Piece, targetPos: Position, pieces: Piece[]): 
         midRow += dr;
       }
       
-      // 目标必须是敌方棋子
-      const targetPiece = getPieceAt(tCol, tRow, pieces);
-      return foundPlatform && targetPiece !== undefined && targetPiece.side !== piece.side;
+      // 保护判定只需要炮台存在，不需要检查目标阵营
+      return foundPlatform;
     
     case 'pawn':
       // 兵
@@ -605,38 +604,24 @@ export const executeSettlement = (
       );
       
       if (blackCapturer) {
-        // 找到所有红方棋子（排除被吃掉的）
-        const remainingRedPieces = pieces.filter(p => p.side === 'red' && p.id !== enemyAtTarget.id);
+        // 找到所有红方棋子（保留被吃的，因为被吃的棋子原来的位置可能有炮台）
+        const allRedPieces = pieces.filter(p => p.side === 'red');
         
-        // DEBUG
-        console.log('【保护判定】黑车吃了红炮，目标位置:', blackAction.to);
-        console.log('【保护判定】剩余红方棋子:', remainingRedPieces.map(p => `${p.type}(${p.position})`));
-        
-        for (const redPiece of remainingRedPieces) {
+        for (const redPiece of allRedPieces) {
           // 检查这个棋子本回合是否移动了
-          // 方法：比较 redAction 的起点（棋子移动前的位置）
-          // 与 pieces 中该棋子的位置
-          // 如果相同位置有棋子在 redAction 中移动了，说明这个棋子本回合移动了
           let movedThisTurn = false;
           if (redAction) {
-            // 检查 pieces 中是否有棋子从 redPiece 当前移动到的位置移动
-            // 实际上：我们需要检查 redAction.from 是否等于 redPiece 在原始棋盘中的位置
-            // remainingRedPieces 中的 position 来自 pieces，所以可以直接比较
             if (redAction.from[0] === redPiece.position[0] && 
                 redAction.from[1] === redPiece.position[1]) {
               movedThisTurn = true;
             }
           }
           
-          console.log(`【保护判定】检查 ${redPiece.type}(原始位置:${pieces.find(p=>p.id===redPiece.id)?.position}, 当前位置:${redPiece.position}) - movedThisTurn:${movedThisTurn}`);
-          
           if (!movedThisTurn) {
             // 本回合没移动，检查能否 capture 到黑炮新位置
             const canCapture = canPieceCaptureAt(redPiece, blackAction.to as Position, pieces);
-            console.log(`【保护判定】${redPiece.type} 能否capture到 ${blackAction.to}: ${canCapture}`);
             
             if (canCapture) {
-              console.log(`【保护判定】${redPiece.type} 可以capture，黑车将被移除！`);
               toRemoveByCapture.push(blackCapturer.id);
               break;
             }
