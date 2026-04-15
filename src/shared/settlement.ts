@@ -812,7 +812,8 @@ export const executeSettlement = (
       blackCaptureCount: newBlackCaptureCount,
     },
     historyEntry: {
-      roundNumber: 0, // 由调用方设置
+      logicRound: 0, // 由调用方设置
+      gameRound: 0, // 由调用方设置
       redAction,
       blackAction,
       redPieceRemoved,

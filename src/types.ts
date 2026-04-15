@@ -1,3 +1,6 @@
+// 类型定义 - 核心类型
+import { HistorySnapshot } from './shared/gameStore';
+
 // 棋子类型
 export type PieceType = 'king' | 'advisor' | 'elephant' | 'horse' | 'chariot' | 'cannon' | 'pawn';
 
@@ -47,15 +50,6 @@ export interface SettlementResult {
   };
   winner: Winner;
   reason: string;
-}
-
-// 历史快照（用于悔棋）
-export interface HistorySnapshot {
-  pieces: Piece[];
-  gameRound: number;
-  logicRound: number;
-  lastMoveTargets: { red: Position | null; black: Position | null };
-  checkStatus: { red: boolean; black: boolean };
 }
 
 // 游戏状态
