@@ -46,9 +46,18 @@ export default function HistoryLog({ history, isExpanded, onToggle }: HistoryLog
 
   // 根据排序顺序处理历史记录（使用 useMemo 避免不必要的重渲染）
   const sortedHistory = useMemo(() => {
-    return sortDesc 
-      ? [...history].sort((a, b) => b.roundNumber - a.roundNumber)  // 倒序
-      : [...history].sort((a, b) => a.roundNumber - b.roundNumber); // 正序
+    const sorted = [...history].sort((a, b) => {
+      // 首先按 roundNumber 排序
+      if (a.roundNumber !== b.roundNumber) {
+        return a.roundNumber - b.roundNumber;
+      }
+      // 相同 roundNumber 时，悔棋记录(undoId)排在前
+      if (a.undoId && !b.undoId) return -1;
+      if (!a.undoId && b.undoId) return 1;
+      return 0;
+    });
+    
+    return sortDesc ? sorted.reverse() : sorted;
   }, [history, sortDesc]);
 
   // 自动滚动到最新/最旧记录

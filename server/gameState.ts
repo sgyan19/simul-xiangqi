@@ -796,9 +796,10 @@ const executeUndo = (room: GameRoom): void => {
   // 移除最后一个快照
   room.historySnapshots.pop();
   
-  // 添加悔棋记录
+  // 添加悔棋记录（使用 undoId 确保唯一性，用于正确排序）
   const undoEntry: RoundHistoryEntry = {
     roundNumber: lastSnapshot.roundNumber,
+    undoId: `undo-${Date.now()}`,
     redAction: null,
     blackAction: null,
     redPieceRemoved: [],
@@ -811,7 +812,18 @@ const executeUndo = (room: GameRoom): void => {
     endReason: null,
     isGameEnd: false,
   };
-  room.roundHistory.push(undoEntry);
+  
+  // 将悔棋记录插入到被撤销回合之后
+  const undoIndex = room.roundHistory.findIndex(
+    entry => entry.roundNumber === lastSnapshot.roundNumber && !entry.undoId
+  );
+  if (undoIndex !== -1) {
+    // 在被撤销回合之后插入
+    room.roundHistory.splice(undoIndex + 1, 0, undoEntry);
+  } else {
+    // 如果没找到（应该不会发生），追加到末尾
+    room.roundHistory.push(undoEntry);
+  }
   
   // 清除悔棋请求
   room.undoRequestFrom = null;
