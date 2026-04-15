@@ -608,6 +608,10 @@ export const executeSettlement = (
         // 找到所有红方棋子（排除被吃掉的）
         const remainingRedPieces = pieces.filter(p => p.side === 'red' && p.id !== enemyAtTarget.id);
         
+        // DEBUG
+        console.log('【保护判定】黑车吃了红炮，目标位置:', blackAction.to);
+        console.log('【保护判定】剩余红方棋子:', remainingRedPieces.map(p => `${p.type}(${p.position})`));
+        
         for (const redPiece of remainingRedPieces) {
           // 检查这个棋子本回合是否移动了
           let movedThisTurn = false;
@@ -618,11 +622,15 @@ export const executeSettlement = (
             }
           }
           
+          console.log(`【保护判定】检查 ${redPiece.type}(${redPiece.position}) - 本回合移动:${movedThisTurn}`);
+          
           if (!movedThisTurn) {
             // 本回合没移动，检查能否 capture 到黑炮新位置
             const canCapture = canPieceCaptureAt(redPiece, blackAction.to as Position, pieces);
+            console.log(`【保护判定】${redPiece.type} 能否capture到 ${blackAction.to}: ${canCapture}`);
             
             if (canCapture) {
+              console.log(`【保护判定】${redPiece.type} 可以capture，黑车将被移除！`);
               toRemoveByCapture.push(blackCapturer.id);
               break;
             }
