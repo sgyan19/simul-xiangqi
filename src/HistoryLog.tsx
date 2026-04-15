@@ -88,8 +88,8 @@ export default function HistoryLog({ history, isExpanded, onToggle }: HistoryLog
           {sortedHistory.length === 0 ? (
             <div className="history-empty">暂无对弈记录</div>
           ) : (
-            sortedHistory.map((entry) => (
-              <div key={entry.roundNumber} className="history-entry">
+            sortedHistory.map((entry, idx) => (
+              <div key={`history-${entry.roundNumber}-${entry.events.some(e => e.description.includes('悔棋')) ? 'undo' : idx}`} className="history-entry">
                 <div className="history-round-header">
                   <span className="round-number">第 {entry.roundNumber} 回合</span>
                   {entry.isGameEnd && (
