@@ -299,12 +299,16 @@ function App() {
     if (gameState.phase !== 'settlement') return;
 
     const doSettlement = async () => {
+      // 保存当前 pending moves（因为异步执行时会变化）
+      const redMove = gameState.redPendingMove;
+      const blackMove = gameState.blackPendingMove;
+      
       await new Promise(resolve => setTimeout(resolve, 1000));
 
       const { pieces: finalPieces, winner, reason, newChaseState, historyEntry } = executeSettlement(
         gameState.pieces,
-        gameState.redPendingMove,
-        gameState.blackPendingMove,
+        redMove,
+        blackMove,
         {
           redLastPiece: gameState.redLastPiece,
           redLastTarget: gameState.redLastTarget,
@@ -362,8 +366,8 @@ function App() {
 
       // 设置最后行动目标位置（用于显示目标框）
       setLastMoveTargets({
-        red: gameState.redPendingMove?.to || null,
-        black: gameState.blackPendingMove?.to || null,
+        red: redMove?.to || null,
+        black: blackMove?.to || null,
       });
 
       // 新一回合开始时（winner 为 null），清除目标框
