@@ -4,21 +4,13 @@
 import { Piece, Position, Side, PieceType, INITIAL_PIECES, ActionType, PendingAction } from '../src/types';
 import { executeSettlement as sharedExecuteSettlement, LongChaseState } from '../src/shared/settlement';
 import { RoundHistoryEntry } from '../src/shared/history';
+import { HistorySnapshot, createSnapshotBeforeSettlement, createSettlementEntry, createUndoEntry } from '../src/shared/gameStore';
 
 // 待执行行动
 interface ServerPendingAction {
   from: Position;
   to: Position;
   actionType: ActionType;
-}
-
-// 历史快照（用于悔棋）
-interface HistorySnapshot {
-  pieces: Piece[];
-  gameRound: number;
-  logicRound: number;
-  lastMoveTargets: { red: Position | null; black: Position | null };
-  checkStatus: { red: boolean; black: boolean };
 }
 
 // 房间状态
@@ -617,35 +609,16 @@ const executeSettlement = (room: GameRoom): void => {
     blackCaptureCount: room.blackCaptureCount,
   };
   
-  // 保存结算前的快照（用于悔棋）
-  // logicRound 应该基于 roundHistory.length（累积的记录数）
-  const currentLogicRound = room.roundHistory.length;
-  
-  // gameRound 计算逻辑：
-  // - 如果有悔棋记录，说明有回合被撤销了，新走的应该重新走被撤销的那个回合
-  // - 如果没有悔棋记录，基于非悔棋记录数计算新的回合号
-  const lastUndoEntry = [...room.roundHistory].reverse().find(
-    entry => entry.events.some(e => e.description.includes('悔棋'))
-  );
-  const currentGameRound = lastUndoEntry 
-    ? lastUndoEntry.gameRound  // 使用被撤销的回合号
-    : room.roundHistory.filter(entry => !entry.events.some(e => e.description.includes('悔棋'))).length + 1;
-  
-  const snapshot: HistorySnapshot = {
-    pieces: room.pieces.map(p => ({ ...p })),
-    gameRound: currentGameRound,
-    logicRound: currentLogicRound,
-    // 保存当前的行动框状态（上一回合的目标位置）
-    lastMoveTargets: { 
-      red: room.lastRedMoveTo, 
-      black: room.lastBlackMoveTo 
-    },
-    // 保存当前的将军状态
-    checkStatus: { 
+  // 使用共用模块创建快照
+  const snapshot = createSnapshotBeforeSettlement(
+    room.pieces,
+    room.roundHistory,
+    { red: room.lastRedMoveTo, black: room.lastBlackMoveTo },
+    { 
       red: isKingInCheck('red', room.pieces), 
       black: isKingInCheck('black', room.pieces) 
-    },
-  };
+    }
+  );
   
   // 使用共享结算逻辑
   const result = sharedExecuteSettlement(room.pieces, redAction, blackAction, chaseState);
@@ -659,20 +632,11 @@ const executeSettlement = (room: GameRoom): void => {
   room.blackLastTarget = result.newChaseState.blackLastTarget;
   room.blackCaptureCount = result.newChaseState.blackCaptureCount;
   
-  // 判断是否是重走（当前 gameRound 是否已有结算记录，排除悔棋记录）
-  const isRedo = room.roundHistory.some(
-    entry => entry.gameRound === currentGameRound && !entry.events.some(e => e.description.includes('悔棋'))
-  );
-  
   // 保存快照
   room.historySnapshots.push(snapshot);
   
-  // 保存历史记录
-  const historyEntry: RoundHistoryEntry = {
-    ...result.historyEntry,
-    logicRound: currentLogicRound,
-    gameRound: currentGameRound,
-  };
+  // 使用共用模块创建历史记录
+  const historyEntry = createSettlementEntry(room.roundHistory, result.historyEntry);
   room.roundHistory.push(historyEntry);
   
   // 保存目标位置（用于客户端显示目标框，在清空pendingMove之前）
@@ -821,24 +785,8 @@ const executeUndo = (room: GameRoom): void => {
   // 移除最后一个快照
   room.historySnapshots.pop();
   
-  // 添加悔棋记录（使用 logicRound 排序，显示 gameRound）
-  // logicRound = roundHistory.length（在 push 之前），确保唯一且递增
-  const undoLogicRound = room.roundHistory.length;
-  const undoEntry: RoundHistoryEntry = {
-    logicRound: undoLogicRound,
-    gameRound: lastSnapshot.gameRound,
-    redAction: null,
-    blackAction: null,
-    redPieceRemoved: [],
-    blackPieceRemoved: [],
-    events: [{
-      type: 'move',
-      description: `[悔棋]第${lastSnapshot.gameRound}回合被撤销`,
-    }],
-    winner: null,
-    endReason: null,
-    isGameEnd: false,
-  };
+  // 使用共用模块创建悔棋记录
+  const undoEntry = createUndoEntry(room.roundHistory, lastSnapshot);
   room.roundHistory.push(undoEntry);
   
   // 清除悔棋请求

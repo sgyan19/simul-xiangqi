@@ -15,6 +15,7 @@ import { checkGameEnd, formatMove } from './gameLogic';
 import { executeSettlement } from './shared/settlement';
 import HistoryLog from './HistoryLog';
 import { RoundHistoryEntry } from './shared/history';
+import { HistorySnapshot, createSnapshotBeforeSettlement, createSettlementEntry, createUndoEntry } from './shared/gameStore';
 import ChessBoard from './ChessBoard';
 
 // WebSocket 客户端
@@ -340,22 +341,8 @@ function App() {
       return newState;
     });
     
-    // 添加悔棋记录到历史记录（使用 logicRound 排序，gameRound 显示）
-    const undoEntry: RoundHistoryEntry = {
-      logicRound: history.length, // 使用 history.length 确保唯一且递增
-      gameRound: lastSnapshot.gameRound,
-      redAction: null,
-      blackAction: null,
-      redPieceRemoved: [],
-      blackPieceRemoved: [],
-      events: [{
-        type: 'move',
-        description: `[悔棋]第${lastSnapshot.gameRound}回合被撤销`,
-      }],
-      winner: null,
-      endReason: null,
-      isGameEnd: false,
-    };
+    // 使用共用模块创建悔棋记录
+    const undoEntry = createUndoEntry(history, lastSnapshot);
     setHistory(prev => {
       console.log('[悔棋] 添加悔棋记录, 之前history长度:', prev.length);
       return [...prev, undoEntry];
@@ -384,27 +371,14 @@ function App() {
       // 保存当前 pending moves（因为异步执行时会变化）
       const redMove = gameState.redPendingMove;
       const blackMove = gameState.blackPendingMove;
-      // logicRound 应该基于 history.length（累积的记录数），不是 historySnapshots.length（快照会因悔棋变少）
-      const currentLogicRound = history.length;
       
-      // gameRound 计算逻辑：
-      // - 如果有悔棋记录，说明有回合被撤销了，新走的应该重新走被撤销的那个回合
-      // - 如果没有悔棋记录，基于非悔棋记录数计算新的回合号
-      const lastUndoEntry = [...history].reverse().find(
-        entry => entry.events.some(e => e.description.includes('悔棋'))
+      // 使用共用模块创建快照
+      const snapshotBeforeSettlement = createSnapshotBeforeSettlement(
+        gameState.pieces,
+        history,
+        lastMoveTargets,
+        checkStatus
       );
-      const currentGameRound = lastUndoEntry 
-        ? lastUndoEntry.gameRound  // 使用被撤销的回合号
-        : history.filter(entry => !entry.events.some(e => e.description.includes('悔棋'))).length + 1;
-      
-      // 保存结算前的棋盘状态（用于悔棋）
-      const snapshotBeforeSettlement = {
-        pieces: gameState.pieces.map(p => ({ ...p })),
-        gameRound: currentGameRound,
-        logicRound: currentLogicRound,
-        lastMoveTargets: { ...lastMoveTargets },
-        checkStatus: { ...checkStatus },
-      };
       
       // 同时更新 ref（用于悔棋时获取最新状态）
       undoSnapshotRef.current = {
@@ -428,12 +402,8 @@ function App() {
         }
       );
 
-      // 添加回合历史记录
-      const entryWithRound: RoundHistoryEntry = {
-        ...historyEntry,
-        logicRound: currentLogicRound,
-        gameRound: currentGameRound,
-      };
+      // 使用共用模块创建历史记录
+      const entryWithRound = createSettlementEntry(history, historyEntry);
       setHistory(prev => [...prev, entryWithRound]);
 
       // 检查将军状态
