@@ -484,6 +484,10 @@ function App() {
         redPendingMove: null,
         blackPendingMove: null,
       }));
+      // 加入房间后，自动切换到自己的视角
+      if (payload.side) {
+        setViewSide(payload.side);
+      }
       showMessage(`加入房间 ${payload.roomId}，你是${payload.side === 'red' ? '红方' : '黑方'}`);
       if (phase === 'strategy') {
         showMessage('双方已就位，可以开始对弈！');
@@ -511,6 +515,11 @@ function App() {
         blackPendingMove: hasBlackPendingMove ? payload.blackPendingMove : prev.blackPendingMove,
         winner: payload.winner ?? prev.winner,
       }));
+      
+      // 同步视角：每次收到房间状态时，都确保视角与玩家阵营一致
+      if (payload.side) {
+        setViewSide(payload.side);
+      }
     });
 
     wsClient.on('opponent_move', (payload: any) => {
