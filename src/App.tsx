@@ -451,7 +451,7 @@ function App() {
     });
 
     wsClient.on('joined', (payload: any) => {
-      console.log('Joined payload:', payload);
+      console.log('Joined payload received:', JSON.stringify(payload, null, 2));
       // 确保pieces存在且有效
       const pieces = payload.pieces && payload.pieces.length > 0 
         ? payload.pieces 
@@ -459,6 +459,7 @@ function App() {
       console.log('Setting pieces:', pieces.length, 'pieces');
       // 使用服务端发送的 phase，默认 strategy
       const phase = payload.phase || 'strategy';
+      console.log('Setting side to:', payload.side, 'phase to:', phase);
       setOnlineState(prev => ({ 
         ...prev, 
         roomId: payload.roomId, 
