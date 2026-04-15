@@ -309,6 +309,40 @@ const checkCannonCapture = (cannon: Piece, targetPos: Position, pieces: Piece[])
 };
 
 /**
+ * 检查两点之间的路径是否畅通（用于车、炮的路径检查）
+ * 注意：检查的是原始 pieces 棋盘，不包括即将被吃掉的棋子
+ */
+const isPathClearBetween = (
+  fromCol: number, fromRow: number,
+  toCol: number, toRow: number,
+  pieces: Piece[]
+): boolean => {
+  // 必须是同一行或同一列
+  if (fromCol !== toCol && fromRow !== toRow) {
+    return false;
+  }
+  
+  const dc = fromCol === toCol ? 0 : (toCol - fromCol) / Math.abs(toCol - fromCol);
+  const dr = fromRow === toRow ? 0 : (toRow - fromRow) / Math.abs(toRow - fromRow);
+  
+  let col = fromCol + dc;
+  let row = fromRow + dr;
+  
+  // 遍历路径上的每个格子
+  while (col !== toCol || row !== toRow) {
+    const pieceAtPos = getPieceAt(col, row, pieces);
+    if (pieceAtPos) {
+      // 有棋子阻挡，路径不畅通
+      return false;
+    }
+    col += dc;
+    row += dr;
+  }
+  
+  return true;
+};
+
+/**
  * 执行同时制象棋结算
  * @param pieces - 当前棋子数组
  * @param redAction - 红方行动
@@ -406,32 +440,46 @@ export const executeSettlement = (
       toRemoveByCapture.push(enemyAtTarget.id);
       
       // ===== 新增规则：保护判定 =====
-      // 检查红方 capture 的位置是否有黑方其他棋子可以 capture 到
+      // 检查红方 capture 的位置是否有黑方其他棋子可以 capture/move 到
       // 且该棋子本回合策略阶段没有移动
       const redCapturer = pieces.find(p => 
         p.side === 'red' && p.position[0] === redAction.from[0] && p.position[1] === redAction.from[1]
       );
       
       if (redCapturer) {
-        // 找到所有黑方棋子（除了被吃掉的）
+        // 找到所有黑方棋子（排除被吃掉的）
         const remainingBlackPieces = pieces.filter(p => p.side === 'black' && p.id !== enemyAtTarget.id);
         
-        // 检查是否有黑方棋子可以 capture 到红方 capture 位置
+        // 检查每个黑方棋子是否能到达红炮新位置（capture 后的位置）
         for (const blackPiece of remainingBlackPieces) {
           // 检查这个棋子本回合是否移动了
-          const movedThisTurn = blackAction && 
-            blackAction.from[0] === blackPiece.position[0] && 
-            blackAction.from[1] === blackPiece.position[1];
+          let movedThisTurn = false;
+          if (blackAction) {
+            // 黑方本回合有行动
+            if (blackAction.from[0] === blackPiece.position[0] && 
+                blackAction.from[1] === blackPiece.position[1]) {
+              movedThisTurn = true;
+            }
+          }
           
           if (!movedThisTurn) {
-            // 这个棋子本回合没有移动，检查它是否可以 capture 到红方 capture 位置
-            const canCapture = checkCannonCapture(blackPiece, redAction.to as Position, pieces) ||
-              (blackPiece.type !== 'cannon' && getValidMoves(blackPiece, pieces).some(m => m[0] === redAction.to[0] && m[1] === redAction.to[1]));
+            // 这个棋子本回合没有移动，检查它是否能到达红炮新位置
+            // 简化检查：同一行或同一列
+            const targetCol = redAction.to[0];
+            const targetRow = redAction.to[1];
+            const pieceCol = blackPiece.position[0];
+            const pieceRow = blackPiece.position[1];
             
-            if (canCapture) {
-              // 有保护，红方吃子方也被移除（相当于同归于尽）
-              toRemoveByCapture.push(redCapturer.id);
-              break;
+            // 同一行或同一列，才可能到达
+            if (pieceCol === targetCol || pieceRow === targetRow) {
+              // 检查路径上是否有阻挡
+              const isPathClear = isPathClearBetween(pieceCol, pieceRow, targetCol, targetRow, pieces);
+              
+              if (isPathClear) {
+                // 路径畅通，红炮被保护，红炮也被移除
+                toRemoveByCapture.push(redCapturer.id);
+                break;
+              }
             }
           }
         }
@@ -453,25 +501,34 @@ export const executeSettlement = (
       );
       
       if (blackCapturer) {
-        // 找到所有红方棋子（除了被吃掉的）
+        // 找到所有红方棋子（排除被吃掉的）
         const remainingRedPieces = pieces.filter(p => p.side === 'red' && p.id !== enemyAtTarget.id);
         
-        // 检查是否有红方棋子可以 capture 到黑方 capture 位置
+        // 检查每个红方棋子是否能到达黑炮新位置
         for (const redPiece of remainingRedPieces) {
           // 检查这个棋子本回合是否移动了
-          const movedThisTurn = redAction && 
-            redAction.from[0] === redPiece.position[0] && 
-            redAction.from[1] === redPiece.position[1];
+          let movedThisTurn = false;
+          if (redAction) {
+            if (redAction.from[0] === redPiece.position[0] && 
+                redAction.from[1] === redPiece.position[1]) {
+              movedThisTurn = true;
+            }
+          }
           
           if (!movedThisTurn) {
-            // 这个棋子本回合没有移动，检查它是否可以 capture 到黑方 capture 位置
-            const canCapture = checkCannonCapture(redPiece, blackAction.to as Position, pieces) ||
-              (redPiece.type !== 'cannon' && getValidMoves(redPiece, pieces).some(m => m[0] === blackAction.to[0] && m[1] === blackAction.to[1]));
+            const targetCol = blackAction.to[0];
+            const targetRow = blackAction.to[1];
+            const pieceCol = redPiece.position[0];
+            const pieceRow = redPiece.position[1];
             
-            if (canCapture) {
-              // 有保护，黑方吃子方也被移除（相当于同归于尽）
-              toRemoveByCapture.push(blackCapturer.id);
-              break;
+            // 同一行或同一列
+            if (pieceCol === targetCol || pieceRow === targetRow) {
+              const isPathClear = isPathClearBetween(pieceCol, pieceRow, targetCol, targetRow, pieces);
+              
+              if (isPathClear) {
+                toRemoveByCapture.push(blackCapturer.id);
+                break;
+              }
             }
           }
         }
