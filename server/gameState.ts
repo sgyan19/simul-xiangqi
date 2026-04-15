@@ -619,7 +619,11 @@ const executeSettlement = (room: GameRoom): void => {
   
   // 保存结算前的快照（用于悔棋）
   const currentLogicRound = room.logicRound;
-  const currentGameRound = room.roundHistory.length + 1;
+  // 游戏回合 = 非悔棋记录的结算次数 + 1
+  const gameRoundCount = room.roundHistory.filter(
+    entry => !entry.events.some(e => e.description.includes('悔棋'))
+  ).length;
+  const currentGameRound = gameRoundCount + 1;
   
   const snapshot: HistorySnapshot = {
     pieces: room.pieces.map(p => ({ ...p })),

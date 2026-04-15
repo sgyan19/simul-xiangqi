@@ -384,8 +384,12 @@ function App() {
       // 保存当前 pending moves（因为异步执行时会变化）
       const redMove = gameState.redPendingMove;
       const blackMove = gameState.blackPendingMove;
-      const currentGameRound = history.length + 1;
       const currentLogicRound = gameState.historySnapshots.length;
+      // 游戏回合 = 非悔棋记录的结算次数 + 1
+      const gameRoundCount = history.filter(
+        entry => !entry.events.some(e => e.description.includes('悔棋'))
+      ).length;
+      const currentGameRound = gameRoundCount + 1;
       
       // 保存结算前的棋盘状态（用于悔棋）
       const snapshotBeforeSettlement = {
