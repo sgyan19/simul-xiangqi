@@ -560,8 +560,6 @@ function App() {
     });
 
     wsClient.on('room_state', (payload: any) => {
-      console.log('DEBUG room_state:', payload.phase, 'lastRed:', payload.lastRedMoveTo, 'lastBlack:', payload.lastBlackMoveTo);
-      console.log('DEBUG pendingMove - red:', payload.redPendingMove, 'black:', payload.blackPendingMove);
       const pieces = payload.pieces && payload.pieces.length > 0 
         ? payload.pieces 
         : (onlineState.pieces.length > 0 ? onlineState.pieces : INITIAL_PIECES.map(p => ({ ...p })));
@@ -604,7 +602,6 @@ function App() {
       
       // 更新对弈历史记录
       if (payload.roundHistory && Array.isArray(payload.roundHistory)) {
-        console.log('DEBUG: Updating history with', payload.roundHistory.length, 'entries');
         setHistory(payload.roundHistory);
       }
       
@@ -745,11 +742,8 @@ function App() {
     if (onlineState.phase !== 'strategy') return;
     if (!onlineState.redPendingMove || !onlineState.blackPendingMove) return;
     
-    console.log('DEBUG auto settle triggered, sending settle...');
-    
     // 双方都走棋后，自动结算（延迟一小段时间让玩家看清箭头）
     const timer = setTimeout(() => {
-      console.log('DEBUG sending settle message');
       wsClient.send('settle');
     }, 500);
     

@@ -267,13 +267,8 @@ const handleMessage = (ws: WebSocket, message: WSMessage): void => {
         return;
       }
       
-      console.log('DEBUG settle: executing...');
-      
       // 执行结算
       const result = settleGame(player.roomId);
-      console.log('DEBUG settle: result:', result);
-      console.log('DEBUG after settle: lastRedMoveTo:', room.lastRedMoveTo, 'lastBlackMoveTo:', room.lastBlackMoveTo);
-      console.log('DEBUG after settle: roundHistory length:', room.roundHistory.length);
       
       if (result.success && room) {
         if (result.winner) {
@@ -410,7 +405,6 @@ const sendToClient = (ws: WebSocket, message: WSMessage): void => {
 // 广播房间状态给所有相关玩家
 const broadcastRoomUpdate = (room: ReturnType<typeof getRoom>): void => {
   if (!room) return;
-  console.log('DEBUG: broadcastRoomUpdate - roundHistory length:', room.roundHistory.length);
   
   for (const [ws, player] of clients) {
     if (player.roomId === room.id) {
