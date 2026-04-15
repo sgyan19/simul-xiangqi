@@ -47,8 +47,10 @@ export const initWebSocket = (server: Server): WebSocketServer => {
     clients.set(ws, { ws, roomId: null, side: null, inMatchmaking: false });
 
     ws.on('message', (data: Buffer) => {
+      console.log('[WS] 收到原始消息:', data.toString());
       try {
         const message: WSMessage = JSON.parse(data.toString());
+        console.log('[WS] 解析后消息:', message);
         handleMessage(ws, message);
       } catch (error) {
         console.error('解析消息失败:', error);
