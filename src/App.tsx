@@ -433,13 +433,18 @@ function App() {
 
       // 处理黑方行动
       if (blackAction) {
+        console.log('[DEBUG] blackAction 完整:', blackAction);
+        console.log('[DEBUG] blackAction.to 类型:', typeof blackAction.to, blackAction.to);
         if (blackAction.actionType === 'move') {
           // move 重置计数
           newBlackCaptureTarget = null;
           newBlackCaptureCount = 0;
         } else {
           // capture：从原始棋盘找目标位置的敌方棋子
-          const originalTargetPiece = pieces.find(p => p.side === 'red' && p.position[0] === blackAction.to[0] && p.position[1] === blackAction.to[1]);
+          const toPos = blackAction.to as Position;
+          console.log('[DEBUG] toPos:', toPos);
+          const originalTargetPiece = pieces.find(p => p.side === 'red' && p.position[0] === toPos[0] && p.position[1] === toPos[1]);
+          console.log('[DEBUG] originalTargetPiece:', originalTargetPiece);
           const targetPieceId = originalTargetPiece?.id || null;
           
           if (originalTargetPiece) {
@@ -448,6 +453,7 @@ function App() {
             newBlackCaptureCount = 0;
           } else {
             // 扑空，检查是否连续捉同一目标（按棋子 ID）
+            console.log('[DEBUG] 扑空判断 - gameState.blackCaptureTarget:', gameState.blackCaptureTarget, 'targetPieceId:', targetPieceId);
             if (gameState.blackCaptureTarget === targetPieceId) {
               newBlackCaptureCount = gameState.blackCaptureCount + 1;
             } else {
