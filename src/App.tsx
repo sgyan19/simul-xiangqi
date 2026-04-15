@@ -516,6 +516,12 @@ function App() {
         showMessage('连接失败，请刷新重试');
       });
 
+    // 监听连接成功消息
+    wsClient.on('connected', (payload: any) => {
+      console.log('收到连接成功消息:', payload);
+      setOnlineState(prev => ({ ...prev, connected: true }));
+    });
+
     wsClient.on('room_created', (payload: any) => {
       // 确保pieces存在且有效
       const pieces = payload.pieces && payload.pieces.length > 0 
