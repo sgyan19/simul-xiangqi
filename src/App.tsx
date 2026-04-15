@@ -418,6 +418,12 @@ function App() {
   // 连接 WebSocket
   useEffect(() => {
     if (gameMode !== 'online') return;
+    
+    // 如果已经连接，不需要重复连接
+    if (wsClient.isConnected()) {
+      setOnlineState(prev => ({ ...prev, connected: true }));
+      return;
+    }
 
     wsClient.connect()
       .then(() => {

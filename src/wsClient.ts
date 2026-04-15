@@ -36,8 +36,18 @@ class WebSocketClient {
   }
 
   connect(): Promise<void> {
+    // 如果已经连接，直接返回
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      return Promise.resolve();
+    }
+    
     return new Promise((resolve, reject) => {
       try {
+        // 关闭旧连接
+        if (this.ws) {
+          this.ws.close();
+        }
+        
         this.ws = new WebSocket(this.url);
 
         this.ws.onopen = () => {
@@ -60,7 +70,8 @@ class WebSocketClient {
 
         this.ws.onclose = () => {
           console.log('WebSocket 连接关闭');
-          this.attemptReconnect();
+          this.ws = null;
+          // 不自动重连，让用户手动操作
         };
 
         this.ws.onerror = (error) => {
@@ -90,6 +101,10 @@ class WebSocketClient {
       this.ws.close();
       this.ws = null;
     }
+  }
+
+  isConnected(): boolean {
+    return this.ws !== null && this.ws.readyState === WebSocket.OPEN;
   }
 
   on(type: string, handler: MessageHandler): void {
