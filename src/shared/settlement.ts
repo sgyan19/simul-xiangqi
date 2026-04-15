@@ -542,7 +542,7 @@ export const executeSettlement = (
         // 记录冲突事件
         events.push({
           type: 'collision',
-          description: `[兑子]红${getPieceName(movedRedPiece.type)}与黑${getPieceName(movedBlackPiece.type)}同归于尽`,
+          description: `[兑子]红${getPieceName(movedRedPiece.type, 'red')}与黑${getPieceName(movedBlackPiece.type, 'black')}同归于尽`,
         });
         
         // 炮撞炮：同归于尽
@@ -595,7 +595,7 @@ export const executeSettlement = (
       
       events.push({
         type: 'capture',
-        description: `[吃子]${formatChessNotation(redAction.from, redAction.to, redCapturer?.type || 'unknown', 'red')}，目标：黑${getPieceName(enemyAtTarget.type)}`,
+        description: `[吃子]${formatChessNotation(redAction.from, redAction.to, redCapturer?.type || 'unknown', 'red')}，目标：黑${getPieceName(enemyAtTarget.type, 'black')}`,
       });
       
       toRemoveByCapture.push(enemyAtTarget.id);
@@ -632,7 +632,7 @@ export const executeSettlement = (
               });
               events.push({
                 type: 'counter_attack',
-                description: `[防反]红${getPieceName(redCapturer.type)}被黑${getPieceName(blackPiece.type)}反吃`,
+                description: `[防反]红${getPieceName(redCapturer.type, 'red')}被黑${getPieceName(blackPiece.type, 'black')}反吃`,
               });
               break;
             }
@@ -662,7 +662,7 @@ export const executeSettlement = (
       
       events.push({
         type: 'capture',
-        description: `[吃子]${formatChessNotation(blackAction.from, blackAction.to, blackCapturer?.type || 'unknown', 'black')}，目标：红${getPieceName(enemyAtTarget.type)}`,
+        description: `[吃子]${formatChessNotation(blackAction.from, blackAction.to, blackCapturer?.type || 'unknown', 'black')}，目标：红${getPieceName(enemyAtTarget.type, 'red')}`,
       });
       
       toRemoveByCapture.push(enemyAtTarget.id);
@@ -694,7 +694,7 @@ export const executeSettlement = (
               });
               events.push({
                 type: 'counter_attack',
-                description: `[防反]黑${getPieceName(blackCapturer.type)}被红${getPieceName(redPiece.type)}反吃`,
+                description: `[防反]黑${getPieceName(blackCapturer.type, 'black')}被红${getPieceName(redPiece.type, 'red')}反吃`,
               });
               break;
             }
