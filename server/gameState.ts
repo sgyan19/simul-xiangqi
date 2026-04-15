@@ -16,6 +16,8 @@ interface ServerPendingAction {
 interface HistorySnapshot {
   pieces: Piece[];
   roundNumber: number;
+  lastMoveTargets: { red: Position | null; black: Position | null };
+  checkStatus: { red: boolean; black: boolean };
 }
 
 // 房间状态
@@ -54,6 +56,143 @@ export interface GameRoom {
 // 棋盘尺寸
 const COLS = 9;
 const ROWS = 10;
+
+// 检测是否为将军
+const isKingInCheck = (side: Side, pieces: Piece[]): boolean => {
+  const king = pieces.find(p => p.side === side && p.type === 'king');
+  if (!king) return false;
+  
+  const opponentPieces = pieces.filter(p => p.side !== side);
+  
+  for (const piece of opponentPieces) {
+    if (canCapture(piece, king.position, pieces)) {
+      return true;
+    }
+  }
+  return false;
+};
+
+// 检测一个棋子是否能吃到指定位置
+const canCapture = (piece: Piece, targetPos: Position, pieces: Piece[]): boolean => {
+  const [tCol, tRow] = targetPos;
+  
+  switch (piece.type) {
+    case 'king': {
+      // 将帅只能走直线一步
+      const [pCol, pRow] = piece.position;
+      const dCol = Math.abs(tCol - pCol);
+      const dRow = Math.abs(tRow - pRow);
+      if (dCol + dRow !== 1) return false;
+      // 不能出九宫
+      if (piece.side === 'red' && tRow < 7) return false;
+      if (piece.side === 'black' && tRow > 2) return false;
+      // 不能同列面对面（将帅对脸）
+      return true;
+    }
+    case 'chariot': {
+      // 车走直线
+      const [pCol, pRow] = piece.position;
+      if (pCol !== tCol && pRow !== tRow) return false;
+      const betweenCount = countPiecesBetween(piece.position, targetPos, pieces);
+      return betweenCount === 0;
+    }
+    case 'horse': {
+      // 马走日
+      const [pCol, pRow] = piece.position;
+      const dCol = Math.abs(tCol - pCol);
+      const dRow = Math.abs(tRow - pRow);
+      if (!((dCol === 1 && dRow === 2) || (dCol === 2 && dRow === 1))) return false;
+      // 检查蹩马腿
+      const legCol = pCol + (tCol > pCol ? 1 : tCol < pCol ? -1 : 0);
+      const legRow = pRow + (tRow > pRow ? 1 : tRow < pRow ? -1 : 0);
+      if (pieces.some(p => p.position[0] === legCol && p.position[1] === legRow)) return false;
+      return true;
+    }
+    case 'cannon': {
+      // 炮走直线，吃子必须隔一子
+      const [pCol, pRow] = piece.position;
+      if (pCol !== tCol && pRow !== tRow) return false;
+      const betweenCount = countPiecesBetween(piece.position, targetPos, pieces);
+      const targetPiece = pieces.find(p => p.position[0] === tCol && p.position[1] === tRow);
+      return targetPiece ? betweenCount === 1 : betweenCount === 0;
+    }
+    case 'advisor': {
+      // 士走斜线一步
+      const [pCol, pRow] = piece.position;
+      const dCol = Math.abs(tCol - pCol);
+      const dRow = Math.abs(tRow - pRow);
+      if (dCol !== 1 || dRow !== 1) return false;
+      // 不能出九宫
+      if (piece.side === 'red' && (tCol < 3 || tCol > 5 || tRow < 7)) return false;
+      if (piece.side === 'black' && (tCol < 3 || tCol > 5 || tRow > 2)) return false;
+      return true;
+    }
+    case 'elephant': {
+      // 象走田字
+      const [pCol, pRow] = piece.position;
+      const dCol = Math.abs(tCol - pCol);
+      const dRow = Math.abs(tRow - pRow);
+      if (dCol !== 2 || dRow !== 2) return false;
+      // 检查塞象眼
+      const eyeCol = (pCol + tCol) / 2;
+      const eyeRow = (pRow + tRow) / 2;
+      if (pieces.some(p => p.position[0] === eyeCol && p.position[1] === eyeRow)) return false;
+      // 不能过河
+      if (piece.side === 'red' && tRow < 5) return false;
+      if (piece.side === 'black' && tRow > 4) return false;
+      return true;
+    }
+    case 'pawn': {
+      // 兵过河后可横走
+      const [pCol, pRow] = piece.position;
+      if (piece.side === 'red') {
+        if (tRow < pRow) return false;
+        if (pRow < 5) {
+          // 未过河只能前进
+          return tCol === pCol && tRow === pRow + 1;
+        } else {
+          // 过河后可横走
+          return (tCol === pCol && tRow === pRow + 1) || (tRow === pRow && Math.abs(tCol - pCol) === 1);
+        }
+      } else {
+        if (tRow > pRow) return false;
+        if (pRow > 4) {
+          // 未过河只能前进
+          return tCol === pCol && tRow === pRow - 1;
+        } else {
+          // 过河后可横走
+          return (tCol === pCol && tRow === pRow - 1) || (tRow === pRow && Math.abs(tCol - pCol) === 1);
+        }
+      }
+    }
+    default:
+      return false;
+  }
+};
+
+// 计算两点之间的棋子数量
+const countPiecesBetween = (from: Position, to: Position, pieces: Piece[]): number => {
+  const [fCol, fRow] = from;
+  const [tCol, tRow] = to;
+  
+  if (fCol !== tCol && fRow !== tRow) return -1; // 不在同一直线
+  
+  const cCol = Math.min(fCol, tCol);
+  const maxCol = Math.max(fCol, tCol);
+  const cRow = Math.min(fRow, tRow);
+  const maxRow = Math.max(fRow, tRow);
+  
+  let count = 0;
+  for (const p of pieces) {
+    const [pCol, pRow] = p.position;
+    if (pCol >= cCol && pCol <= maxCol && pRow >= cRow && pRow <= maxRow) {
+      if (!(pCol === fCol && pRow === fRow) && !(pCol === tCol && pRow === tRow)) {
+        count++;
+      }
+    }
+  }
+  return count;
+};
 
 // 存储所有房间
 const rooms: Map<string, GameRoom> = new Map();
@@ -477,6 +616,16 @@ const executeSettlement = (room: GameRoom): void => {
   const snapshot: HistorySnapshot = {
     pieces: room.pieces.map(p => ({ ...p })),
     roundNumber: room.historySnapshots.length + 1,
+    // 保存当前的行动框状态（上一回合的目标位置）
+    lastMoveTargets: { 
+      red: room.lastRedMoveTo, 
+      black: room.lastBlackMoveTo 
+    },
+    // 保存当前的将军状态
+    checkStatus: { 
+      red: isKingInCheck('red', room.pieces), 
+      black: isKingInCheck('black', room.pieces) 
+    },
   };
   
   // 使用共享结算逻辑
@@ -639,8 +788,31 @@ const executeUndo = (room: GameRoom): void => {
   room.blackLastPiece = null;
   room.blackLastTarget = null;
   room.blackCaptureCount = 0;
+  
+  // 恢复行动框状态（显示上一回合的目标位置）
+  room.lastRedMoveTo = lastSnapshot.lastMoveTargets.red;
+  room.lastBlackMoveTo = lastSnapshot.lastMoveTargets.black;
+  
   // 移除最后一个快照
   room.historySnapshots.pop();
+  
+  // 添加悔棋记录
+  const undoEntry: RoundHistoryEntry = {
+    roundNumber: lastSnapshot.roundNumber,
+    redAction: null,
+    blackAction: null,
+    redPieceRemoved: [],
+    blackPieceRemoved: [],
+    events: [{
+      type: 'move',
+      description: `[悔棋]第${lastSnapshot.roundNumber}回合被撤销`,
+    }],
+    winner: null,
+    endReason: null,
+    isGameEnd: false,
+  };
+  room.roundHistory.push(undoEntry);
+  
   // 清除悔棋请求
   room.undoRequestFrom = null;
   room.undoRequestedTo = null;
