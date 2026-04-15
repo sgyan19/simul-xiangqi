@@ -15,7 +15,8 @@ interface ServerPendingAction {
 // 历史快照（用于悔棋）
 interface HistorySnapshot {
   pieces: Piece[];
-  roundNumber: number;
+  gameRound: number;
+  logicRound: number;
   lastMoveTargets: { red: Position | null; black: Position | null };
   checkStatus: { red: boolean; black: boolean };
 }
@@ -51,6 +52,8 @@ export interface GameRoom {
   lastBlackMoveTo: Position | null;
   // 对弈历史记录
   roundHistory: RoundHistoryEntry[];
+  // 当前逻辑回合数
+  logicRound: number;
 }
 
 // 棋盘尺寸
@@ -234,6 +237,8 @@ export const createRoom = (roomId: string): GameRoom => {
     lastBlackMoveTo: null,
     // 对弈历史记录
     roundHistory: [],
+    // 当前逻辑回合数
+    logicRound: 0,
   };
   rooms.set(roomId, room);
   return room;
@@ -613,9 +618,13 @@ const executeSettlement = (room: GameRoom): void => {
   };
   
   // 保存结算前的快照（用于悔棋）
+  const currentLogicRound = room.logicRound;
+  const currentGameRound = room.roundHistory.length + 1;
+  
   const snapshot: HistorySnapshot = {
     pieces: room.pieces.map(p => ({ ...p })),
-    roundNumber: room.historySnapshots.length + 1,
+    gameRound: currentGameRound,
+    logicRound: currentLogicRound,
     // 保存当前的行动框状态（上一回合的目标位置）
     lastMoveTargets: { 
       red: room.lastRedMoveTo, 
@@ -639,6 +648,7 @@ const executeSettlement = (room: GameRoom): void => {
   room.blackLastPiece = result.newChaseState.blackLastPiece;
   room.blackLastTarget = result.newChaseState.blackLastTarget;
   room.blackCaptureCount = result.newChaseState.blackCaptureCount;
+  room.logicRound = currentLogicRound + 1;
   
   // 保存快照
   room.historySnapshots.push(snapshot);
@@ -646,7 +656,8 @@ const executeSettlement = (room: GameRoom): void => {
   // 保存历史记录
   const historyEntry: RoundHistoryEntry = {
     ...result.historyEntry,
-    roundNumber: room.roundHistory.length + 1,
+    logicRound: currentLogicRound,
+    gameRound: currentGameRound,
   };
   room.roundHistory.push(historyEntry);
   
@@ -796,34 +807,26 @@ const executeUndo = (room: GameRoom): void => {
   // 移除最后一个快照
   room.historySnapshots.pop();
   
-  // 添加悔棋记录（使用 undoId 确保唯一性，用于正确排序）
+  // 递增 logicRound
+  room.logicRound++;
+  
+  // 添加悔棋记录（使用 logicRound 排序，显示 gameRound）
   const undoEntry: RoundHistoryEntry = {
-    roundNumber: lastSnapshot.roundNumber,
-    undoId: `undo-${Date.now()}`,
+    logicRound: room.logicRound,
+    gameRound: lastSnapshot.gameRound,
     redAction: null,
     blackAction: null,
     redPieceRemoved: [],
     blackPieceRemoved: [],
     events: [{
       type: 'move',
-      description: `[悔棋]第${lastSnapshot.roundNumber}回合被撤销`,
+      description: `[悔棋]第${lastSnapshot.gameRound}回合被撤销`,
     }],
     winner: null,
     endReason: null,
     isGameEnd: false,
   };
-  
-  // 将悔棋记录插入到被撤销回合之后
-  const undoIndex = room.roundHistory.findIndex(
-    entry => entry.roundNumber === lastSnapshot.roundNumber && !entry.undoId
-  );
-  if (undoIndex !== -1) {
-    // 在被撤销回合之后插入
-    room.roundHistory.splice(undoIndex + 1, 0, undoEntry);
-  } else {
-    // 如果没找到（应该不会发生），追加到末尾
-    room.roundHistory.push(undoEntry);
-  }
+  room.roundHistory.push(undoEntry);
   
   // 清除悔棋请求
   room.undoRequestFrom = null;

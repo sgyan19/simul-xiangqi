@@ -340,16 +340,17 @@ function App() {
       return newState;
     });
     
-    // 添加悔棋记录到历史记录
+    // 添加悔棋记录到历史记录（使用 logicRound 排序，gameRound 显示）
     const undoEntry: RoundHistoryEntry = {
-      roundNumber: lastSnapshot.roundNumber,
+      logicRound: lastSnapshot.logicRound + 1,
+      gameRound: lastSnapshot.gameRound,
       redAction: null,
       blackAction: null,
       redPieceRemoved: [],
       blackPieceRemoved: [],
       events: [{
         type: 'move',
-        description: `[悔棋]第${lastSnapshot.roundNumber}回合被撤销`,
+        description: `[悔棋]第${lastSnapshot.gameRound}回合被撤销`,
       }],
       winner: null,
       endReason: null,
@@ -383,12 +384,14 @@ function App() {
       // 保存当前 pending moves（因为异步执行时会变化）
       const redMove = gameState.redPendingMove;
       const blackMove = gameState.blackPendingMove;
-      const currentRoundNumber = history.length + 1;
+      const currentGameRound = history.length + 1;
+      const currentLogicRound = gameState.historySnapshots.length;
       
       // 保存结算前的棋盘状态（用于悔棋）
       const snapshotBeforeSettlement = {
         pieces: gameState.pieces.map(p => ({ ...p })),
-        roundNumber: currentRoundNumber,
+        gameRound: currentGameRound,
+        logicRound: currentLogicRound,
         lastMoveTargets: { ...lastMoveTargets },
         checkStatus: { ...checkStatus },
       };
@@ -418,7 +421,8 @@ function App() {
       // 添加回合历史记录
       const entryWithRound: RoundHistoryEntry = {
         ...historyEntry,
-        roundNumber: currentRoundNumber,
+        logicRound: currentLogicRound,
+        gameRound: currentGameRound,
       };
       setHistory(prev => [...prev, entryWithRound]);
 

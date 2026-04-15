@@ -52,7 +52,8 @@ export interface SettlementResult {
 // 历史快照（用于悔棋）
 export interface HistorySnapshot {
   pieces: Piece[];
-  roundNumber: number;
+  gameRound: number;
+  logicRound: number;
   lastMoveTargets: { red: Position | null; black: Position | null };
   checkStatus: { red: boolean; black: boolean };
 }

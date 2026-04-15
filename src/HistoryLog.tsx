@@ -46,17 +46,7 @@ export default function HistoryLog({ history, isExpanded, onToggle }: HistoryLog
 
   // 根据排序顺序处理历史记录（使用 useMemo 避免不必要的重渲染）
   const sortedHistory = useMemo(() => {
-    const sorted = [...history].sort((a, b) => {
-      // 首先按 roundNumber 排序
-      if (a.roundNumber !== b.roundNumber) {
-        return a.roundNumber - b.roundNumber;
-      }
-      // 相同 roundNumber 时，悔棋记录(undoId)排在前
-      if (a.undoId && !b.undoId) return -1;
-      if (!a.undoId && b.undoId) return 1;
-      return 0;
-    });
-    
+    const sorted = [...history].sort((a, b) => a.logicRound - b.logicRound);
     return sortDesc ? sorted.reverse() : sorted;
   }, [history, sortDesc]);
 
@@ -100,9 +90,9 @@ export default function HistoryLog({ history, isExpanded, onToggle }: HistoryLog
             <div className="history-empty">暂无对弈记录</div>
           ) : (
             sortedHistory.map((entry, idx) => (
-              <div key={`history-${entry.roundNumber}-${entry.events.some(e => e.description.includes('悔棋')) ? 'undo' : idx}`} className="history-entry">
+              <div key={`history-${entry.logicRound}`} className="history-entry">
                 <div className="history-round-header">
-                  <span className="round-number">第 {entry.roundNumber} 回合</span>
+                  <span className="round-number">第 {entry.gameRound} 回合</span>
                   {entry.isGameEnd && (
                     <span className="game-end-badge">
                       {entry.winner === 'draw' ? '平局' : entry.winner === 'red' ? '红胜' : '黑胜'}
