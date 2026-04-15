@@ -603,6 +603,11 @@ function App() {
         });
       }
       
+      // 更新对弈历史记录
+      if (payload.roundHistory && Array.isArray(payload.roundHistory)) {
+        setHistory(payload.roundHistory);
+      }
+      
       // 同步视角：每次收到房间状态时，都确保视角与玩家阵营一致
       if (payload.side) {
         setViewSide(payload.side);

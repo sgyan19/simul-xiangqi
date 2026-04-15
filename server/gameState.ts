@@ -1,8 +1,9 @@
 // 服务端游戏状态管理
 // 负责棋盘规则、游戏逻辑、双人对战状态同步
 
-import { Piece, Position, Side, PieceType, INITIAL_PIECES, ActionType } from '../src/types';
+import { Piece, Position, Side, PieceType, INITIAL_PIECES, ActionType, PendingAction } from '../src/types';
 import { executeSettlement as sharedExecuteSettlement, LongChaseState } from '../src/shared/settlement';
+import { RoundHistoryEntry } from '../src/shared/history';
 
 // 待执行行动
 interface ServerPendingAction {
@@ -46,6 +47,8 @@ export interface GameRoom {
   // 最后行动目标位置（用于客户端显示目标框）
   lastRedMoveTo: Position | null;
   lastBlackMoveTo: Position | null;
+  // 对弈历史记录
+  roundHistory: RoundHistoryEntry[];
 }
 
 // 棋盘尺寸
@@ -90,6 +93,8 @@ export const createRoom = (roomId: string): GameRoom => {
     // 最后行动目标位置
     lastRedMoveTo: null,
     lastBlackMoveTo: null,
+    // 对弈历史记录
+    roundHistory: [],
   };
   rooms.set(roomId, room);
   return room;
@@ -489,6 +494,13 @@ const executeSettlement = (room: GameRoom): void => {
   // 保存快照
   room.historySnapshots.push(snapshot);
   
+  // 保存历史记录
+  const historyEntry: RoundHistoryEntry = {
+    ...result.historyEntry,
+    roundNumber: room.roundHistory.length + 1,
+  };
+  room.roundHistory.push(historyEntry);
+  
   // 保存目标位置（用于客户端显示目标框，在清空pendingMove之前）
   room.lastRedMoveTo = room.redPendingMove?.to || null;
   room.lastBlackMoveTo = room.blackPendingMove?.to || null;
@@ -528,6 +540,11 @@ export const resetRoom = (roomId: string): boolean => {
   room.blackCaptureCount = 0;
   // 重置历史快照
   room.historySnapshots = [];
+  // 重置对弈历史记录
+  room.roundHistory = [];
+  // 重置最后行动目标
+  room.lastRedMoveTo = null;
+  room.lastBlackMoveTo = null;
   // 重置悔棋请求
   room.undoRequestFrom = null;
   room.undoRequestedTo = null;

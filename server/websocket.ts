@@ -438,6 +438,8 @@ const sendRoomState = (ws: WebSocket, room: NonNullable<ReturnType<typeof getRoo
       // 最后行动目标位置
       lastRedMoveTo: room.lastRedMoveTo,
       lastBlackMoveTo: room.lastBlackMoveTo,
+      // 对弈历史记录
+      roundHistory: room.roundHistory,
     },
   });
 };
