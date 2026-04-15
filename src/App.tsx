@@ -214,9 +214,6 @@ function App() {
       selectedPiece: piece,
       validMoves,
     }));
-    
-    // 用户开始选择棋子时，清除目标框
-    setLastMoveTargets({ red: null, black: null });
   }, [gameState.phase, gameState.selectedPiece, gameState.pieces, gameState.redConfirmed, gameState.blackConfirmed, viewSide, showMessage]);
 
   // 移动棋子
@@ -596,9 +593,6 @@ function App() {
     const moves = getValidMoves(piece, onlineState.pieces);
     setSelectedPiece(piece);
     setValidMoves(moves);
-    
-    // 用户开始选择棋子时，清除目标框
-    setLastMoveTargets({ red: null, black: null });
   }, [onlineState.phase, onlineState.side, onlineState.redConfirmed, onlineState.blackConfirmed, onlineState.pieces, selectedPiece, showMessage]);
 
   // 在线模式：移动棋子
