@@ -686,9 +686,16 @@ function App() {
           />
           <span>红方</span>
           {checkStatus.red && <span style={{ color: '#FF4444', fontWeight: 'bold' }}>被将军!</span>}
-          {currentRedPendingMove && (
+          {/* 联机模式不显示对方的具体行动 */}
+          {currentRedPendingMove && (gameMode === 'local' || onlineState.side === 'red') && (
             <span style={{ fontSize: '10px', color: '#FFD700' }}>
               {formatMove(currentRedPendingMove)}
+            </span>
+          )}
+          {/* 联机模式：只显示对方是否已走棋 */}
+          {gameMode === 'online' && onlineState.side === 'black' && (
+            <span style={{ fontSize: '10px', color: '#888' }}>
+              {currentRedConfirmed ? '已走棋' : '等待中'}
             </span>
           )}
         </div>
@@ -704,9 +711,16 @@ function App() {
           />
           <span>黑方</span>
           {checkStatus.black && <span style={{ color: '#FF4444', fontWeight: 'bold' }}>被将军!</span>}
-          {currentBlackPendingMove && (
+          {/* 联机模式不显示对方的具体行动 */}
+          {currentBlackPendingMove && (gameMode === 'local' || onlineState.side === 'black') && (
             <span style={{ fontSize: '10px', color: '#FFD700' }}>
               {formatMove(currentBlackPendingMove)}
+            </span>
+          )}
+          {/* 联机模式：只显示对方是否已走棋 */}
+          {gameMode === 'online' && onlineState.side === 'red' && (
+            <span style={{ fontSize: '10px', color: '#888' }}>
+              {currentBlackConfirmed ? '已走棋' : '等待中'}
             </span>
           )}
         </div>
