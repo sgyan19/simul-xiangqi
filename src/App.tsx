@@ -223,6 +223,13 @@ function App() {
     // 长捉检查：如果是要 capture，检查是否超过连续 3 次
     if (actionType === 'capture') {
       const { lastCaptureTarget, captureSameTargetCount } = currentPiece;
+      console.log('[长捉检查]', {
+        pieceId: currentPiece.id,
+        target: to,
+        lastTarget: lastCaptureTarget,
+        count: captureSameTargetCount,
+        isSameTarget: lastCaptureTarget && lastCaptureTarget[0] === to[0] && lastCaptureTarget[1] === to[1]
+      });
       // 如果上次 capture 目标与本次相同，且已达到 3 次，则禁止
       if (lastCaptureTarget && 
           lastCaptureTarget[0] === to[0] && 
@@ -414,6 +421,14 @@ function App() {
           // capture 处理长捉
           const isCaptureHit = !toRemoveByCapture.includes(p.id) && 
                               pieces.some(op => op.side !== p.side && op.position[0] === myAction.to[0] && op.position[1] === myAction.to[1]);
+          
+          console.log('[结算-长捉计数]', {
+            pieceId: p.id,
+            action: myAction,
+            isCaptureHit,
+            originalCount: originalPiece.captureSameTargetCount,
+            originalLastTarget: originalPiece.lastCaptureTarget
+          });
           
           if (isCaptureHit) {
             // 吃子成功，重置计数
