@@ -397,56 +397,91 @@ export const undoMove = (roomId: string, playerId: string): { success: boolean; 
 
 // 执行结算
 const executeSettlement = (room: GameRoom): void => {
-  const redMove = room.redPendingMove;
-  const blackMove = room.blackPendingMove;
+  const redAction = room.redPendingMove;
+  const blackAction = room.blackPendingMove;
   
   // 复制棋子数组
   let finalPieces = room.pieces.map(p => ({ ...p }));
   
-  // ===== 第一步：执行所有移动 =====
-  if (redMove) {
+  // ===== 第一步：执行所有移动（move 和 capture 都移动到目标位置） =====
+  if (redAction) {
     const redPiece = finalPieces.find(p => 
-      p.side === 'red' && p.position[0] === redMove.from[0] && p.position[1] === redMove.from[1]
+      p.side === 'red' && p.position[0] === redAction.from[0] && p.position[1] === redAction.from[1]
     );
     if (redPiece) {
-      redPiece.position = [...redMove.to] as Position;
+      redPiece.position = [...redAction.to] as Position;
     }
   }
   
-  if (blackMove) {
+  if (blackAction) {
     const blackPiece = finalPieces.find(p => 
-      p.side === 'black' && p.position[0] === blackMove.from[0] && p.position[1] === blackMove.from[1]
+      p.side === 'black' && p.position[0] === blackAction.from[0] && p.position[1] === blackAction.from[1]
     );
     if (blackPiece) {
-      blackPiece.position = [...blackMove.to] as Position;
+      blackPiece.position = [...blackAction.to] as Position;
     }
   }
   
-  // ===== 第二步：检查吃子 =====
-  const toRemove: string[] = [];
+  // ===== 第二步：处理 move + move 冲突（只针对 move 类型的行动） =====
+  const toRemoveByMove: string[] = [];
   
-  // 检查红方移动目标
-  if (redMove) {
+  if (redAction?.actionType === 'move' && blackAction?.actionType === 'move') {
+    // 两个都是 move，检查目标是否相同
+    if (redAction.to[0] === blackAction.to[0] && redAction.to[1] === blackAction.to[1]) {
+      // 找到移动后的棋子
+      const movedRedPiece = finalPieces.find(p => 
+        p.side === 'red' && p.position[0] === redAction.to[0] && p.position[1] === redAction.to[1]
+      );
+      const movedBlackPiece = finalPieces.find(p => 
+        p.side === 'black' && p.position[0] === blackAction.to[0] && p.position[1] === blackAction.to[1]
+      );
+      
+      if (movedRedPiece && movedBlackPiece) {
+        // 炮撞炮：同归于尽
+        if (movedRedPiece.type === 'cannon' && movedBlackPiece.type === 'cannon') {
+          toRemoveByMove.push(movedRedPiece.id, movedBlackPiece.id);
+        }
+        // 炮撞其他子：炮被吃
+        else if (movedRedPiece.type === 'cannon') {
+          toRemoveByMove.push(movedRedPiece.id);
+        }
+        else if (movedBlackPiece.type === 'cannon') {
+          toRemoveByMove.push(movedBlackPiece.id);
+        }
+        // 其他子撞其他子：同归于尽
+        else {
+          toRemoveByMove.push(movedRedPiece.id, movedBlackPiece.id);
+        }
+      }
+    }
+  }
+  
+  // 先移除因 move 冲突被吃的棋子
+  finalPieces = finalPieces.filter(p => !toRemoveByMove.includes(p.id));
+  
+  // ===== 第三步：处理 capture 吃子判定 =====
+  const toRemoveByCapture: string[] = [];
+  
+  if (redAction?.actionType === 'capture') {
     const enemyAtTarget = finalPieces.find(p => 
-      p.side === 'black' && p.position[0] === redMove.to[0] && p.position[1] === redMove.to[1]
+      p.side === 'black' && p.position[0] === redAction.to[0] && p.position[1] === redAction.to[1]
     );
     if (enemyAtTarget) {
-      toRemove.push(enemyAtTarget.id);
+      toRemoveByCapture.push(enemyAtTarget.id);
     }
+    // 如果目标位置没有敌方子，capture 扑空，什么都不做
   }
   
-  // 检查黑方移动目标
-  if (blackMove) {
+  if (blackAction?.actionType === 'capture') {
     const enemyAtTarget = finalPieces.find(p => 
-      p.side === 'red' && p.position[0] === blackMove.to[0] && p.position[1] === blackMove.to[1]
+      p.side === 'red' && p.position[0] === blackAction.to[0] && p.position[1] === blackAction.to[1]
     );
     if (enemyAtTarget) {
-      toRemove.push(enemyAtTarget.id);
+      toRemoveByCapture.push(enemyAtTarget.id);
     }
   }
   
-  // 移除被吃的棋子
-  finalPieces = finalPieces.filter(p => !toRemove.includes(p.id));
+  finalPieces = finalPieces.filter(p => !toRemoveByCapture.includes(p.id));
   
   // 更新棋子
   room.pieces = finalPieces;
