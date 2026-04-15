@@ -169,6 +169,7 @@ function App() {
   const [validMoves, setValidMoves] = useState<Position[]>([]);
   const [history, setHistory] = useState<RoundHistoryEntry[]>([]);
   const [historyExpanded, setHistoryExpanded] = useState(false);
+  const [lastMoveTargets, setLastMoveTargets] = useState<{ red: Position | null; black: Position | null }>({ red: null, black: null });
 
   // 显示提示
   const showMessage = useCallback((msg: string, duration = 2000) => {
@@ -359,6 +360,17 @@ function App() {
         blackCaptureCount: newChaseState.blackCaptureCount,
       }));
 
+      // 设置最后行动目标位置（用于显示目标框）
+      setLastMoveTargets({
+        red: gameState.redPendingMove?.to || null,
+        black: gameState.blackPendingMove?.to || null,
+      });
+
+      // 新一回合开始时（winner 为 null），清除目标框
+      if (!winner) {
+        setLastMoveTargets({ red: null, black: null });
+      }
+
       if (finalMessage) {
         showMessage(finalMessage, 3000);
       }
@@ -399,6 +411,7 @@ function App() {
     setViewSide('red');
     setCheckStatus({ red: false, black: false });
     setHistory([]);
+    setLastMoveTargets({ red: null, black: null });
     showMessage('游戏已重置', 1500);
   }, [showMessage]);
 
@@ -480,6 +493,10 @@ function App() {
       const hasRedPendingMove = 'redPendingMove' in payload;
       const hasBlackPendingMove = 'blackPendingMove' in payload;
       
+      // 检查是否进入新的策略阶段（新一回合），清除目标框
+      const wasInSettlement = onlineState.phase === 'settlement' || onlineState.phase === 'ended';
+      const isNowInStrategy = payload.phase === 'strategy';
+      
       setOnlineState(prev => ({
         ...prev,
         pieces: pieces,
@@ -491,6 +508,11 @@ function App() {
         blackPendingMove: hasBlackPendingMove ? payload.blackPendingMove : prev.blackPendingMove,
         winner: payload.winner ?? prev.winner,
       }));
+      
+      // 新一回合开始时清除目标框
+      if (wasInSettlement && isNowInStrategy) {
+        setLastMoveTargets({ red: null, black: null });
+      }
       
       // 同步视角：每次收到房间状态时，都确保视角与玩家阵营一致
       if (payload.side) {
@@ -511,6 +533,12 @@ function App() {
       const winnerText = payload.winner === 'draw' ? '和棋！' : 
                          payload.winner === 'red' ? '红方胜利！' : '黑方胜利！';
       showMessage(winnerText + (payload.reason ? ' ' + payload.reason : ''), 3000);
+      
+      // 设置最后行动目标位置（用于显示目标框）
+      setLastMoveTargets({
+        red: payload.redPendingMove?.to || null,
+        black: payload.blackPendingMove?.to || null,
+      });
     });
 
     wsClient.on('left_room', () => {
@@ -593,6 +621,7 @@ function App() {
     wsClient.send('reset_game');
     setHistory([]);
     setGameState(createInitialState());
+    setLastMoveTargets({ red: null, black: null });
   }, []);
 
   // 联机模式：监听双方走棋，自动结算
@@ -730,6 +759,7 @@ function App() {
                         (gameMode === 'online' && onlineState.side === 'red' ? currentRedPendingMove : null)}
         blackPendingMove={gameMode === 'local' ? currentBlackPendingMove : 
                           (gameMode === 'online' && onlineState.side === 'black' ? currentBlackPendingMove : null)}
+        lastMoveTargets={lastMoveTargets}
         onSelectPiece={handleSelect}
         onMovePiece={handleMove}
       />

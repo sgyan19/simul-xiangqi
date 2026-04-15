@@ -10,6 +10,7 @@ interface ChessBoardProps {
   flipped: boolean;
   redPendingMove: Move | null;
   blackPendingMove: Move | null;
+  lastMoveTargets: { red: Position | null; black: Position | null };
   onSelectPiece: (piece: Piece) => void;
   onMovePiece: (to: Position) => void;
 }
@@ -300,6 +301,53 @@ const MoveArrow = ({
   );
 };
 
+// 结算后显示的行动目标框
+const TargetBox = ({
+  position,
+  side,
+  flipped,
+}: {
+  position: Position;
+  side: 'red' | 'black';
+  flipped: boolean;
+}) => {
+  const { left, top } = getPosition(position[0], position[1], flipped);
+  
+  // 将百分比字符串转换为数值
+  const leftVal = parseFloat(left);
+  const topVal = parseFloat(top);
+  
+  // 棋子的尺寸（与 piece 组件保持一致）
+  // piece 宽度是 11.11%，高度是 10%
+  const boxWidth = 12;
+  const boxHeight = 11;
+  
+  // 框的位置（居中于格子中心，偏移半个格子）
+  const boxLeft = leftVal - boxWidth / 2;
+  const boxTop = topVal - boxHeight / 2;
+  
+  // 阵营颜色
+  const borderColor = side === 'red' ? '#C41E3A' : '#1A1A1A';
+  
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        left: `${boxLeft}%`,
+        top: `${boxTop}%`,
+        width: `${boxWidth}%`,
+        height: `${boxHeight}%`,
+        border: `3px solid ${borderColor}`,
+        borderRadius: '8px',
+        backgroundColor: side === 'red' ? 'rgba(196, 30, 58, 0.2)' : 'rgba(26, 26, 26, 0.2)',
+        pointerEvents: 'none',
+        zIndex: 4,
+        boxSizing: 'border-box',
+      }}
+    />
+  );
+};
+
 function ChessBoard({
   pieces,
   selectedPiece,
@@ -309,6 +357,7 @@ function ChessBoard({
   flipped,
   redPendingMove,
   blackPendingMove,
+  lastMoveTargets,
   onSelectPiece,
   onMovePiece,
 }: ChessBoardProps) {
@@ -336,6 +385,14 @@ function ChessBoard({
         {/* 移动箭头 - 黑方 */}
         {blackPendingMove && (
           <MoveArrow move={blackPendingMove} side="black" flipped={flipped} />
+        )}
+
+        {/* 结算后显示的行动目标框 */}
+        {lastMoveTargets.red && (
+          <TargetBox position={lastMoveTargets.red} side="red" flipped={flipped} />
+        )}
+        {lastMoveTargets.black && (
+          <TargetBox position={lastMoveTargets.black} side="black" flipped={flipped} />
         )}
 
         {/* 可移动位置指示 */}
