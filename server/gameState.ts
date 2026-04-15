@@ -648,6 +648,13 @@ const executeSettlement = (room: GameRoom): void => {
   room.blackLastPiece = result.newChaseState.blackLastPiece;
   room.blackLastTarget = result.newChaseState.blackLastTarget;
   room.blackCaptureCount = result.newChaseState.blackCaptureCount;
+  
+  // 判断是否是重走（当前 gameRound 是否已有结算记录，排除悔棋记录）
+  const isRedo = room.roundHistory.some(
+    entry => entry.gameRound === currentGameRound && !entry.events.some(e => e.description.includes('悔棋'))
+  );
+  
+  // logicRound 递增
   room.logicRound = currentLogicRound + 1;
   
   // 保存快照
@@ -656,7 +663,7 @@ const executeSettlement = (room: GameRoom): void => {
   // 保存历史记录
   const historyEntry: RoundHistoryEntry = {
     ...result.historyEntry,
-    logicRound: currentLogicRound,
+    logicRound: room.logicRound,
     gameRound: currentGameRound,
   };
   room.roundHistory.push(historyEntry);

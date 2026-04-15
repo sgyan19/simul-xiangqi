@@ -23,7 +23,7 @@ export interface SettlementEvent {
 
 export interface RoundHistoryEntry {
   logicRound: number;   // 逻辑回合，用于排序，每次操作递增
-  gameRound: number;     // 游戏回合，用于显示，悔棋后不变
+  gameRound: number;    // 游戏回合，用于显示
   redAction: PendingAction | null;
   blackAction: PendingAction | null;
   redPieceRemoved: PieceRemovalRecord[];
