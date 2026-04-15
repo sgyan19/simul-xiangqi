@@ -1,4 +1,4 @@
-import { GameState, Move, Piece, SettlementResult, Side, Winner, Position } from './types';
+import { GameState, Move, PendingAction, Piece, SettlementResult, Side, Winner, Position } from './types';
 import { getPieceAt } from './chessLogic';
 
 // 执行移动（克隆棋子数组后移动）
@@ -312,7 +312,7 @@ export const getCurrentHint = (state: GameState): string => {
 };
 
 // 格式化移动为中文描述
-export const formatMove = (move: Move): string => {
+export const formatMove = (move: Move | PendingAction): string => {
   const cols = '九八七六五四三二一'.split('');
   const rows = '零一二三四五六七八九'.split('');
   const fromDesc = cols[move.from[0]] + rows[9 - move.from[1]];

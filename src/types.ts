@@ -15,10 +15,20 @@ export interface Piece {
   id: string;
 }
 
-// 移动
+// 行动类型
+export type ActionType = 'capture' | 'move';
+
+// 移动（原始定义）
 export interface Move {
   from: Position;
   to: Position;
+}
+
+// 待执行行动（包含行动类型）
+export interface PendingAction {
+  from: Position;
+  to: Position;
+  actionType: ActionType; // 'capture' = 吃子，'move' = 移动到空位
 }
 
 // 游戏阶段
@@ -29,8 +39,8 @@ export type Winner = Side | 'draw' | null;
 
 // 结算结果
 export interface SettlementResult {
-  redMove: Move | null;
-  blackMove: Move | null;
+  redAction: PendingAction | null;
+  blackAction: PendingAction | null;
   captures: {
     red: Piece[];
     black: Piece[];
@@ -46,8 +56,8 @@ export interface GameState {
   redConfirmed: boolean;
   blackConfirmed: boolean;
   pieces: Piece[]; // 所有棋子
-  redPendingMove: Move | null; // 红方待执行移动
-  blackPendingMove: Move | null; // 黑方待执行移动
+  redPendingMove: PendingAction | null; // 红方待执行行动
+  blackPendingMove: PendingAction | null; // 黑方待执行行动
   selectedPiece: Piece | null; // 选中的棋子
   validMoves: Position[]; // 可移动位置
   winner: Winner;

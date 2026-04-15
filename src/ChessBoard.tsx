@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import { Piece, Position, Side, GamePhase, PIECE_NAMES, Move } from './types';
+import { Piece, Position, Side, GamePhase, PIECE_NAMES, Move, PendingAction } from './types';
 
 interface ChessBoardProps {
   pieces: Piece[];
@@ -8,8 +8,8 @@ interface ChessBoardProps {
   currentOperatedSide: Side;
   phase: GamePhase;
   flipped: boolean;
-  redPendingMove: Move | null;
-  blackPendingMove: Move | null;
+  redPendingMove: PendingAction | null;
+  blackPendingMove: PendingAction | null;
   onSelectPiece: (piece: Piece) => void;
   onMovePiece: (to: Position) => void;
 }

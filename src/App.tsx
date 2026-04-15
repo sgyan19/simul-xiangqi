@@ -5,6 +5,8 @@ import {
   Position,
   Side,
   Move,
+  PendingAction,
+  ActionType,
   INITIAL_PIECES,
   GamePhase,
 } from './types';
@@ -208,9 +210,16 @@ function App() {
     const selectedPiece = gameState.selectedPiece;
     const side = selectedPiece.side;
     
-    const pendingMove: Move = {
+    // 判断行动类型：目标是敌方棋子则为吃子，否则为移动
+    const targetPiece = gameState.pieces.find(p => 
+      p.side !== side && p.position[0] === to[0] && p.position[1] === to[1]
+    );
+    const actionType: ActionType = targetPiece ? 'capture' : 'move';
+    
+    const pendingMove: PendingAction = {
       from: selectedPiece.position,
       to,
+      actionType,
     };
 
     setGameState(prev => {
@@ -226,7 +235,7 @@ function App() {
       newState.validMoves = [];
       return newState;
     });
-  }, [gameState.selectedPiece, gameState.phase, showMessage]);
+  }, [gameState.selectedPiece, gameState.phase, gameState.pieces, showMessage]);
 
   // 结算按钮
   const handleSettle = useCallback(() => {
@@ -371,8 +380,8 @@ function App() {
         phase: winner ? 'ended' : 'strategy',
         winner,
         settlementResult: winner ? { 
-          redMove: prev.redPendingMove, 
-          blackMove: prev.blackPendingMove, 
+          redAction: prev.redPendingMove, 
+          blackAction: prev.blackPendingMove, 
           captures: { red: [], black: [] },
           winner,
           reason 

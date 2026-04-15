@@ -1,7 +1,14 @@
 // 服务端游戏状态管理
 // 负责棋盘规则、游戏逻辑、双人对战状态同步
 
-import { Piece, Position, Side, PieceType, INITIAL_PIECES } from '../src/types';
+import { Piece, Position, Side, PieceType, INITIAL_PIECES, ActionType } from '../src/types';
+
+// 待执行行动
+interface ServerPendingAction {
+  from: Position;
+  to: Position;
+  actionType: ActionType;
+}
 
 // 房间状态
 export interface GameRoom {
@@ -13,8 +20,8 @@ export interface GameRoom {
   currentOperatedSide: Side;
   redConfirmed: boolean;
   blackConfirmed: boolean;
-  redPendingMove: { from: Position; to: Position } | null;
-  blackPendingMove: { from: Position; to: Position } | null;
+  redPendingMove: ServerPendingAction | null;
+  blackPendingMove: ServerPendingAction | null;
   winner: Side | 'draw' | null;
   createdAt: number;
 }
@@ -346,12 +353,16 @@ export const submitMove = (roomId: string, playerId: string, from: Position, to:
     return { success: false, error: '移动不合法' };
   }
   
+  // 判断行动类型：目标是敌方棋子则为吃子，否则为移动
+  const enemyAtTarget = room.pieces.find(p => p.side !== side && p.position[0] === to[0] && p.position[1] === to[1]);
+  const actionType: ActionType = enemyAtTarget ? 'capture' : 'move';
+  
   // 记录移动
   if (side === 'red') {
-    room.redPendingMove = { from, to };
+    room.redPendingMove = { from, to, actionType };
     room.redConfirmed = true;
   } else {
-    room.blackPendingMove = { from, to };
+    room.blackPendingMove = { from, to, actionType };
     room.blackConfirmed = true;
   }
   
