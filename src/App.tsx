@@ -119,6 +119,7 @@ interface OnlineState {
   blackPendingMove: Move | null;
   winner: Side | 'draw' | null;
   message: string;
+  isMatchmaking: boolean; // 是否正在匹配中
 }
 
 // 初始游戏状态
@@ -158,6 +159,7 @@ const createInitialOnlineState = (): OnlineState => ({
   blackPendingMove: null,
   winner: null,
   message: '',
+  isMatchmaking: false,
 });
 
 function App() {
@@ -535,6 +537,43 @@ function App() {
       showMessage(`房间 ${payload.roomId} 已创建，你是${payload.side === 'red' ? '红方' : '黑方'}`);
     });
 
+    // 匹配开始
+    wsClient.on('matchmaking_started', (payload: any) => {
+      setOnlineState(prev => ({ ...prev, isMatchmaking: true }));
+      showMessage('正在匹配对手...', 999999);
+    });
+
+    // 匹配取消
+    wsClient.on('matchmaking_cancelled', (payload: any) => {
+      setOnlineState(prev => ({ ...prev, isMatchmaking: false }));
+      showMessage('已取消匹配');
+    });
+
+    // 匹配成功
+    wsClient.on('match_found', (payload: any) => {
+      const pieces = payload.pieces && payload.pieces.length > 0 
+        ? payload.pieces 
+        : INITIAL_PIECES.map(p => ({ ...p }));
+      setOnlineState(prev => ({ 
+        ...prev, 
+        isMatchmaking: false,
+        roomId: payload.roomId, 
+        side: payload.side, 
+        pieces: pieces,
+        phase: 'strategy',
+        redConfirmed: false,
+        blackConfirmed: false,
+        redPendingMove: null,
+        blackPendingMove: null,
+        message: '',
+      }));
+      // 匹配成功后，切换到自己的视角
+      if (payload.side) {
+        setViewSide(payload.side);
+      }
+      showMessage(`匹配成功！你是${payload.side === 'red' ? '红方' : '黑方'}`, 3000);
+    });
+
     wsClient.on('joined', (payload: any) => {
       // 确保pieces存在且有效
       const pieces = payload.pieces && payload.pieces.length > 0 
@@ -659,6 +698,16 @@ function App() {
       wsClient.disconnect();
     };
   }, [gameMode, showMessage]);
+
+  // 在线模式：快速匹配
+  const handleQuickMatch = useCallback(() => {
+    wsClient.send('join_matchmaking');
+  }, []);
+
+  // 在线模式：取消匹配
+  const handleCancelMatch = useCallback(() => {
+    wsClient.send('leave_matchmaking');
+  }, []);
 
   // 在线模式：创建房间
   const handleCreateRoom = useCallback(() => {
@@ -881,11 +930,15 @@ function App() {
       />
 
       {/* 在线模式房间UI（棋盘下方） */}
-      {gameMode === 'online' && !onlineState.roomId && (
+      {gameMode === 'online' && !onlineState.roomId && !onlineState.isMatchmaking && (
         <div className="online-panel">
           <h3>联机对战</h3>
           <div className="room-actions">
-            <button className="btn btn-primary" onClick={handleCreateRoom}>
+            <button className="btn btn-primary" onClick={handleQuickMatch}>
+              快速匹配
+            </button>
+            <div className="divider-text">或</div>
+            <button className="btn btn-secondary" onClick={handleCreateRoom}>
               创建房间
             </button>
             <div className="divider-text">或</div>
@@ -901,6 +954,18 @@ function App() {
               加入
             </button>
           </div>
+        </div>
+      )}
+
+      {/* 匹配中状态 */}
+      {gameMode === 'online' && onlineState.isMatchmaking && (
+        <div className="online-panel matchmaking">
+          <div className="matchmaking-spinner"></div>
+          <h3>正在匹配对手...</h3>
+          <p>请稍候，系统正在为您寻找对手</p>
+          <button className="btn btn-secondary" onClick={handleCancelMatch}>
+            取消匹配
+          </button>
         </div>
       )}
 

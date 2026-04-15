@@ -27,10 +27,14 @@ interface PlayerInfo {
   ws: WebSocket;
   roomId: string | null;
   side: 'red' | 'black' | null;
+  inMatchmaking: boolean; // 是否在匹配中
 }
 
 // 存储所有连接的客户端
 const clients: Map<WebSocket, PlayerInfo> = new Map();
+
+// 匹配队列
+const matchQueue: Set<WebSocket> = new Set();
 
 // 初始化 WebSocket 服务
 export const initWebSocket = (server: Server): WebSocketServer => {
@@ -40,7 +44,7 @@ export const initWebSocket = (server: Server): WebSocketServer => {
     console.log('新的 WebSocket 连接');
     
     // 初始化玩家信息
-    clients.set(ws, { ws, roomId: null, side: null });
+    clients.set(ws, { ws, roomId: null, side: null, inMatchmaking: false });
 
     ws.on('message', (data: Buffer) => {
       try {
@@ -79,6 +83,77 @@ const getPlayerId = (ws: WebSocket): string => {
   return (ws as any)._playerId;
 };
 
+// 尝试匹配玩家
+const tryMatchPlayers = (): void => {
+  if (matchQueue.size < 2) return;
+  
+  // 取队列中最先进入的两个玩家
+  const players = Array.from(matchQueue);
+  const ws1 = players[0];
+  const ws2 = players[1];
+  
+  // 从队列中移除
+  matchQueue.delete(ws1);
+  matchQueue.delete(ws2);
+  
+  // 创建房间
+  const roomId = generateRoomId();
+  const room = createRoom(roomId);
+  
+  const playerId1 = getPlayerId(ws1);
+  const playerId2 = getPlayerId(ws2);
+  
+  // 随机分配红黑方
+  const [redWs, blackWs] = Math.random() < 0.5 ? [ws1, ws2] : [ws2, ws1];
+  const redPlayerId = getPlayerId(redWs);
+  const blackPlayerId = getPlayerId(blackWs);
+  
+  room.redPlayer = redPlayerId;
+  room.blackPlayer = blackPlayerId;
+  room.phase = 'strategy';
+  
+  // 更新客户端状态
+  const player1Info = clients.get(ws1);
+  const player2Info = clients.get(ws2);
+  
+  if (player1Info) {
+    player1Info.roomId = roomId;
+    player1Info.side = redPlayerId === room.redPlayer ? 'red' : 'black';
+    player1Info.inMatchmaking = false;
+    clients.set(ws1, player1Info);
+  }
+  
+  if (player2Info) {
+    player2Info.roomId = roomId;
+    player2Info.side = blackPlayerId === room.blackPlayer ? 'black' : 'red';
+    player2Info.inMatchmaking = false;
+    clients.set(ws2, player2Info);
+  }
+  
+  // 发送匹配成功和房间信息给双方
+  sendToClient(ws1, {
+    type: 'match_found',
+    payload: {
+      roomId,
+      side: player1Info?.side,
+      pieces: room.pieces,
+      isQuickMatch: true
+    }
+  });
+  
+  sendToClient(ws2, {
+    type: 'match_found',
+    payload: {
+      roomId,
+      side: player2Info?.side,
+      pieces: room.pieces,
+      isQuickMatch: true
+    }
+  });
+  
+  console.log(`快速匹配成功: 房间 ${roomId}, 红方: ${room.redPlayer}, 黑方: ${room.blackPlayer}`);
+};
+
 // 处理消息
 const handleMessage = (ws: WebSocket, message: WSMessage): void => {
   const playerId = getPlayerId(ws);
@@ -105,6 +180,63 @@ const handleMessage = (ws: WebSocket, message: WSMessage): void => {
       });
       
       broadcastRoomUpdate(room);
+      break;
+    }
+
+    case 'join_matchmaking': {
+      // 如果已在匹配中，不处理
+      if (player?.inMatchmaking) {
+        return;
+      }
+      
+      // 如果已在房间中，先离开房间
+      if (player?.roomId) {
+        const room = getRoom(player.roomId);
+        if (room) {
+          leaveRoom(player.roomId, getPlayerId(ws));
+          broadcastRoomUpdate(room);
+        }
+        player.roomId = null;
+        player.side = null;
+      }
+      
+      // 加入匹配队列
+      matchQueue.add(ws);
+      if (player) {
+        player.inMatchmaking = true;
+        clients.set(ws, player);
+      }
+      
+      sendToClient(ws, {
+        type: 'matchmaking_started',
+        payload: { message: '正在匹配对手...' }
+      });
+      
+      console.log(`玩家 ${getPlayerId(ws)} 加入匹配队列，当前队列: ${matchQueue.size} 人`);
+      
+      // 尝试匹配
+      tryMatchPlayers();
+      break;
+    }
+
+    case 'leave_matchmaking': {
+      // 如果不在匹配中，不处理
+      if (!player?.inMatchmaking) {
+        return;
+      }
+      
+      matchQueue.delete(ws);
+      if (player) {
+        player.inMatchmaking = false;
+        clients.set(ws, player);
+      }
+      
+      sendToClient(ws, {
+        type: 'matchmaking_cancelled',
+        payload: { message: '已取消匹配' }
+      });
+      
+      console.log(`玩家 ${getPlayerId(ws)} 离开匹配队列`);
       break;
     }
 
@@ -378,6 +510,13 @@ const handleMessage = (ws: WebSocket, message: WSMessage): void => {
 // 处理断开连接
 const handleDisconnect = (ws: WebSocket): void => {
   const player = clients.get(ws);
+  
+  // 如果在匹配队列中，移除
+  if (player?.inMatchmaking) {
+    matchQueue.delete(ws);
+    console.log('匹配中的玩家断开连接');
+  }
+  
   if (player && player.roomId) {
     const room = getRoom(player.roomId);
     if (room) {
