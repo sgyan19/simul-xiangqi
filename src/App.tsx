@@ -586,15 +586,17 @@ function App() {
         winner: payload.winner ?? prev.winner,
       }));
       
-      // 新一回合开始时清除目标框
+      // 新一回合开始时清除目标框（仅当没有lastMoveTo时）
       if (wasInSettlement && isNowInStrategy) {
-        setLastMoveTargets({ red: null, black: null });
+        // 只有当没有新的lastMoveTo时才清除
+        if (!payload.lastRedMoveTo && !payload.lastBlackMoveTo) {
+          setLastMoveTargets({ red: null, black: null });
+        }
       }
       
-      // 进入结算或结束阶段时，显示最后行动目标框
-      const isNowInSettlementOrEnded = payload.phase === 'settlement' || payload.phase === 'ended';
-      if (isNowInSettlementOrEnded) {
-        console.log('DEBUG: room_state in settlement/ended, lastRedMoveTo:', payload.lastRedMoveTo, 'lastBlackMoveTo:', payload.lastBlackMoveTo);
+      // 收到room_state时，如果有lastMoveTo就显示目标框
+      if (payload.lastRedMoveTo || payload.lastBlackMoveTo) {
+        console.log('DEBUG: Setting lastMoveTargets from room_state');
         setLastMoveTargets({
           red: payload.lastRedMoveTo || null,
           black: payload.lastBlackMoveTo || null,
