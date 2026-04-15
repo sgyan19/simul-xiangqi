@@ -734,8 +734,10 @@ function App() {
         currentOperatedSide={viewSide}
         phase={currentPhase}
         flipped={viewSide === 'black'}
-        redPendingMove={currentRedPendingMove}
-        blackPendingMove={currentBlackPendingMove}
+        redPendingMove={gameMode === 'local' ? currentRedPendingMove : 
+                        (gameMode === 'online' && onlineState.side === 'red' ? currentRedPendingMove : null)}
+        blackPendingMove={gameMode === 'local' ? currentBlackPendingMove : 
+                          (gameMode === 'online' && onlineState.side === 'black' ? currentBlackPendingMove : null)}
         onSelectPiece={handleSelect}
         onMovePiece={handleMove}
       />
