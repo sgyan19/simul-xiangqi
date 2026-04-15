@@ -131,6 +131,9 @@ const createInitialState = (): GameState => ({
   winner: null,
   settlementResult: null,
   message: '',
+  // 长捉限制
+  lastCaptureTarget: null,
+  captureSameTargetCount: 0,
 });
 
 const createInitialOnlineState = (): OnlineState => ({
@@ -210,10 +213,6 @@ function App() {
     const selectedPiece = gameState.selectedPiece;
     const side = selectedPiece.side;
     
-    // 从 pieces 中获取最新的棋子数据（确保引用正确）
-    const currentPiece = gameState.pieces.find(p => p.id === selectedPiece.id);
-    if (!currentPiece) return;
-    
     // 判断行动类型：目标是敌方棋子则为吃子，否则为移动
     const targetPiece = gameState.pieces.find(p => 
       p.side !== side && p.position[0] === to[0] && p.position[1] === to[1]
@@ -222,14 +221,7 @@ function App() {
     
     // 长捉检查：如果是要 capture，检查是否超过连续 3 次
     if (actionType === 'capture') {
-      const { lastCaptureTarget, captureSameTargetCount } = currentPiece;
-      console.log('[长捉检查]', {
-        pieceId: currentPiece.id,
-        target: to,
-        lastTarget: lastCaptureTarget,
-        count: captureSameTargetCount,
-        isSameTarget: lastCaptureTarget && lastCaptureTarget[0] === to[0] && lastCaptureTarget[1] === to[1]
-      });
+      const { lastCaptureTarget, captureSameTargetCount } = gameState;
       // 如果上次 capture 目标与本次相同，且已达到 3 次，则禁止
       if (lastCaptureTarget && 
           lastCaptureTarget[0] === to[0] && 
@@ -259,7 +251,7 @@ function App() {
       newState.validMoves = [];
       return newState;
     });
-  }, [gameState.selectedPiece, gameState.phase, gameState.pieces, showMessage]);
+  }, [gameState.selectedPiece, gameState.phase, gameState.pieces, gameState.lastCaptureTarget, gameState.captureSameTargetCount, showMessage]);
 
   // 结算按钮
   const handleSettle = useCallback(() => {
@@ -397,60 +389,35 @@ function App() {
       
       finalPieces = finalPieces.filter(p => !toRemoveByCapture.includes(p.id));
       
-      // 第四步：更新长捉计数
-      finalPieces = finalPieces.map(p => {
-        let newPiece = { ...p };
-        
-        // 找到这个棋子对应的行动
-        const isRedPiece = p.side === 'red';
-        const myAction = isRedPiece ? redAction : blackAction;
-        const originalPiece = pieces.find(op => op.id === p.id);
-        
-        if (!originalPiece || !myAction) {
-          // 没有行动，重置计数
-          newPiece.lastCaptureTarget = null;
-          newPiece.captureSameTargetCount = 0;
-          return newPiece;
-        }
-        
-        if (myAction.actionType === 'move') {
-          // move 重置计数
-          newPiece.lastCaptureTarget = null;
-          newPiece.captureSameTargetCount = 0;
-        } else if (myAction.actionType === 'capture') {
-          // capture 处理长捉
-          const isCaptureHit = !toRemoveByCapture.includes(p.id) && 
-                              pieces.some(op => op.side !== p.side && op.position[0] === myAction.to[0] && op.position[1] === myAction.to[1]);
-          
-          console.log('[结算-长捉计数]', {
-            pieceId: p.id,
-            action: myAction,
-            isCaptureHit,
-            originalCount: originalPiece.captureSameTargetCount,
-            originalLastTarget: originalPiece.lastCaptureTarget
-          });
-          
-          if (isCaptureHit) {
-            // 吃子成功，重置计数
-            newPiece.lastCaptureTarget = null;
-            newPiece.captureSameTargetCount = 0;
+      // 第四步：更新长捉计数（全局策略阶段计数）
+      let newLastCaptureTarget: Position | null = null;
+      let newCaptureSameTargetCount = 0;
+
+      // 遍历所有棋子的行动
+      for (const action of [redAction, blackAction]) {
+        if (!action || action.actionType !== 'capture') continue;
+
+        const isCaptureHit = pieces.some(op => 
+          op.side !== (action === redAction ? 'red' : 'black') && 
+          op.position[0] === action.to[0] && 
+          op.position[1] === action.to[1]
+        );
+
+        if (!isCaptureHit) {
+          // 扑空：检查是否与上次目标相同
+          if (gameState.lastCaptureTarget && 
+              gameState.lastCaptureTarget[0] === action.to[0] && 
+              gameState.lastCaptureTarget[1] === action.to[1]) {
+            // 连续同一目标
+            newCaptureSameTargetCount = gameState.captureSameTargetCount + 1;
           } else {
-            // 扑空，增加计数
-            if (originalPiece.lastCaptureTarget && 
-                originalPiece.lastCaptureTarget[0] === myAction.to[0] && 
-                originalPiece.lastCaptureTarget[1] === myAction.to[1]) {
-              // 连续同一目标
-              newPiece.captureSameTargetCount = originalPiece.captureSameTargetCount + 1;
-            } else {
-              // 新目标
-              newPiece.captureSameTargetCount = 1;
-            }
-            newPiece.lastCaptureTarget = [...myAction.to] as Position;
+            // 新目标
+            newCaptureSameTargetCount = 1;
           }
+          newLastCaptureTarget = [...action.to] as Position;
         }
-        
-        return newPiece;
-      });
+        // 吃子成功：重置计数（保持 newLastCaptureTarget = null, newCaptureSameTargetCount = 0）
+      }
 
       // 检查将帅面对面
       const redKing = finalPieces.find(p => p.type === 'king' && p.side === 'red');
@@ -510,6 +477,9 @@ function App() {
         blackConfirmed: false,
         redPendingMove: null,
         blackPendingMove: null,
+        // 更新长捉计数
+        lastCaptureTarget: newLastCaptureTarget,
+        captureSameTargetCount: newCaptureSameTargetCount,
       }));
 
       if (finalMessage) {
@@ -518,7 +488,7 @@ function App() {
     };
 
     doSettlement();
-  }, [gameState.phase, gameState.pieces, gameState.redPendingMove, gameState.blackPendingMove, showMessage]);
+  }, [gameState.phase, gameState.pieces, gameState.redPendingMove, gameState.blackPendingMove, gameState.lastCaptureTarget, gameState.captureSameTargetCount, showMessage]);
 
   // 本地模式：监听双方走棋，自动进入结算
   useEffect(() => {
