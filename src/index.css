@@ -1172,6 +1172,35 @@ body {
   transform: rotate(180deg);
 }
 
+.history-log-header {
+  display: flex;
+  gap: 8px;
+  padding: 0 10px 8px 10px;
+}
+
+.sort-btn {
+  flex: 1;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sort-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+.sort-btn.active {
+  background: rgba(255, 215, 0, 0.15);
+  border-color: var(--highlight);
+  color: var(--highlight);
+}
+
 .history-log-list {
   max-height: 250px;
   min-height: 100px;

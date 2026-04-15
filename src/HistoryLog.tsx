@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { RoundHistoryEntry, getPieceName } from './shared/history';
 import { PendingAction } from './types';
 
@@ -42,13 +42,20 @@ const getEventIcon = (type: string): string => {
 
 export default function HistoryLog({ history, isExpanded, onToggle }: HistoryLogProps) {
   const listRef = useRef<HTMLDivElement>(null);
+  const [sortDesc, setSortDesc] = useState(true); // 默认倒序
 
-  // 自动滚动到最新记录
+  // 根据排序顺序处理历史记录
+  const sortedHistory = sortDesc 
+    ? [...history].sort((a, b) => b.roundNumber - a.roundNumber)  // 倒序
+    : [...history].sort((a, b) => a.roundNumber - b.roundNumber); // 正序
+
+  // 自动滚动到最新/最旧记录
   useEffect(() => {
     if (listRef.current && isExpanded) {
-      listRef.current.scrollTop = listRef.current.scrollHeight;
+      // 倒序时滚动到顶部（最新），正序时滚动到底部（最新）
+      listRef.current.scrollTop = sortDesc ? 0 : listRef.current.scrollHeight;
     }
-  }, [history.length, isExpanded]);
+  }, [history.length, isExpanded, sortDesc]);
 
   return (
     <div className="history-log-container">
@@ -60,11 +67,28 @@ export default function HistoryLog({ history, isExpanded, onToggle }: HistoryLog
       </button>
 
       {isExpanded && (
+        <div className="history-log-header">
+          <button 
+            className={`sort-btn ${sortDesc ? 'active' : ''}`}
+            onClick={() => setSortDesc(true)}
+          >
+            最新优先
+          </button>
+          <button 
+            className={`sort-btn ${!sortDesc ? 'active' : ''}`}
+            onClick={() => setSortDesc(false)}
+          >
+            最早优先
+          </button>
+        </div>
+      )}
+
+      {isExpanded && (
         <div className="history-log-list" ref={listRef}>
-          {history.length === 0 ? (
+          {sortedHistory.length === 0 ? (
             <div className="history-empty">暂无对弈记录</div>
           ) : (
-            history.map((entry) => (
+            sortedHistory.map((entry) => (
               <div key={entry.roundNumber} className="history-entry">
                 <div className="history-round-header">
                   <span className="round-number">第 {entry.roundNumber} 回合</span>
