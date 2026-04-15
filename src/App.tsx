@@ -392,6 +392,24 @@ function App() {
     doSettlement();
   }, [gameState.phase, gameState.pieces, gameState.redPendingMove, gameState.blackPendingMove, showMessage]);
 
+  // 本地模式：监听双方走棋，自动进入结算
+  useEffect(() => {
+    if (gameMode !== 'local') return;
+    if (gameState.phase !== 'strategy') return;
+    if (!gameState.redPendingMove || !gameState.blackPendingMove) return;
+    
+    // 双方都走棋后，自动进入结算阶段（延迟一小段时间让玩家看清箭头）
+    const timer = setTimeout(() => {
+      setGameState(prev => ({
+        ...prev,
+        phase: 'settlement',
+        message: '双方策略已锁定，开始结算...',
+      }));
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, [gameMode, gameState.phase, gameState.redPendingMove, gameState.blackPendingMove]);
+
   // 切换视角
   const handleSwitchView = useCallback((side: Side) => {
     setViewSide(side);
@@ -477,21 +495,22 @@ function App() {
       const pieces = payload.pieces && payload.pieces.length > 0 
         ? payload.pieces 
         : (onlineState.pieces.length > 0 ? onlineState.pieces : INITIAL_PIECES.map(p => ({ ...p })));
+      
+      // 正确处理 null 值：检查字段是否存在，而不是使用 ?? 操作符
+      const hasRedPendingMove = 'redPendingMove' in payload;
+      const hasBlackPendingMove = 'blackPendingMove' in payload;
+      
       setOnlineState(prev => ({
         ...prev,
         pieces: pieces,
-        phase: payload.phase || prev.phase,
-        side: payload.side || prev.side,
+        phase: payload.phase ?? prev.phase,
+        side: payload.side ?? prev.side,
         redConfirmed: payload.redConfirmed ?? prev.redConfirmed,
         blackConfirmed: payload.blackConfirmed ?? prev.blackConfirmed,
-        redPendingMove: payload.redPendingMove ?? prev.redPendingMove,
-        blackPendingMove: payload.blackPendingMove ?? prev.blackPendingMove,
+        redPendingMove: hasRedPendingMove ? payload.redPendingMove : prev.redPendingMove,
+        blackPendingMove: hasBlackPendingMove ? payload.blackPendingMove : prev.blackPendingMove,
         winner: payload.winner ?? prev.winner,
       }));
-      // 自动切换视角
-      if (payload.side) {
-        setViewSide(payload.side);
-      }
     });
 
     wsClient.on('opponent_move', (payload: any) => {
@@ -588,6 +607,20 @@ function App() {
   const handleResetOnline = useCallback(() => {
     wsClient.send('reset_game');
   }, []);
+
+  // 联机模式：监听双方走棋，自动结算
+  useEffect(() => {
+    if (gameMode !== 'online') return;
+    if (onlineState.phase !== 'strategy') return;
+    if (!onlineState.redPendingMove || !onlineState.blackPendingMove) return;
+    
+    // 双方都走棋后，自动结算（延迟一小段时间让玩家看清箭头）
+    const timer = setTimeout(() => {
+      wsClient.send('settle');
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, [gameMode, onlineState.phase, onlineState.redPendingMove, onlineState.blackPendingMove]);
 
   // 获取当前游戏状态（根据模式）
   const currentPieces = gameMode === 'local' ? gameState.pieces : onlineState.pieces;
@@ -767,7 +800,7 @@ function App() {
           onClick={handleSettleFn}
           disabled={!canSettle}
         >
-          结算
+          {canSettle ? '自动结算中...' : '结算'}
         </button>
         <button className="btn btn-reset" onClick={handleResetFn}>
           重置
@@ -791,7 +824,7 @@ function App() {
             {viewSide === 'red' && currentRedPendingMove && ' - 红方已走棋'}
             {viewSide === 'black' && currentBlackPendingMove && ' - 黑方已走棋'}
             {!canSettle && ' - 等待双方都走棋'}
-            {canSettle && ' - 可以点击结算'}
+            {canSettle && ' - 即将自动结算'}
           </>
         )}
       </div>
