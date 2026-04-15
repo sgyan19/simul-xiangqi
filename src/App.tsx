@@ -374,8 +374,6 @@ function App() {
       
       // 第三步：处理 capture 吃子判定
       const toRemoveByCapture: string[] = [];
-      const redCaptureTarget = redAction?.actionType === 'capture' ? redAction.to : null;
-      const blackCaptureTarget = blackAction?.actionType === 'capture' ? blackAction.to : null;
       
       if (redAction?.actionType === 'capture') {
         const enemyAtTarget = finalPieces.find(p => 
@@ -384,7 +382,6 @@ function App() {
         if (enemyAtTarget) {
           toRemoveByCapture.push(enemyAtTarget.id);
         }
-        // 如果目标位置没有敌方子，capture 扑空
       }
       
       if (blackAction?.actionType === 'capture') {
@@ -399,6 +396,7 @@ function App() {
       finalPieces = finalPieces.filter(p => !toRemoveByCapture.includes(p.id));
       
       // 第四步：更新长捉计数（阵营级别）
+      // 判断是否吃子成功：用 toRemoveByCapture 检查目标棋子是否被移除
       let newRedCaptureTarget = null as string | null;
       let newRedCaptureCount = 0;
       let newBlackCaptureTarget = null as string | null;
@@ -411,11 +409,14 @@ function App() {
           newRedCaptureTarget = null;
           newRedCaptureCount = 0;
         } else {
-          // capture：从原始棋盘找目标位置的敌方棋子
+          // capture：从原始棋盘找目标棋子 ID
           const originalTargetPiece = pieces.find(p => p.side === 'black' && p.position[0] === redAction.to[0] && p.position[1] === redAction.to[1]);
           const targetPieceId = originalTargetPiece?.id || null;
           
-          if (originalTargetPiece) {
+          // 判断是否吃子成功：检查目标棋子是否在 toRemoveByCapture 中
+          const captureSuccess = targetPieceId !== null && toRemoveByCapture.includes(targetPieceId);
+          
+          if (captureSuccess) {
             // 吃子成功，重置计数
             newRedCaptureTarget = null;
             newRedCaptureCount = 0;
@@ -433,27 +434,24 @@ function App() {
 
       // 处理黑方行动
       if (blackAction) {
-        console.log('[DEBUG] blackAction 完整:', blackAction);
-        console.log('[DEBUG] blackAction.to 类型:', typeof blackAction.to, blackAction.to);
         if (blackAction.actionType === 'move') {
           // move 重置计数
           newBlackCaptureTarget = null;
           newBlackCaptureCount = 0;
         } else {
-          // capture：从原始棋盘找目标位置的敌方棋子
-          const toPos = blackAction.to as Position;
-          console.log('[DEBUG] toPos:', toPos);
-          const originalTargetPiece = pieces.find(p => p.side === 'red' && p.position[0] === toPos[0] && p.position[1] === toPos[1]);
-          console.log('[DEBUG] originalTargetPiece:', originalTargetPiece);
+          // capture：从原始棋盘找目标棋子 ID
+          const originalTargetPiece = pieces.find(p => p.side === 'red' && p.position[0] === blackAction.to[0] && p.position[1] === blackAction.to[1]);
           const targetPieceId = originalTargetPiece?.id || null;
           
-          if (originalTargetPiece) {
+          // 判断是否吃子成功：检查目标棋子是否在 toRemoveByCapture 中
+          const captureSuccess = targetPieceId !== null && toRemoveByCapture.includes(targetPieceId);
+          
+          if (captureSuccess) {
             // 吃子成功，重置计数
             newBlackCaptureTarget = null;
             newBlackCaptureCount = 0;
           } else {
             // 扑空，检查是否连续捉同一目标（按棋子 ID）
-            console.log('[DEBUG] 扑空判断 - gameState.blackCaptureTarget:', gameState.blackCaptureTarget, 'targetPieceId:', targetPieceId);
             if (gameState.blackCaptureTarget === targetPieceId) {
               newBlackCaptureCount = gameState.blackCaptureCount + 1;
             } else {
@@ -463,6 +461,14 @@ function App() {
           }
         }
       }
+
+      console.log('[结算-长捉计数]', {
+        toRemoveByCapture,
+        oldBlackCaptureTarget: gameState.blackCaptureTarget,
+        oldBlackCaptureCount: gameState.blackCaptureCount,
+        newBlackCaptureTarget,
+        newBlackCaptureCount,
+      });
 
       console.log('[结算-长捉计数]', {
         redAction,
