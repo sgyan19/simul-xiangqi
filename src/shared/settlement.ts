@@ -1,4 +1,5 @@
 import { Piece, PendingAction, Position } from '../types';
+import { PieceRemovalRecord, RoundHistoryEntry, SettlementEvent, getPieceName } from './history';
 
 // 长捉状态
 export interface LongChaseState {
@@ -16,6 +17,7 @@ export interface SettlementResultData {
   winner: 'red' | 'black' | 'draw' | null;
   reason: string;
   newChaseState: LongChaseState;
+  historyEntry: RoundHistoryEntry;
 }
 
 // ==================== 棋子移动规则 ====================
@@ -474,6 +476,11 @@ export const executeSettlement = (
   // 复制棋子数组
   let finalPieces = pieces.map(p => ({ ...p }));
   
+  // ===== 历史记录追踪 =====
+  const redPieceRemoved: PieceRemovalRecord[] = [];
+  const blackPieceRemoved: PieceRemovalRecord[] = [];
+  const events: SettlementEvent[] = [];
+  
   // ===== 记录 capture 目标位置（用于后续检查保护） =====
   const redCaptureTargetPos: Position | null = redAction?.actionType === 'capture' 
     ? [...redAction.to] as Position 
@@ -522,20 +529,32 @@ export const executeSettlement = (
       );
       
       if (movedRedPiece && movedBlackPiece) {
+        // 记录冲突事件
+        events.push({
+          type: 'collision',
+          description: `${movedRedPiece.side === 'red' ? '红' : '黑'}${getPieceName(movedRedPiece.type)}与${movedBlackPiece.side === 'red' ? '红' : '黑'}${getPieceName(movedBlackPiece.type)}同归于尽`,
+        });
+        
         // 炮撞炮：同归于尽
         if (movedRedPiece.type === 'cannon' && movedBlackPiece.type === 'cannon') {
           toRemoveByMove.push(movedRedPiece.id, movedBlackPiece.id);
+          redPieceRemoved.push({ piece: { ...movedRedPiece }, reason: 'exchange' });
+          blackPieceRemoved.push({ piece: { ...movedBlackPiece }, reason: 'exchange' });
         }
         // 炮撞其他子：炮被吃
         else if (movedRedPiece.type === 'cannon') {
           toRemoveByMove.push(movedRedPiece.id);
+          redPieceRemoved.push({ piece: { ...movedRedPiece }, reason: 'exchange' });
         }
         else if (movedBlackPiece.type === 'cannon') {
           toRemoveByMove.push(movedBlackPiece.id);
+          blackPieceRemoved.push({ piece: { ...movedBlackPiece }, reason: 'exchange' });
         }
         // 其他子撞其他子：同归于尽
         else {
           toRemoveByMove.push(movedRedPiece.id, movedBlackPiece.id);
+          redPieceRemoved.push({ piece: { ...movedRedPiece }, reason: 'exchange' });
+          blackPieceRemoved.push({ piece: { ...movedBlackPiece }, reason: 'exchange' });
         }
       }
     }
@@ -552,16 +571,29 @@ export const executeSettlement = (
       p.side === 'black' && p.position[0] === redAction.to[0] && p.position[1] === redAction.to[1]
     );
     if (enemyAtTarget) {
+      // 获取原始红方吃子棋子的信息
+      const redCapturer = pieces.find(p => 
+        p.side === 'red' && p.position[0] === redAction.from[0] && p.position[1] === redAction.from[1]
+      );
+      
+      // 记录正常吃子
+      blackPieceRemoved.push({
+        piece: { ...enemyAtTarget },
+        reason: 'captured',
+        removedBy: redCapturer ? { side: 'red', pieceType: redCapturer.type, pieceId: redCapturer.id } : undefined,
+      });
+      
+      events.push({
+        type: 'capture',
+        description: `红${getPieceName(redCapturer?.type || 'unknown')}吃掉黑${getPieceName(enemyAtTarget.type)}`,
+      });
+      
       toRemoveByCapture.push(enemyAtTarget.id);
       
       // ===== 新增规则：保护判定 =====
       // 红炮现在在 redAction.to 位置
       // 检查黑方其他棋子（不含被吃的 enemyAtTarget）能否 capture 这个位置
       // 用原始 pieces 检查（capture 前的棋盘）
-      const redCapturer = pieces.find(p => 
-        p.side === 'red' && p.position[0] === redAction.from[0] && p.position[1] === redAction.from[1]
-      );
-      
       if (redCapturer) {
         // 找到所有黑方棋子（排除被吃掉的）
         const remainingBlackPieces = pieces.filter(p => p.side === 'black' && p.id !== enemyAtTarget.id);
@@ -581,8 +613,17 @@ export const executeSettlement = (
             const canCapture = canPieceCaptureAt(blackPiece, redAction.to as Position, pieces);
             
             if (canCapture) {
-              // 红炮被保护，也移除红炮
+              // 红炮被保护，也移除红炮（防守反击）
               toRemoveByCapture.push(redCapturer.id);
+              redPieceRemoved.push({
+                piece: { ...redCapturer, position: [...redAction.to] as Position },
+                reason: 'counter_attack',
+                removedBy: { side: 'black', pieceType: blackPiece.type, pieceId: blackPiece.id },
+              });
+              events.push({
+                type: 'counter_attack',
+                description: `防守反击：黑${getPieceName(blackPiece.type)}保护，红${getPieceName(redCapturer.type)}反被吃掉`,
+              });
               break;
             }
           }
@@ -597,11 +638,24 @@ export const executeSettlement = (
       p.side === 'red' && p.position[0] === blackAction.to[0] && p.position[1] === blackAction.to[1]
     );
     if (enemyAtTarget) {
-      toRemoveByCapture.push(enemyAtTarget.id);
-      
+      // 获取原始黑方吃子棋子的信息
       const blackCapturer = pieces.find(p => 
         p.side === 'black' && p.position[0] === blackAction.from[0] && p.position[1] === blackAction.from[1]
       );
+      
+      // 记录正常吃子
+      redPieceRemoved.push({
+        piece: { ...enemyAtTarget },
+        reason: 'captured',
+        removedBy: blackCapturer ? { side: 'black', pieceType: blackCapturer.type, pieceId: blackCapturer.id } : undefined,
+      });
+      
+      events.push({
+        type: 'capture',
+        description: `黑${getPieceName(blackCapturer?.type || 'unknown')}吃掉红${getPieceName(enemyAtTarget.type)}`,
+      });
+      
+      toRemoveByCapture.push(enemyAtTarget.id);
       
       if (blackCapturer) {
         // 找到所有红方棋子（保留被吃的，因为被吃的棋子原来的位置可能有炮台）
@@ -623,6 +677,15 @@ export const executeSettlement = (
             
             if (canCapture) {
               toRemoveByCapture.push(blackCapturer.id);
+              blackPieceRemoved.push({
+                piece: { ...blackCapturer, position: [...blackAction.to] as Position },
+                reason: 'counter_attack',
+                removedBy: { side: 'red', pieceType: redPiece.type, pieceId: redPiece.id },
+              });
+              events.push({
+                type: 'counter_attack',
+                description: `防守反击：红${getPieceName(redPiece.type)}保护，黑${getPieceName(blackCapturer.type)}反被吃掉`,
+              });
               break;
             }
           }
@@ -701,6 +764,14 @@ export const executeSettlement = (
     });
 
     if (between.length === 0) {
+      // 记录将帅被移除
+      redPieceRemoved.push({ piece: { ...redKing }, reason: 'face_off' });
+      blackPieceRemoved.push({ piece: { ...blackKing }, reason: 'face_off' });
+      events.push({
+        type: 'face_off',
+        description: '将帅对面同归于尽',
+      });
+      
       finalPieces = finalPieces.filter(p => p.type !== 'king');
       winner = 'draw';
       reason = '将帅对面，双方同时被吃';
@@ -729,6 +800,17 @@ export const executeSettlement = (
       blackLastPiece: newBlackLastPiece,
       blackLastTarget: newBlackLastTarget,
       blackCaptureCount: newBlackCaptureCount,
+    },
+    historyEntry: {
+      roundNumber: 0, // 由调用方设置
+      redAction,
+      blackAction,
+      redPieceRemoved,
+      blackPieceRemoved,
+      events,
+      winner,
+      endReason: reason || null,
+      isGameEnd: winner !== null,
     },
   };
 };

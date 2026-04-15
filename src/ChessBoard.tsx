@@ -8,8 +8,8 @@ interface ChessBoardProps {
   currentOperatedSide: Side;
   phase: GamePhase;
   flipped: boolean;
-  redPendingMove: PendingAction | null;
-  blackPendingMove: PendingAction | null;
+  redPendingMove: Move | null;
+  blackPendingMove: Move | null;
   onSelectPiece: (piece: Piece) => void;
   onMovePiece: (to: Position) => void;
 }

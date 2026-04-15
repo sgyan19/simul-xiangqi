@@ -13,6 +13,8 @@ import {
 import { getValidMoves, isCheck, isValidMove } from './chessLogic';
 import { checkGameEnd, formatMove } from './gameLogic';
 import { executeSettlement } from './shared/settlement';
+import HistoryLog from './HistoryLog';
+import { RoundHistoryEntry } from './shared/history';
 import ChessBoard from './ChessBoard';
 
 // WebSocket 客户端
@@ -165,6 +167,8 @@ function App() {
   const [roomInput, setRoomInput] = useState('');
   const [selectedPiece, setSelectedPiece] = useState<Piece | null>(null);
   const [validMoves, setValidMoves] = useState<Position[]>([]);
+  const [history, setHistory] = useState<RoundHistoryEntry[]>([]);
+  const [historyExpanded, setHistoryExpanded] = useState(false);
 
   // 显示提示
   const showMessage = useCallback((msg: string, duration = 2000) => {
@@ -296,7 +300,7 @@ function App() {
     const doSettlement = async () => {
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      const { pieces: finalPieces, winner, reason, newChaseState } = executeSettlement(
+      const { pieces: finalPieces, winner, reason, newChaseState, historyEntry } = executeSettlement(
         gameState.pieces,
         gameState.redPendingMove,
         gameState.blackPendingMove,
@@ -309,6 +313,14 @@ function App() {
           blackCaptureCount: gameState.blackCaptureCount,
         }
       );
+
+      // 添加回合历史记录
+      const roundNumber = history.length + 1;
+      const entryWithRound: RoundHistoryEntry = {
+        ...historyEntry,
+        roundNumber,
+      };
+      setHistory(prev => [...prev, entryWithRound]);
 
       // 检查将军状态
       const redInCheck = isCheck('red', finalPieces);
@@ -353,7 +365,7 @@ function App() {
     };
 
     doSettlement();
-  }, [gameState.phase, gameState.pieces, gameState.redPendingMove, gameState.blackPendingMove, gameState.redLastPiece, gameState.redLastTarget, gameState.redCaptureCount, gameState.blackLastPiece, gameState.blackLastTarget, gameState.blackCaptureCount, showMessage]);
+  }, [gameState.phase, gameState.pieces, gameState.redPendingMove, gameState.blackPendingMove, gameState.redLastPiece, gameState.redLastTarget, gameState.redCaptureCount, gameState.blackLastPiece, gameState.blackLastTarget, gameState.blackCaptureCount, showMessage, history.length]);
 
   // 本地模式：监听双方走棋，自动进入结算
   useEffect(() => {
@@ -386,6 +398,7 @@ function App() {
     setGameState(createInitialState());
     setViewSide('red');
     setCheckStatus({ red: false, black: false });
+    setHistory([]);
     showMessage('游戏已重置', 1500);
   }, [showMessage]);
 
@@ -578,6 +591,8 @@ function App() {
   // 在线模式：重置
   const handleResetOnline = useCallback(() => {
     wsClient.send('reset_game');
+    setHistory([]);
+    setGameState(createInitialState());
   }, []);
 
   // 联机模式：监听双方走棋，自动结算
@@ -816,6 +831,12 @@ function App() {
           </>
         )}
       </div>
+
+      <HistoryLog
+        history={history}
+        isExpanded={historyExpanded}
+        onToggle={() => setHistoryExpanded(!historyExpanded)}
+      />
 
       {showToast && <div className="toast">{showToast}</div>}
 

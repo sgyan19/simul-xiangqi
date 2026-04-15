@@ -267,8 +267,8 @@ export const resolveSettlement = (
   }
 
   return {
-    redMove,
-    blackMove,
+    redAction: redMove as PendingAction | null,
+    blackAction: blackMove as PendingAction | null,
     captures: { red: redCaptured, black: blackCaptured },
     winner,
     reason,

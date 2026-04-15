@@ -1120,3 +1120,246 @@ body {
   background: rgba(255, 255, 255, 0.1);
   color: #fff;
 }
+
+/* ===== 历史记录日志样式 ===== */
+.history-log-container {
+  width: 100%;
+  max-width: 400px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.history-toggle-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 15px;
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  color: var(--text-primary);
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.history-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.history-icon {
+  font-size: 16px;
+}
+
+.history-count {
+  background: rgba(255, 215, 0, 0.2);
+  color: var(--highlight);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 12px;
+  margin-left: auto;
+}
+
+.toggle-arrow {
+  font-size: 10px;
+  transition: transform 0.2s ease;
+}
+
+.toggle-arrow.expanded {
+  transform: rotate(180deg);
+}
+
+.history-log-list {
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 10px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.history-log-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.history-log-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.history-log-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.history-empty {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 20px;
+  font-size: 13px;
+}
+
+.history-entry {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 8px;
+}
+
+.history-entry:last-child {
+  margin-bottom: 0;
+}
+
+.history-round-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.round-number {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--highlight);
+}
+
+.game-end-badge {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(76, 175, 80, 0.2);
+  color: var(--success);
+}
+
+.history-actions {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.action-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.action-line.pass {
+  opacity: 0.5;
+}
+
+.side-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.side-dot.red {
+  background: var(--piece-red);
+}
+
+.side-dot.black {
+  background: var(--piece-black);
+  border: 1px solid #666;
+}
+
+.action-text {
+  color: var(--text-primary);
+}
+
+.history-events {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.event-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 4px;
+}
+
+.event-item.capture {
+  background: rgba(196, 30, 58, 0.1);
+  color: var(--piece-red);
+}
+
+.event-item.collision {
+  background: rgba(255, 215, 0, 0.1);
+  color: var(--highlight);
+}
+
+.event-item.counter_attack {
+  background: rgba(76, 175, 80, 0.1);
+  color: var(--success);
+}
+
+.event-item.face_off {
+  background: rgba(255, 68, 68, 0.1);
+  color: var(--danger);
+}
+
+.event-icon {
+  font-size: 14px;
+}
+
+.history-captures {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.capture-section {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.capture-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.capture-item.red {
+  background: rgba(196, 30, 58, 0.15);
+  color: var(--piece-red);
+}
+
+.capture-item.black {
+  background: rgba(26, 26, 26, 0.3);
+  color: var(--text-primary);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.piece-name {
+  font-weight: 500;
+}
+
+.reason-tag {
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 10px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.history-result {
+  margin-top: 8px;
+  padding: 6px 10px;
+  background: rgba(76, 175, 80, 0.15);
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--success);
+  text-align: center;
+}
