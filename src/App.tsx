@@ -560,6 +560,7 @@ function App() {
     });
 
     wsClient.on('room_state', (payload: any) => {
+      console.log('DEBUG room_state:', payload.phase, 'lastRed:', payload.lastRedMoveTo, 'lastBlack:', payload.lastBlackMoveTo);
       const pieces = payload.pieces && payload.pieces.length > 0 
         ? payload.pieces 
         : (onlineState.pieces.length > 0 ? onlineState.pieces : INITIAL_PIECES.map(p => ({ ...p })));

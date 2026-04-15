@@ -267,12 +267,11 @@ const handleMessage = (ws: WebSocket, message: WSMessage): void => {
         return;
       }
       
-      // 在执行结算前保存 pending moves（结算后会清空）
-      const savedRedPendingMove = room.redPendingMove;
-      const savedBlackPendingMove = room.blackPendingMove;
+      console.log('DEBUG settle: executing...');
       
       // 执行结算
       const result = settleGame(player.roomId);
+      console.log('DEBUG settle: result:', result);
       
       if (result.success && room) {
         if (result.winner) {
