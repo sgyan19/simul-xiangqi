@@ -326,8 +326,8 @@ const TargetBox = ({
   const boxLeft = leftVal - boxWidth / 2;
   const boxTop = topVal - boxHeight / 2;
   
-  // 阵营颜色
-  const borderColor = side === 'red' ? '#C41E3A' : '#1A1A1A';
+  // 阵营颜色（半透明边框）
+  const borderColor = side === 'red' ? 'rgba(196, 30, 58, 0.6)' : 'rgba(26, 26, 26, 0.6)';
   
   return (
     <div
@@ -339,7 +339,7 @@ const TargetBox = ({
         height: `${boxHeight}%`,
         border: `3px solid ${borderColor}`,
         borderRadius: '8px',
-        backgroundColor: side === 'red' ? 'rgba(196, 30, 58, 0.2)' : 'rgba(26, 26, 26, 0.2)',
+        backgroundColor: 'transparent',
         pointerEvents: 'none',
         zIndex: 15,
         boxSizing: 'border-box',
