@@ -955,13 +955,16 @@ function App() {
         >
           {canSettle ? '自动结算中...' : '结算'}
         </button>
-        <button
-          className="btn btn-reset"
-          onClick={handleUndoMove}
-          disabled={gameState.historySnapshots.length === 0}
-        >
-          悔棋
-        </button>
+        {/* 本地/双人对战模式下的悔棋按钮 */}
+        {gameMode !== 'online' && (
+          <button
+            className="btn btn-reset"
+            onClick={handleUndoMove}
+            disabled={gameState.historySnapshots.length === 0}
+          >
+            悔棋
+          </button>
+        )}
         <button className="btn btn-reset" onClick={handleResetFn}>
           重置
         </button>
