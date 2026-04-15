@@ -43,6 +43,9 @@ export interface GameRoom {
   // 悔棋请求状态
   undoRequestFrom: Side | null;  // 谁发起的悔棋请求
   undoRequestedTo: Side | null;   // 请求谁同意
+  // 最后行动目标位置（用于客户端显示目标框）
+  lastRedMoveTo: Position | null;
+  lastBlackMoveTo: Position | null;
 }
 
 // 棋盘尺寸
@@ -84,6 +87,9 @@ export const createRoom = (roomId: string): GameRoom => {
     // 悔棋请求
     undoRequestFrom: null,
     undoRequestedTo: null,
+    // 最后行动目标位置
+    lastRedMoveTo: null,
+    lastBlackMoveTo: null,
   };
   rooms.set(roomId, room);
   return room;
@@ -482,6 +488,10 @@ const executeSettlement = (room: GameRoom): void => {
   
   // 保存快照
   room.historySnapshots.push(snapshot);
+  
+  // 保存目标位置（用于客户端显示目标框，在清空pendingMove之前）
+  room.lastRedMoveTo = room.redPendingMove?.to || null;
+  room.lastBlackMoveTo = room.blackPendingMove?.to || null;
   
   if (result.winner) {
     room.winner = result.winner;

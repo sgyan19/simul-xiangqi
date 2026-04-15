@@ -560,7 +560,6 @@ function App() {
     });
 
     wsClient.on('room_state', (payload: any) => {
-      // 确保pieces存在且有效
       const pieces = payload.pieces && payload.pieces.length > 0 
         ? payload.pieces 
         : (onlineState.pieces.length > 0 ? onlineState.pieces : INITIAL_PIECES.map(p => ({ ...p })));
@@ -592,11 +591,15 @@ function App() {
       
       // 进入结算或结束阶段时，显示最后行动目标框
       const isNowInSettlementOrEnded = payload.phase === 'settlement' || payload.phase === 'ended';
-      if (isNowInSettlementOrEnded && hasRedPendingMove && hasBlackPendingMove) {
-        setLastMoveTargets({
-          red: payload.redPendingMove?.to || null,
-          black: payload.blackPendingMove?.to || null,
-        });
+      if (isNowInSettlementOrEnded) {
+        // 优先使用新字段 lastRedMoveTo/lastBlackMoveTo
+        const hasLastMoves = 'lastRedMoveTo' in payload && 'lastBlackMoveTo' in payload;
+        if (hasLastMoves) {
+          setLastMoveTargets({
+            red: payload.lastRedMoveTo || null,
+            black: payload.lastBlackMoveTo || null,
+          });
+        }
       }
       
       // 同步视角：每次收到房间状态时，都确保视角与玩家阵营一致
@@ -618,12 +621,6 @@ function App() {
       const winnerText = payload.winner === 'draw' ? '和棋！' : 
                          payload.winner === 'red' ? '红方胜利！' : '黑方胜利！';
       showMessage(winnerText + (payload.reason ? ' ' + payload.reason : ''), 3000);
-      
-      // 设置最后行动目标位置（用于显示目标框）
-      setLastMoveTargets({
-        red: payload.redPendingMove?.to || null,
-        black: payload.blackPendingMove?.to || null,
-      });
     });
 
     wsClient.on('left_room', () => {

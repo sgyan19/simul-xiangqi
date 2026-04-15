@@ -451,6 +451,9 @@ const sendRoomState = (ws: WebSocket, room: NonNullable<ReturnType<typeof getRoo
       winner: room.winner,
       redOnline: !!room.redPlayer,
       blackOnline: !!room.blackPlayer,
+      // 最后行动目标位置
+      lastRedMoveTo: room.lastRedMoveTo,
+      lastBlackMoveTo: room.lastBlackMoveTo,
     },
   });
 };
