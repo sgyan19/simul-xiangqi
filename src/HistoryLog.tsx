@@ -15,7 +15,7 @@ const getReasonLabel = (reason: string): string => {
     case 'exchange':
       return '兑子';
     case 'counter_attack':
-      return '防守反击';
+      return '防反';
     case 'face_off':
       return '将对将';
     default:

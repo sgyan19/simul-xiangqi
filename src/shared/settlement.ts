@@ -622,7 +622,7 @@ export const executeSettlement = (
               });
               events.push({
                 type: 'counter_attack',
-                description: `防守反击：黑${getPieceName(blackPiece.type)}保护，红${getPieceName(redCapturer.type)}反被吃掉`,
+                description: `防反：黑${getPieceName(blackPiece.type)}保护，红${getPieceName(redCapturer.type)}反被吃掉`,
               });
               break;
             }
@@ -684,7 +684,7 @@ export const executeSettlement = (
               });
               events.push({
                 type: 'counter_attack',
-                description: `防守反击：红${getPieceName(redPiece.type)}保护，黑${getPieceName(blackCapturer.type)}反被吃掉`,
+                description: `防反：红${getPieceName(redPiece.type)}保护，黑${getPieceName(blackCapturer.type)}反被吃掉`,
               });
               break;
             }

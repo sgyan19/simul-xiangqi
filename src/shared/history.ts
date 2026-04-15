@@ -35,13 +35,13 @@ export interface RoundHistoryEntry {
 
 export const getPieceName = (pieceType: string): string => {
   const names: Record<string, string> = {
-    king: 'shuai/jiang',
-    advisor: 'shi',
-    elephant: 'xiang',
-    horse: 'ma',
-    chariot: 'che',
-    cannon: 'pao',
-    pawn: 'bing/zu',
+    king: '帅/将',
+    advisor: '仕/士',
+    elephant: '相/象',
+    horse: '马',
+    chariot: '车',
+    cannon: '炮',
+    pawn: '兵/卒',
   };
   return names[pieceType] || pieceType;
 };
