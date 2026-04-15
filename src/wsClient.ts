@@ -101,7 +101,7 @@ class WebSocketClient {
   }
 
   send(type: string, payload?: unknown): void {
-    console.log('wsClient.send called:', type, payload);
+    console.log('[WS] Sending message:', type, payload);
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       const message = JSON.stringify({ type, payload });
       console.log('Sending:', message);
