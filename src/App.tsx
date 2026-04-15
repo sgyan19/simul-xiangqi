@@ -386,11 +386,16 @@ function App() {
       const blackMove = gameState.blackPendingMove;
       // logicRound 应该基于 history.length（累积的记录数），不是 historySnapshots.length（快照会因悔棋变少）
       const currentLogicRound = history.length;
-      // 游戏回合 = 非悔棋记录的结算次数 + 1
-      const gameRoundCount = history.filter(
-        entry => !entry.events.some(e => e.description.includes('悔棋'))
-      ).length;
-      const currentGameRound = gameRoundCount + 1;
+      
+      // gameRound 计算逻辑：
+      // - 如果有悔棋记录，说明有回合被撤销了，新走的应该重新走被撤销的那个回合
+      // - 如果没有悔棋记录，基于非悔棋记录数计算新的回合号
+      const lastUndoEntry = [...history].reverse().find(
+        entry => entry.events.some(e => e.description.includes('悔棋'))
+      );
+      const currentGameRound = lastUndoEntry 
+        ? lastUndoEntry.gameRound  // 使用被撤销的回合号
+        : history.filter(entry => !entry.events.some(e => e.description.includes('悔棋'))).length + 1;
       
       // 保存结算前的棋盘状态（用于悔棋）
       const snapshotBeforeSettlement = {
