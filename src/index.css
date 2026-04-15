@@ -938,3 +938,185 @@ body {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* ===== 模式切换按钮 ===== */
+.mode-btn {
+  padding: 6px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mode-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.mode-btn.active {
+  background: var(--highlight);
+  color: #333;
+  border-color: var(--highlight);
+}
+
+/* ===== 连接状态 ===== */
+.conn-status {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-left: 8px;
+}
+
+.conn-status.online {
+  background: rgba(76, 175, 80, 0.3);
+  color: #4CAF50;
+}
+
+.conn-status.offline {
+  background: rgba(255, 68, 68, 0.3);
+  color: #FF4444;
+}
+
+/* ===== 在线模式面板 ===== */
+.online-panel {
+  width: 100%;
+  max-width: 400px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 24px;
+  margin: 10px 0;
+}
+
+.online-panel h3 {
+  text-align: center;
+  margin-bottom: 20px;
+  color: var(--highlight);
+  font-size: 18px;
+}
+
+.room-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: center;
+}
+
+.room-input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  color: #fff;
+  font-size: 16px;
+  text-align: center;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.room-input:focus {
+  outline: none;
+  border-color: var(--highlight);
+}
+
+.room-input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+/* ===== 房间信息栏 ===== */
+.room-info-bar {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 14px;
+}
+
+.room-info-bar strong {
+  color: var(--highlight);
+}
+
+.btn-small {
+  padding: 6px 12px;
+  font-size: 12px;
+  background: rgba(255, 68, 68, 0.2);
+  color: #FF6666;
+  border: 1px solid rgba(255, 68, 68, 0.4);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-small:hover {
+  background: rgba(255, 68, 68, 0.4);
+}
+
+.btn-primary {
+  padding: 12px 24px;
+  background: linear-gradient(135deg, var(--highlight), #FFA500);
+  color: #333;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-primary:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 20px rgba(255, 215, 0, 0.4);
+}
+
+.btn-secondary {
+  padding: 12px 24px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.divider-text {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 13px;
+}
+
+.room-info-bar .divider {
+  color: rgba(255, 255, 255, 0.2);
+  margin: 0 4px;
+}
+
+/* ===== 联机模式样式覆盖 ===== */
+.online-mode .btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.online-mode .btn-settle {
+  background: linear-gradient(135deg, var(--highlight), #FFA500);
+  color: #333;
+}
+
+.online-mode .btn-reset {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}

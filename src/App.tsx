@@ -629,34 +629,11 @@ function App() {
         </div>
       </div>
 
-      {/* 在线模式房间UI */}
-      {gameMode === 'online' && !onlineState.roomId && (
-        <div className="online-panel">
-          <h3>联机对战</h3>
-          <div className="room-actions">
-            <button className="btn btn-primary" onClick={handleCreateRoom}>
-              创建房间
-            </button>
-            <span style={{ color: '#888' }}>或</span>
-            <input
-              type="text"
-              className="room-input"
-              placeholder="输入房间号"
-              value={roomInput}
-              onChange={(e) => setRoomInput(e.target.value.toUpperCase())}
-              maxLength={6}
-            />
-            <button className="btn btn-secondary" onClick={handleJoinRoom}>
-              加入
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* 在线模式房间信息 */}
+      {/* 在线模式房间信息（顶部小条） */}
       {gameMode === 'online' && onlineState.roomId && (
         <div className="room-info-bar">
           <span>房间号: <strong>{onlineState.roomId}</strong></span>
+          <span className="divider">|</span>
           <span>你是: <strong style={{ color: onlineState.side === 'red' ? '#C41E3A' : '#333' }}>
             {onlineState.side === 'red' ? '红方' : onlineState.side === 'black' ? '黑方' : '观战'}
           </strong></span>
@@ -679,6 +656,30 @@ function App() {
         onSelectPiece={handleSelect}
         onMovePiece={handleMove}
       />
+
+      {/* 在线模式房间UI（棋盘下方） */}
+      {gameMode === 'online' && !onlineState.roomId && (
+        <div className="online-panel">
+          <h3>联机对战</h3>
+          <div className="room-actions">
+            <button className="btn btn-primary" onClick={handleCreateRoom}>
+              创建房间
+            </button>
+            <div className="divider-text">或</div>
+            <input
+              type="text"
+              className="room-input"
+              placeholder="输入房间号"
+              value={roomInput}
+              onChange={(e) => setRoomInput(e.target.value.toUpperCase())}
+              maxLength={6}
+            />
+            <button className="btn btn-secondary" onClick={handleJoinRoom}>
+              加入
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 控制面板 */}
       <div className="control-panel">
