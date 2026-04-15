@@ -428,25 +428,60 @@ function App() {
       });
 
     wsClient.on('room_created', (payload: any) => {
-      setOnlineState(prev => ({ ...prev, roomId: payload.roomId, side: payload.side }));
+      // 确保pieces存在且有效
+      const pieces = payload.pieces && payload.pieces.length > 0 
+        ? payload.pieces 
+        : INITIAL_PIECES.map(p => ({ ...p }));
+      setOnlineState(prev => ({ 
+        ...prev, 
+        roomId: payload.roomId, 
+        side: payload.side, 
+        pieces: pieces,
+        phase: 'waiting',
+        redConfirmed: false,
+        blackConfirmed: false,
+        redPendingMove: null,
+        blackPendingMove: null,
+      }));
       showMessage(`房间 ${payload.roomId} 已创建，你是${payload.side === 'red' ? '红方' : '黑方'}`);
     });
 
     wsClient.on('joined', (payload: any) => {
-      setOnlineState(prev => ({ ...prev, roomId: payload.roomId, side: payload.side, pieces: payload.pieces }));
+      console.log('Joined payload:', payload);
+      // 确保pieces存在且有效
+      const pieces = payload.pieces && payload.pieces.length > 0 
+        ? payload.pieces 
+        : INITIAL_PIECES.map(p => ({ ...p }));
+      console.log('Setting pieces:', pieces.length, 'pieces');
+      setOnlineState(prev => ({ 
+        ...prev, 
+        roomId: payload.roomId, 
+        side: payload.side, 
+        pieces: pieces,
+        phase: 'strategy',
+        redConfirmed: false,
+        blackConfirmed: false,
+        redPendingMove: null,
+        blackPendingMove: null,
+      }));
       showMessage(`加入房间 ${payload.roomId}，你是${payload.side === 'red' ? '红方' : '黑方'}`);
     });
 
     wsClient.on('room_state', (payload: any) => {
+      // 确保pieces存在且有效
+      const pieces = payload.pieces && payload.pieces.length > 0 
+        ? payload.pieces 
+        : (onlineState.pieces.length > 0 ? onlineState.pieces : INITIAL_PIECES.map(p => ({ ...p })));
+      console.log('Room state pieces:', pieces.length);
       setOnlineState(prev => ({
         ...prev,
-        pieces: payload.pieces,
-        phase: payload.phase,
-        redConfirmed: payload.redConfirmed,
-        blackConfirmed: payload.blackConfirmed,
-        redPendingMove: payload.redPendingMove,
-        blackPendingMove: payload.blackPendingMove,
-        winner: payload.winner,
+        pieces: pieces,
+        phase: payload.phase || prev.phase,
+        redConfirmed: payload.redConfirmed ?? prev.redConfirmed,
+        blackConfirmed: payload.blackConfirmed ?? prev.blackConfirmed,
+        redPendingMove: payload.redPendingMove ?? prev.redPendingMove,
+        blackPendingMove: payload.blackPendingMove ?? prev.blackPendingMove,
+        winner: payload.winner ?? prev.winner,
       }));
       // 自动切换视角
       if (payload.side) {
@@ -539,7 +574,7 @@ function App() {
   }, []);
 
   // 在线模式：重走
-  const handleRedoMoveOnline = useCallback((side: Side) => {
+  const handleRedoMoveOnline = useCallback(() => {
     wsClient.send('undo_move');
   }, []);
 
