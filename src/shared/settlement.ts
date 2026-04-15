@@ -614,15 +614,21 @@ export const executeSettlement = (
         
         for (const redPiece of remainingRedPieces) {
           // 检查这个棋子本回合是否移动了
+          // 方法：比较 redAction 的起点（棋子移动前的位置）
+          // 与 pieces 中该棋子的位置
+          // 如果相同位置有棋子在 redAction 中移动了，说明这个棋子本回合移动了
           let movedThisTurn = false;
           if (redAction) {
+            // 检查 pieces 中是否有棋子从 redPiece 当前移动到的位置移动
+            // 实际上：我们需要检查 redAction.from 是否等于 redPiece 在原始棋盘中的位置
+            // remainingRedPieces 中的 position 来自 pieces，所以可以直接比较
             if (redAction.from[0] === redPiece.position[0] && 
                 redAction.from[1] === redPiece.position[1]) {
               movedThisTurn = true;
             }
           }
           
-          console.log(`【保护判定】检查 ${redPiece.type}(${redPiece.position}) - 本回合移动:${movedThisTurn}`);
+          console.log(`【保护判定】检查 ${redPiece.type}(原始位置:${pieces.find(p=>p.id===redPiece.id)?.position}, 当前位置:${redPiece.position}) - movedThisTurn:${movedThisTurn}`);
           
           if (!movedThisTurn) {
             // 本回合没移动，检查能否 capture 到黑炮新位置
