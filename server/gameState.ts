@@ -618,12 +618,18 @@ const executeSettlement = (room: GameRoom): void => {
   };
   
   // 保存结算前的快照（用于悔棋）
-  const currentLogicRound = room.logicRound;
-  // 游戏回合 = 非悔棋记录的结算次数 + 1
-  const gameRoundCount = room.roundHistory.filter(
-    entry => !entry.events.some(e => e.description.includes('悔棋'))
-  ).length;
-  const currentGameRound = gameRoundCount + 1;
+  // logicRound 应该基于 roundHistory.length（累积的记录数）
+  const currentLogicRound = room.roundHistory.length;
+  
+  // gameRound 计算逻辑：
+  // - 如果有悔棋记录，说明有回合被撤销了，新走的应该重新走被撤销的那个回合
+  // - 如果没有悔棋记录，基于非悔棋记录数计算新的回合号
+  const lastUndoEntry = [...room.roundHistory].reverse().find(
+    entry => entry.events.some(e => e.description.includes('悔棋'))
+  );
+  const currentGameRound = lastUndoEntry 
+    ? lastUndoEntry.gameRound  // 使用被撤销的回合号
+    : room.roundHistory.filter(entry => !entry.events.some(e => e.description.includes('悔棋'))).length + 1;
   
   const snapshot: HistorySnapshot = {
     pieces: room.pieces.map(p => ({ ...p })),
@@ -658,16 +664,13 @@ const executeSettlement = (room: GameRoom): void => {
     entry => entry.gameRound === currentGameRound && !entry.events.some(e => e.description.includes('悔棋'))
   );
   
-  // logicRound 递增
-  room.logicRound = currentLogicRound + 1;
-  
   // 保存快照
   room.historySnapshots.push(snapshot);
   
   // 保存历史记录
   const historyEntry: RoundHistoryEntry = {
     ...result.historyEntry,
-    logicRound: room.logicRound,
+    logicRound: currentLogicRound,
     gameRound: currentGameRound,
   };
   room.roundHistory.push(historyEntry);
@@ -818,12 +821,11 @@ const executeUndo = (room: GameRoom): void => {
   // 移除最后一个快照
   room.historySnapshots.pop();
   
-  // 递增 logicRound
-  room.logicRound++;
-  
   // 添加悔棋记录（使用 logicRound 排序，显示 gameRound）
+  // logicRound = roundHistory.length（在 push 之前），确保唯一且递增
+  const undoLogicRound = room.roundHistory.length;
   const undoEntry: RoundHistoryEntry = {
-    logicRound: room.logicRound,
+    logicRound: undoLogicRound,
     gameRound: lastSnapshot.gameRound,
     redAction: null,
     blackAction: null,
