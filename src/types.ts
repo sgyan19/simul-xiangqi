@@ -49,6 +49,12 @@ export interface SettlementResult {
   reason: string;
 }
 
+// 历史快照（用于悔棋）
+export interface HistorySnapshot {
+  pieces: Piece[];
+  roundNumber: number;
+}
+
 // 游戏状态
 export interface GameState {
   phase: GamePhase;
@@ -70,6 +76,8 @@ export interface GameState {
   blackLastPiece: string | null;
   blackLastTarget: string | null;
   blackCaptureCount: number;
+  // 历史快照（用于悔棋）
+  historySnapshots: HistorySnapshot[];
 }
 
 // 棋子名称映射

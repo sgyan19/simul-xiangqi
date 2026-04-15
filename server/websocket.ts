@@ -14,6 +14,8 @@ import {
   generateRoomId,
   settleGame,
   addPlayerToRoom,
+  requestUndo,
+  respondToUndo,
 } from './gameState';
 
 interface WSMessage {
@@ -299,6 +301,71 @@ const handleMessage = (ws: WebSocket, message: WSMessage): void => {
         if (room) {
           broadcastRoomUpdate(room);
         }
+      }
+      break;
+    }
+
+    case 'request_undo': {
+      if (!player || !player.roomId || !player.side) {
+        sendToClient(ws, { type: 'error', payload: { message: '你不在任何房间中' } });
+        return;
+      }
+      
+      const result = requestUndo(player.roomId, player.side);
+      
+      if (result.success) {
+        const room = getRoom(player.roomId);
+        if (room) {
+          // 通知对方有悔棋请求
+          for (const [ws2, p2] of clients) {
+            if (p2.roomId === room.id && p2.ws !== ws) {
+              sendToClient(ws2, { 
+                type: 'undo_requested', 
+                payload: { from: player.side } 
+              });
+            }
+          }
+          // 通知请求方等待对方同意
+          sendToClient(ws, { 
+            type: 'undo_waiting', 
+            payload: { to: player.side === 'red' ? 'black' : 'red' } 
+          });
+        }
+      } else {
+        sendToClient(ws, { type: 'error', payload: { message: result.error || '请求失败' } });
+      }
+      break;
+    }
+
+    case 'respond_undo': {
+      if (!player || !player.roomId || !player.side) {
+        sendToClient(ws, { type: 'error', payload: { message: '你不在任何房间中' } });
+        return;
+      }
+      
+      const { accepted } = message.payload as { accepted: boolean };
+      const result = respondToUndo(player.roomId, player.side, accepted);
+      
+      if (result.success) {
+        const room = getRoom(player.roomId);
+        if (room) {
+          // 通知双方悔棋结果
+          for (const [ws2, p2] of clients) {
+            if (p2.roomId === room.id) {
+              sendToClient(ws2, { 
+                type: 'undo_response', 
+                payload: { 
+                  accepted,
+                  message: accepted ? '对方同意了悔棋请求' : '对方拒绝了悔棋请求'
+                } 
+              });
+            }
+          }
+          // 广播房间更新
+          broadcastRoomUpdate(room);
+        }
+      } else {
+        sendToClient(ws, { type: 'error', payload: { message: result.error || '操作失败' } });
       }
       break;
     }

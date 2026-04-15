@@ -11,6 +11,12 @@ interface ServerPendingAction {
   actionType: ActionType;
 }
 
+// 历史快照（用于悔棋）
+interface HistorySnapshot {
+  pieces: Piece[];
+  roundNumber: number;
+}
+
 // 房间状态
 export interface GameRoom {
   id: string;
@@ -32,6 +38,11 @@ export interface GameRoom {
   blackLastPiece: string | null;
   blackLastTarget: string | null;
   blackCaptureCount: number;
+  // 历史快照（用于悔棋）
+  historySnapshots: HistorySnapshot[];
+  // 悔棋请求状态
+  undoRequestFrom: Side | null;  // 谁发起的悔棋请求
+  undoRequestedTo: Side | null;   // 请求谁同意
 }
 
 // 棋盘尺寸
@@ -68,6 +79,11 @@ export const createRoom = (roomId: string): GameRoom => {
     blackLastPiece: null,
     blackLastTarget: null,
     blackCaptureCount: 0,
+    // 历史快照
+    historySnapshots: [],
+    // 悔棋请求
+    undoRequestFrom: null,
+    undoRequestedTo: null,
   };
   rooms.set(roomId, room);
   return room;
@@ -446,6 +462,12 @@ const executeSettlement = (room: GameRoom): void => {
     blackCaptureCount: room.blackCaptureCount,
   };
   
+  // 保存结算前的快照（用于悔棋）
+  const snapshot: HistorySnapshot = {
+    pieces: room.pieces.map(p => ({ ...p })),
+    roundNumber: room.historySnapshots.length + 1,
+  };
+  
   // 使用共享结算逻辑
   const result = sharedExecuteSettlement(room.pieces, redAction, blackAction, chaseState);
   
@@ -457,6 +479,9 @@ const executeSettlement = (room: GameRoom): void => {
   room.blackLastPiece = result.newChaseState.blackLastPiece;
   room.blackLastTarget = result.newChaseState.blackLastTarget;
   room.blackCaptureCount = result.newChaseState.blackCaptureCount;
+  
+  // 保存快照
+  room.historySnapshots.push(snapshot);
   
   if (result.winner) {
     room.winner = result.winner;
@@ -491,6 +516,11 @@ export const resetRoom = (roomId: string): boolean => {
   room.blackLastPiece = null;
   room.blackLastTarget = null;
   room.blackCaptureCount = 0;
+  // 重置历史快照
+  room.historySnapshots = [];
+  // 重置悔棋请求
+  room.undoRequestFrom = null;
+  room.undoRequestedTo = null;
   
   return true;
 };
@@ -536,4 +566,82 @@ export const settleGame = (roomId: string): { success: boolean; winner?: Side | 
             room.winner === 'black' ? '黑将被吃' : 
             room.winner === 'draw' ? '将帅对面' : undefined
   };
+};
+
+// 请求悔棋
+export const requestUndo = (roomId: string, requesterSide: Side): { success: boolean; error?: string } => {
+  const room = rooms.get(roomId);
+  if (!room) return { success: false, error: '房间不存在' };
+  
+  // 检查是否有可悔棋的回合
+  if (room.historySnapshots.length === 0) {
+    return { success: false, error: '没有可悔棋的回合' };
+  }
+  
+  // 已经有待处理的悔棋请求
+  if (room.undoRequestFrom !== null) {
+    return { success: false, error: '已有待处理的悔棋请求' };
+  }
+  
+  // 设置悔棋请求
+  room.undoRequestFrom = requesterSide;
+  room.undoRequestedTo = requesterSide === 'red' ? 'black' : 'red';
+  
+  return { success: true };
+};
+
+// 执行悔棋
+const executeUndo = (room: GameRoom): void => {
+  if (room.historySnapshots.length === 0) return;
+  
+  // 获取最后一个快照
+  const lastSnapshot = room.historySnapshots[room.historySnapshots.length - 1];
+  
+  // 恢复到快照状态
+  room.pieces = lastSnapshot.pieces.map(p => ({ ...p }));
+  room.phase = 'strategy';
+  room.winner = null;
+  room.redPendingMove = null;
+  room.blackPendingMove = null;
+  room.redConfirmed = false;
+  room.blackConfirmed = false;
+  // 清除长捉状态
+  room.redLastPiece = null;
+  room.redLastTarget = null;
+  room.redCaptureCount = 0;
+  room.blackLastPiece = null;
+  room.blackLastTarget = null;
+  room.blackCaptureCount = 0;
+  // 移除最后一个快照
+  room.historySnapshots.pop();
+  // 清除悔棋请求
+  room.undoRequestFrom = null;
+  room.undoRequestedTo = null;
+};
+
+// 回应悔棋请求
+export const respondToUndo = (roomId: string, responderSide: Side, accepted: boolean): { success: boolean; error?: string } => {
+  const room = rooms.get(roomId);
+  if (!room) return { success: false, error: '房间不存在' };
+  
+  // 检查是否有待处理的悔棋请求
+  if (room.undoRequestFrom === null) {
+    return { success: false, error: '没有待处理的悔棋请求' };
+  }
+  
+  // 检查是否是发给自己的请求
+  if (room.undoRequestedTo !== responderSide) {
+    return { success: false, error: '这不是发给你的悔棋请求' };
+  }
+  
+  if (accepted) {
+    // 执行悔棋
+    executeUndo(room);
+  } else {
+    // 拒绝悔棋，清除请求状态
+    room.undoRequestFrom = null;
+    room.undoRequestedTo = null;
+  }
+  
+  return { success: true };
 };

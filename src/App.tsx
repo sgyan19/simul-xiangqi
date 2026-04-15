@@ -141,6 +141,8 @@ const createInitialState = (): GameState => ({
   blackLastPiece: null,
   blackLastTarget: null,
   blackCaptureCount: 0,
+  // 历史快照（用于悔棋）
+  historySnapshots: [],
 });
 
 const createInitialOnlineState = (): OnlineState => ({
@@ -170,6 +172,9 @@ function App() {
   const [history, setHistory] = useState<RoundHistoryEntry[]>([]);
   const [historyExpanded, setHistoryExpanded] = useState(false);
   const [lastMoveTargets, setLastMoveTargets] = useState<{ red: Position | null; black: Position | null }>({ red: null, black: null });
+  
+  // 联机模式悔棋请求状态
+  const [undoRequestPending, setUndoRequestPending] = useState<{ from: 'red' | 'black' | null; waiting: boolean }>({ from: null, waiting: false });
 
   // 显示提示
   const showMessage = useCallback((msg: string, duration = 2000) => {
@@ -294,6 +299,70 @@ function App() {
     });
   }, [gameState.phase]);
 
+  // 悔棋：撤销上一回合的所有变化
+  const handleUndoMove = useCallback(() => {
+    if (gameState.phase !== 'strategy') return;
+    if (gameState.historySnapshots.length === 0) {
+      showMessage('没有可悔棋的回合');
+      return;
+    }
+    
+    // 获取上一个快照
+    const lastSnapshot = gameState.historySnapshots[gameState.historySnapshots.length - 1];
+    
+    // 恢复到快照状态
+    setGameState(prev => {
+      const newState: GameState = {
+        ...prev,
+        pieces: lastSnapshot.pieces.map(p => ({ ...p })),
+        phase: 'strategy',
+        winner: null,
+        settlementResult: null,
+        redPendingMove: null,
+        blackPendingMove: null,
+        redConfirmed: false,
+        blackConfirmed: false,
+        selectedPiece: null,
+        validMoves: [],
+        // 清除长捉状态
+        redLastPiece: null,
+        redLastTarget: null,
+        redCaptureCount: 0,
+        blackLastPiece: null,
+        blackLastTarget: null,
+        blackCaptureCount: 0,
+        // 移除最后一个快照
+        historySnapshots: prev.historySnapshots.slice(0, -1),
+      };
+      return newState;
+    });
+    
+    // 添加悔棋记录到历史记录
+    const undoEntry: RoundHistoryEntry = {
+      roundNumber: lastSnapshot.roundNumber,
+      redAction: null,
+      blackAction: null,
+      redPieceRemoved: [],
+      blackPieceRemoved: [],
+      events: [{
+        type: 'move',
+        description: `[悔棋]第${lastSnapshot.roundNumber}回合被撤销`,
+      }],
+      winner: null,
+      endReason: null,
+      isGameEnd: false,
+    };
+    setHistory(prev => [...prev, undoEntry]);
+    
+    // 清除目标框
+    setLastMoveTargets({ red: null, black: null });
+    
+    // 清除将军状态
+    setCheckStatus({ red: false, black: false });
+    
+    showMessage('悔棋成功');
+  }, [gameState.phase, gameState.historySnapshots, showMessage]);
+
   // 执行结算
   useEffect(() => {
     if (gameState.phase !== 'settlement') return;
@@ -302,6 +371,13 @@ function App() {
       // 保存当前 pending moves（因为异步执行时会变化）
       const redMove = gameState.redPendingMove;
       const blackMove = gameState.blackPendingMove;
+      const currentRoundNumber = history.length + 1;
+      
+      // 保存结算前的棋盘状态（用于悔棋）
+      const snapshotBeforeSettlement = {
+        pieces: gameState.pieces.map(p => ({ ...p })),
+        roundNumber: currentRoundNumber,
+      };
       
       await new Promise(resolve => setTimeout(resolve, 1000));
 
@@ -320,10 +396,9 @@ function App() {
       );
 
       // 添加回合历史记录
-      const roundNumber = history.length + 1;
       const entryWithRound: RoundHistoryEntry = {
         ...historyEntry,
-        roundNumber,
+        roundNumber: currentRoundNumber,
       };
       setHistory(prev => [...prev, entryWithRound]);
 
@@ -362,6 +437,8 @@ function App() {
         blackLastPiece: newChaseState.blackLastPiece,
         blackLastTarget: newChaseState.blackLastTarget,
         blackCaptureCount: newChaseState.blackCaptureCount,
+        // 保存结算前的快照（用于悔棋）
+        historySnapshots: [...prev.historySnapshots, snapshotBeforeSettlement],
       }));
 
       // 设置最后行动目标位置（用于显示目标框）
@@ -545,6 +622,22 @@ function App() {
       showMessage('对方离开了房间');
     });
 
+    // 收到对方发起的悔棋请求
+    wsClient.on('undo_requested', (payload: any) => {
+      setUndoRequestPending({ from: payload.from, waiting: false });
+    });
+
+    // 发送悔棋请求后等待对方回应
+    wsClient.on('undo_waiting', (payload: any) => {
+      setUndoRequestPending({ from: onlineState.side, waiting: true });
+    });
+
+    // 悔棋请求的回应
+    wsClient.on('undo_response', (payload: any) => {
+      setUndoRequestPending({ from: null, waiting: false });
+      showMessage(payload.message, 2000);
+    });
+
     wsClient.on('error', (payload: any) => {
       showMessage(payload.message || '发生错误');
     });
@@ -613,6 +706,17 @@ function App() {
   // 在线模式：重走
   const handleRedoMoveOnline = useCallback(() => {
     wsClient.send('undo_move');
+  }, []);
+
+  // 在线模式：悔棋请求
+  const handleRequestUndoOnline = useCallback(() => {
+    wsClient.send('request_undo');
+  }, []);
+
+  // 在线模式：回应悔棋请求
+  const handleRespondUndoOnline = useCallback((accepted: boolean) => {
+    wsClient.send('respond_undo', { accepted });
+    setUndoRequestPending({ from: null, waiting: false });
   }, []);
 
   // 在线模式：重置
@@ -817,12 +921,20 @@ function App() {
           </button>
         )}
         {gameMode === 'online' && onlineState.side && currentPhase === 'strategy' && (
-          <button
-            className="btn btn-reset"
-            onClick={handleRedoMoveOnline}
-          >
-            重走
-          </button>
+          <>
+            <button
+              className="btn btn-reset"
+              onClick={handleRedoMoveOnline}
+            >
+              重走
+            </button>
+            <button
+              className="btn btn-reset"
+              onClick={handleRequestUndoOnline}
+            >
+              悔棋
+            </button>
+          </>
         )}
       </div>
 
@@ -833,6 +945,13 @@ function App() {
           disabled={!canSettle}
         >
           {canSettle ? '自动结算中...' : '结算'}
+        </button>
+        <button
+          className="btn btn-reset"
+          onClick={handleUndoMove}
+          disabled={gameState.historySnapshots.length === 0}
+        >
+          悔棋
         </button>
         <button className="btn btn-reset" onClick={handleResetFn}>
           重置
@@ -872,6 +991,37 @@ function App() {
       {currentPhase === 'settlement' && (
         <div className="settlement-overlay">
           <div className="settlement-text">结算中...</div>
+        </div>
+      )}
+
+      {/* 悔棋请求弹窗（等待对方同意） */}
+      {gameMode === 'online' && undoRequestPending.waiting && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h2>等待对方同意...</h2>
+            <p>请等待 {undoRequestPending.from === 'red' ? '黑方' : '红方'} 回应悔棋请求</p>
+            <button className="btn btn-reset" onClick={() => setUndoRequestPending({ from: null, waiting: false })}>
+              取消
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 收到悔棋请求弹窗 */}
+      {gameMode === 'online' && undoRequestPending.from && !undoRequestPending.waiting && onlineState.side && undoRequestPending.from !== onlineState.side && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h2>悔棋请求</h2>
+            <p>{undoRequestPending.from === 'red' ? '红方' : '黑方'} 请求悔棋，是否同意？</p>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+              <button className="btn btn-confirm" onClick={() => handleRespondUndoOnline(true)}>
+                同意
+              </button>
+              <button className="btn btn-reset" onClick={() => handleRespondUndoOnline(false)}>
+                拒绝
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
