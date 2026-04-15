@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { RoundHistoryEntry, getPieceName } from './shared/history';
 import { PendingAction } from './types';
 
@@ -44,10 +44,12 @@ export default function HistoryLog({ history, isExpanded, onToggle }: HistoryLog
   const listRef = useRef<HTMLDivElement>(null);
   const [sortDesc, setSortDesc] = useState(true); // 默认倒序
 
-  // 根据排序顺序处理历史记录
-  const sortedHistory = sortDesc 
-    ? [...history].sort((a, b) => b.roundNumber - a.roundNumber)  // 倒序
-    : [...history].sort((a, b) => a.roundNumber - b.roundNumber); // 正序
+  // 根据排序顺序处理历史记录（使用 useMemo 避免不必要的重渲染）
+  const sortedHistory = useMemo(() => {
+    return sortDesc 
+      ? [...history].sort((a, b) => b.roundNumber - a.roundNumber)  // 倒序
+      : [...history].sort((a, b) => a.roundNumber - b.roundNumber); // 正序
+  }, [history, sortDesc]);
 
   // 自动滚动到最新/最旧记录
   useEffect(() => {
