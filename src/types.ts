@@ -13,6 +13,9 @@ export interface Piece {
   side: Side;
   position: Position;
   id: string;
+  // 长捉限制：该棋子连续 capture 同一目标次数
+  lastCaptureTarget: Position | null;
+  captureSameTargetCount: number;
 }
 
 // 行动类型
@@ -63,9 +66,6 @@ export interface GameState {
   winner: Winner;
   settlementResult: SettlementResult | null;
   message: string; // 提示信息
-  // 长捉限制：当前策略阶段内连续 capture 同一目标的次数
-  lastCaptureTarget: Position | null;
-  captureSameTargetCount: number;
 }
 
 // 棋子名称映射
@@ -86,43 +86,43 @@ export const PIECE_NAMES: Record<PieceType, Record<Side, string>> = {
 export const INITIAL_PIECES: Piece[] = [
   // 红方（下方，row 6-9）
   // 底线 row 9：车马象士将士象马车
-  { type: 'chariot', side: 'red', position: [0, 9], id: 'red-chariot-0' },
-  { type: 'horse', side: 'red', position: [1, 9], id: 'red-horse-0' },
-  { type: 'elephant', side: 'red', position: [2, 9], id: 'red-elephant-0' },
-  { type: 'advisor', side: 'red', position: [3, 9], id: 'red-advisor-0' },
-  { type: 'king', side: 'red', position: [4, 9], id: 'red-king' },
-  { type: 'advisor', side: 'red', position: [5, 9], id: 'red-advisor-1' },
-  { type: 'elephant', side: 'red', position: [6, 9], id: 'red-elephant-1' },
-  { type: 'horse', side: 'red', position: [7, 9], id: 'red-horse-1' },
-  { type: 'chariot', side: 'red', position: [8, 9], id: 'red-chariot-1' },
+  { type: 'chariot', side: 'red', position: [0, 9], id: 'red-chariot-0', lastCaptureTarget: null, captureSameTargetCount: 0 },
+  { type: 'horse', side: 'red', position: [1, 9], id: 'red-horse-0', lastCaptureTarget: null, captureSameTargetCount: 0 },
+  { type: 'elephant', side: 'red', position: [2, 9], id: 'red-elephant-0', lastCaptureTarget: null, captureSameTargetCount: 0 },
+  { type: 'advisor', side: 'red', position: [3, 9], id: 'red-advisor-0', lastCaptureTarget: null, captureSameTargetCount: 0 },
+  { type: 'king', side: 'red', position: [4, 9], id: 'red-king', lastCaptureTarget: null, captureSameTargetCount: 0 },
+  { type: 'advisor', side: 'red', position: [5, 9], id: 'red-advisor-1', lastCaptureTarget: null, captureSameTargetCount: 0 },
+  { type: 'elephant', side: 'red', position: [6, 9], id: 'red-elephant-1', lastCaptureTarget: null, captureSameTargetCount: 0 },
+  { type: 'horse', side: 'red', position: [7, 9], id: 'red-horse-1', lastCaptureTarget: null, captureSameTargetCount: 0 },
+  { type: 'chariot', side: 'red', position: [8, 9], id: 'red-chariot-1', lastCaptureTarget: null, captureSameTargetCount: 0 },
   // 炮 row 7
-  { type: 'cannon', side: 'red', position: [1, 7], id: 'red-cannon-0' },
-  { type: 'cannon', side: 'red', position: [7, 7], id: 'red-cannon-1' },
+  { type: 'cannon', side: 'red', position: [1, 7], id: 'red-cannon-0', lastCaptureTarget: null, captureSameTargetCount: 0 },
+  { type: 'cannon', side: 'red', position: [7, 7], id: 'red-cannon-1', lastCaptureTarget: null, captureSameTargetCount: 0 },
   // 兵 row 6
-  { type: 'pawn', side: 'red', position: [0, 6], id: 'red-pawn-0' },
-  { type: 'pawn', side: 'red', position: [2, 6], id: 'red-pawn-1' },
-  { type: 'pawn', side: 'red', position: [4, 6], id: 'red-pawn-2' },
-  { type: 'pawn', side: 'red', position: [6, 6], id: 'red-pawn-3' },
-  { type: 'pawn', side: 'red', position: [8, 6], id: 'red-pawn-4' },
+  { type: 'pawn', side: 'red', position: [0, 6], id: 'red-pawn-0', lastCaptureTarget: null, captureSameTargetCount: 0 },
+  { type: 'pawn', side: 'red', position: [2, 6], id: 'red-pawn-1', lastCaptureTarget: null, captureSameTargetCount: 0 },
+  { type: 'pawn', side: 'red', position: [4, 6], id: 'red-pawn-2', lastCaptureTarget: null, captureSameTargetCount: 0 },
+  { type: 'pawn', side: 'red', position: [6, 6], id: 'red-pawn-3', lastCaptureTarget: null, captureSameTargetCount: 0 },
+  { type: 'pawn', side: 'red', position: [8, 6], id: 'red-pawn-4', lastCaptureTarget: null, captureSameTargetCount: 0 },
 
   // 黑方（上方，row 0-3）
   // 底线 row 0：车马象士将士象马车
-  { type: 'chariot', side: 'black', position: [0, 0], id: 'black-chariot-0' },
-  { type: 'horse', side: 'black', position: [1, 0], id: 'black-horse-0' },
-  { type: 'elephant', side: 'black', position: [2, 0], id: 'black-elephant-0' },
-  { type: 'advisor', side: 'black', position: [3, 0], id: 'black-advisor-0' },
-  { type: 'king', side: 'black', position: [4, 0], id: 'black-king' },
-  { type: 'advisor', side: 'black', position: [5, 0], id: 'black-advisor-1' },
-  { type: 'elephant', side: 'black', position: [6, 0], id: 'black-elephant-1' },
-  { type: 'horse', side: 'black', position: [7, 0], id: 'black-horse-1' },
-  { type: 'chariot', side: 'black', position: [8, 0], id: 'black-chariot-1' },
+  { type: 'chariot', side: 'black', position: [0, 0], id: 'black-chariot-0', lastCaptureTarget: null, captureSameTargetCount: 0 },
+  { type: 'horse', side: 'black', position: [1, 0], id: 'black-horse-0', lastCaptureTarget: null, captureSameTargetCount: 0 },
+  { type: 'elephant', side: 'black', position: [2, 0], id: 'black-elephant-0', lastCaptureTarget: null, captureSameTargetCount: 0 },
+  { type: 'advisor', side: 'black', position: [3, 0], id: 'black-advisor-0', lastCaptureTarget: null, captureSameTargetCount: 0 },
+  { type: 'king', side: 'black', position: [4, 0], id: 'black-king', lastCaptureTarget: null, captureSameTargetCount: 0 },
+  { type: 'advisor', side: 'black', position: [5, 0], id: 'black-advisor-1', lastCaptureTarget: null, captureSameTargetCount: 0 },
+  { type: 'elephant', side: 'black', position: [6, 0], id: 'black-elephant-1', lastCaptureTarget: null, captureSameTargetCount: 0 },
+  { type: 'horse', side: 'black', position: [7, 0], id: 'black-horse-1', lastCaptureTarget: null, captureSameTargetCount: 0 },
+  { type: 'chariot', side: 'black', position: [8, 0], id: 'black-chariot-1', lastCaptureTarget: null, captureSameTargetCount: 0 },
   // 炮 row 2
-  { type: 'cannon', side: 'black', position: [1, 2], id: 'black-cannon-0' },
-  { type: 'cannon', side: 'black', position: [7, 2], id: 'black-cannon-1' },
+  { type: 'cannon', side: 'black', position: [1, 2], id: 'black-cannon-0', lastCaptureTarget: null, captureSameTargetCount: 0 },
+  { type: 'cannon', side: 'black', position: [7, 2], id: 'black-cannon-1', lastCaptureTarget: null, captureSameTargetCount: 0 },
   // 卒 row 3
-  { type: 'pawn', side: 'black', position: [0, 3], id: 'black-pawn-0' },
-  { type: 'pawn', side: 'black', position: [2, 3], id: 'black-pawn-1' },
-  { type: 'pawn', side: 'black', position: [4, 3], id: 'black-pawn-2' },
-  { type: 'pawn', side: 'black', position: [6, 3], id: 'black-pawn-3' },
-  { type: 'pawn', side: 'black', position: [8, 3], id: 'black-pawn-4' },
+  { type: 'pawn', side: 'black', position: [0, 3], id: 'black-pawn-0', lastCaptureTarget: null, captureSameTargetCount: 0 },
+  { type: 'pawn', side: 'black', position: [2, 3], id: 'black-pawn-1', lastCaptureTarget: null, captureSameTargetCount: 0 },
+  { type: 'pawn', side: 'black', position: [4, 3], id: 'black-pawn-2', lastCaptureTarget: null, captureSameTargetCount: 0 },
+  { type: 'pawn', side: 'black', position: [6, 3], id: 'black-pawn-3', lastCaptureTarget: null, captureSameTargetCount: 0 },
+  { type: 'pawn', side: 'black', position: [8, 3], id: 'black-pawn-4', lastCaptureTarget: null, captureSameTargetCount: 0 },
 ];
