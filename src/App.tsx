@@ -227,6 +227,14 @@ function App() {
       const captureTarget = isRed ? gameState.redCaptureTarget : gameState.blackCaptureTarget;
       const captureCount = isRed ? gameState.redCaptureCount : gameState.blackCaptureCount;
       
+      console.log('[长捉检查]', {
+        side,
+        targetPieceId: targetPiece!.id,
+        captureTarget,
+        captureCount,
+        willBlock: captureTarget === targetPiece!.id && captureCount >= 3
+      });
+      
       if (captureTarget === targetPiece!.id && captureCount >= 3) {
         showMessage('不允许长捉（3次）');
         return;
@@ -449,6 +457,19 @@ function App() {
           }
         }
       }
+
+      console.log('[结算-长捉计数]', {
+        redAction,
+        blackAction,
+        oldRedCaptureTarget: gameState.redCaptureTarget,
+        oldRedCaptureCount: gameState.redCaptureCount,
+        newRedCaptureTarget,
+        newRedCaptureCount,
+        oldBlackCaptureTarget: gameState.blackCaptureTarget,
+        oldBlackCaptureCount: gameState.blackCaptureCount,
+        newBlackCaptureTarget,
+        newBlackCaptureCount,
+      });
 
       // 检查将帅面对面
       const redKing = finalPieces.find(p => p.type === 'king' && p.side === 'red');
