@@ -216,6 +216,19 @@ function App() {
     );
     const actionType: ActionType = targetPiece ? 'capture' : 'move';
     
+    // 长捉检查：如果是要 capture，检查是否超过连续 3 次
+    if (actionType === 'capture') {
+      const { lastCaptureTarget, captureSameTargetCount } = selectedPiece;
+      // 如果上次 capture 目标与本次相同，且已达到 3 次，则禁止
+      if (lastCaptureTarget && 
+          lastCaptureTarget[0] === to[0] && 
+          lastCaptureTarget[1] === to[1] && 
+          captureSameTargetCount >= 3) {
+        showMessage('不允许长捉（3次）');
+        return;
+      }
+    }
+    
     const pendingMove: PendingAction = {
       from: selectedPiece.position,
       to,
@@ -349,6 +362,8 @@ function App() {
       
       // 第三步：处理 capture 吃子判定
       const toRemoveByCapture: string[] = [];
+      const redCaptureTarget = redAction?.actionType === 'capture' ? redAction.to : null;
+      const blackCaptureTarget = blackAction?.actionType === 'capture' ? blackAction.to : null;
       
       if (redAction?.actionType === 'capture') {
         const enemyAtTarget = finalPieces.find(p => 
@@ -357,7 +372,7 @@ function App() {
         if (enemyAtTarget) {
           toRemoveByCapture.push(enemyAtTarget.id);
         }
-        // 如果目标位置没有敌方子，capture 扑空，什么都不做
+        // 如果目标位置没有敌方子，capture 扑空
       }
       
       if (blackAction?.actionType === 'capture') {
@@ -370,6 +385,53 @@ function App() {
       }
       
       finalPieces = finalPieces.filter(p => !toRemoveByCapture.includes(p.id));
+      
+      // 第四步：更新长捉计数
+      finalPieces = finalPieces.map(p => {
+        let newPiece = { ...p };
+        
+        // 找到这个棋子对应的行动
+        const isRedPiece = p.side === 'red';
+        const myAction = isRedPiece ? redAction : blackAction;
+        const originalPiece = pieces.find(op => op.id === p.id);
+        
+        if (!originalPiece || !myAction) {
+          // 没有行动，重置计数
+          newPiece.lastCaptureTarget = null;
+          newPiece.captureSameTargetCount = 0;
+          return newPiece;
+        }
+        
+        if (myAction.actionType === 'move') {
+          // move 重置计数
+          newPiece.lastCaptureTarget = null;
+          newPiece.captureSameTargetCount = 0;
+        } else if (myAction.actionType === 'capture') {
+          // capture 处理长捉
+          const isCaptureHit = !toRemoveByCapture.includes(p.id) && 
+                              pieces.some(op => op.side !== p.side && op.position[0] === myAction.to[0] && op.position[1] === myAction.to[1]);
+          
+          if (isCaptureHit) {
+            // 吃子成功，重置计数
+            newPiece.lastCaptureTarget = null;
+            newPiece.captureSameTargetCount = 0;
+          } else {
+            // 扑空，增加计数
+            if (originalPiece.lastCaptureTarget && 
+                originalPiece.lastCaptureTarget[0] === myAction.to[0] && 
+                originalPiece.lastCaptureTarget[1] === myAction.to[1]) {
+              // 连续同一目标
+              newPiece.captureSameTargetCount = originalPiece.captureSameTargetCount + 1;
+            } else {
+              // 新目标
+              newPiece.captureSameTargetCount = 1;
+            }
+            newPiece.lastCaptureTarget = [...myAction.to] as Position;
+          }
+        }
+        
+        return newPiece;
+      });
 
       // 检查将帅面对面
       const redKing = finalPieces.find(p => p.type === 'king' && p.side === 'red');
