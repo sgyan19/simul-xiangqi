@@ -65,9 +65,16 @@ export const initWebSocket = (server: Server): WebSocketServer => {
   return wss;
 };
 
-// 获取玩家ID（WebSocket 对象ID）
+// 玩家ID计数器
+let playerIdCounter = 0;
+
+// 获取玩家ID（使用唯一的递增ID）
 const getPlayerId = (ws: WebSocket): string => {
-  return ws.toString();
+  // 使用内部属性存储ID
+  if (!(ws as any)._playerId) {
+    (ws as any)._playerId = `player_${++playerIdCounter}`;
+  }
+  return (ws as any)._playerId;
 };
 
 // 处理消息
