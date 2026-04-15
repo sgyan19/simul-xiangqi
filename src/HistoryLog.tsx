@@ -75,6 +75,22 @@ export default function HistoryLog({ history, isExpanded, onToggle }: HistoryLog
                   )}
                 </div>
 
+                {/* 检查是否是悔棋记录 */}
+                {entry.events.some(e => e.description.includes('悔棋')) ? (
+                  /* 悔棋记录只显示事件 */
+                  entry.events.length > 0 && (
+                    <div className="history-events">
+                      {entry.events.map((event, idx) => {
+                        return (
+                          <div key={idx} className={`event-item ${event.type}`}>
+                            <span className="event-icon">{getEventIcon(event.type)}</span>
+                            <span className="event-desc">{event.description}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )
+                ) : (
                 <div className="history-actions">
                   <div className={`action-line red ${!entry.redAction ? 'pass' : ''}`}>
                     <span className="side-dot red"></span>
@@ -93,6 +109,7 @@ export default function HistoryLog({ history, isExpanded, onToggle }: HistoryLog
                     </span>
                   </div>
                 </div>
+                )}
 
                 {entry.events.length > 0 && (
                   <div className="history-events">
