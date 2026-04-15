@@ -1,5 +1,5 @@
 import { Piece, PendingAction, Position } from '../types';
-import { PieceRemovalRecord, RoundHistoryEntry, SettlementEvent, getPieceName } from './history';
+import { PieceRemovalRecord, RoundHistoryEntry, SettlementEvent, getPieceName, formatChessNotation } from './history';
 
 // 长捉状态
 export interface LongChaseState {
@@ -504,6 +504,11 @@ export const executeSettlement = (
     );
     if (redPiece) {
       redPiece.position = [...redAction.to] as Position;
+      // 记录移动事件
+      events.push({
+        type: 'move',
+        description: `[移动]${formatChessNotation(redAction.from, redAction.to, redPiece.type, 'red')}`,
+      });
     }
   }
   
@@ -513,6 +518,11 @@ export const executeSettlement = (
     );
     if (blackPiece) {
       blackPiece.position = [...blackAction.to] as Position;
+      // 记录移动事件
+      events.push({
+        type: 'move',
+        description: `[移动]${formatChessNotation(blackAction.from, blackAction.to, blackPiece.type, 'black')}`,
+      });
     }
   }
   
@@ -532,7 +542,7 @@ export const executeSettlement = (
         // 记录冲突事件
         events.push({
           type: 'collision',
-          description: `${movedRedPiece.side === 'red' ? '红' : '黑'}${getPieceName(movedRedPiece.type)}与${movedBlackPiece.side === 'red' ? '红' : '黑'}${getPieceName(movedBlackPiece.type)}同归于尽`,
+          description: `[兑子]红${getPieceName(movedRedPiece.type)}与黑${getPieceName(movedBlackPiece.type)}同归于尽`,
         });
         
         // 炮撞炮：同归于尽
@@ -585,7 +595,7 @@ export const executeSettlement = (
       
       events.push({
         type: 'capture',
-        description: `红${getPieceName(redCapturer?.type || 'unknown')}吃掉黑${getPieceName(enemyAtTarget.type)}`,
+        description: `[吃子]${formatChessNotation(redAction.from, redAction.to, redCapturer?.type || 'unknown', 'red')}，目标：黑${getPieceName(enemyAtTarget.type)}`,
       });
       
       toRemoveByCapture.push(enemyAtTarget.id);
@@ -622,7 +632,7 @@ export const executeSettlement = (
               });
               events.push({
                 type: 'counter_attack',
-                description: `防反：黑${getPieceName(blackPiece.type)}保护，红${getPieceName(redCapturer.type)}反被吃掉`,
+                description: `[防反]红${getPieceName(redCapturer.type)}被黑${getPieceName(blackPiece.type)}反吃`,
               });
               break;
             }
@@ -652,7 +662,7 @@ export const executeSettlement = (
       
       events.push({
         type: 'capture',
-        description: `黑${getPieceName(blackCapturer?.type || 'unknown')}吃掉红${getPieceName(enemyAtTarget.type)}`,
+        description: `[吃子]${formatChessNotation(blackAction.from, blackAction.to, blackCapturer?.type || 'unknown', 'black')}，目标：红${getPieceName(enemyAtTarget.type)}`,
       });
       
       toRemoveByCapture.push(enemyAtTarget.id);
@@ -684,7 +694,7 @@ export const executeSettlement = (
               });
               events.push({
                 type: 'counter_attack',
-                description: `防反：红${getPieceName(redPiece.type)}保护，黑${getPieceName(blackCapturer.type)}反被吃掉`,
+                description: `[防反]黑${getPieceName(blackCapturer.type)}被红${getPieceName(redPiece.type)}反吃`,
               });
               break;
             }
@@ -769,7 +779,7 @@ export const executeSettlement = (
       blackPieceRemoved.push({ piece: { ...blackKing }, reason: 'face_off' });
       events.push({
         type: 'face_off',
-        description: '将帅对面同归于尽',
+        description: '[将对将]双方同归于尽',
       });
       
       finalPieces = finalPieces.filter(p => p.type !== 'king');
