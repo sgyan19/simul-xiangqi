@@ -341,7 +341,7 @@ const TargetBox = ({
         borderRadius: '8px',
         backgroundColor: side === 'red' ? 'rgba(196, 30, 58, 0.2)' : 'rgba(26, 26, 26, 0.2)',
         pointerEvents: 'none',
-        zIndex: 4,
+        zIndex: 15,
         boxSizing: 'border-box',
       }}
     />
