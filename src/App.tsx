@@ -592,14 +592,11 @@ function App() {
       // 进入结算或结束阶段时，显示最后行动目标框
       const isNowInSettlementOrEnded = payload.phase === 'settlement' || payload.phase === 'ended';
       if (isNowInSettlementOrEnded) {
-        // 优先使用新字段 lastRedMoveTo/lastBlackMoveTo
-        const hasLastMoves = 'lastRedMoveTo' in payload && 'lastBlackMoveTo' in payload;
-        if (hasLastMoves) {
-          setLastMoveTargets({
-            red: payload.lastRedMoveTo || null,
-            black: payload.lastBlackMoveTo || null,
-          });
-        }
+        console.log('DEBUG: room_state in settlement/ended, lastRedMoveTo:', payload.lastRedMoveTo, 'lastBlackMoveTo:', payload.lastBlackMoveTo);
+        setLastMoveTargets({
+          red: payload.lastRedMoveTo || null,
+          black: payload.lastBlackMoveTo || null,
+        });
       }
       
       // 同步视角：每次收到房间状态时，都确保视角与玩家阵营一致
