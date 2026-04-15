@@ -116,8 +116,6 @@ const handleMessage = (ws: WebSocket, message: WSMessage): void => {
         return;
       }
       
-      console.log(`[Join Room] roomId: ${roomId}, redPlayer: ${room.redPlayer}, blackPlayer: ${room.blackPlayer}`);
-      
       if (!player) {
         player = { ws, roomId: null, side: null };
       }
@@ -126,11 +124,9 @@ const handleMessage = (ws: WebSocket, message: WSMessage): void => {
       if (!room.redPlayer) {
         room.redPlayer = playerId;
         player.side = 'red';
-        console.log(`[Join Room] Setting ${playerId} as red player`);
       } else if (!room.blackPlayer) {
         room.blackPlayer = playerId;
         player.side = 'black';
-        console.log(`[Join Room] Setting ${playerId} as black player`);
       } else {
         sendToClient(ws, { type: 'error', payload: { message: '房间已满' } });
         return;
@@ -142,7 +138,6 @@ const handleMessage = (ws: WebSocket, message: WSMessage): void => {
       // 检查是否双方都已加入，自动开始游戏
       if (room.redPlayer && room.blackPlayer) {
         room.phase = 'strategy';
-        console.log(`[Join Room] Both players joined, setting phase to strategy`);
       }
       
       sendToClient(ws, { 

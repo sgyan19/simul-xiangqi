@@ -418,12 +418,6 @@ function App() {
   // 连接 WebSocket
   useEffect(() => {
     if (gameMode !== 'online') return;
-    
-    // 如果已经连接，不需要重复连接
-    if (wsClient.isConnected()) {
-      setOnlineState(prev => ({ ...prev, connected: true }));
-      return;
-    }
 
     wsClient.connect()
       .then(() => {
@@ -434,18 +428,16 @@ function App() {
       });
 
     wsClient.on('room_created', (payload: any) => {
-      console.log('Room created payload:', payload);
       // 确保pieces存在且有效
       const pieces = payload.pieces && payload.pieces.length > 0 
         ? payload.pieces 
         : INITIAL_PIECES.map(p => ({ ...p }));
       // 使用服务端发送的 phase（等待状态）
       const phase = payload.phase || 'waiting';
-      console.log('Setting side to:', payload.side, 'phase to:', phase);
       setOnlineState(prev => ({ 
         ...prev, 
         roomId: payload.roomId, 
-        side: payload.side || 'red', // 确保 side 不会是 null
+        side: payload.side || 'red',
         pieces: pieces,
         phase: phase,
         redConfirmed: false,
@@ -457,15 +449,12 @@ function App() {
     });
 
     wsClient.on('joined', (payload: any) => {
-      console.log('Joined payload received:', JSON.stringify(payload, null, 2));
       // 确保pieces存在且有效
       const pieces = payload.pieces && payload.pieces.length > 0 
         ? payload.pieces 
         : INITIAL_PIECES.map(p => ({ ...p }));
-      console.log('Setting pieces:', pieces.length, 'pieces');
       // 使用服务端发送的 phase，默认 strategy
       const phase = payload.phase || 'strategy';
-      console.log('Setting side to:', payload.side, 'phase to:', phase);
       setOnlineState(prev => ({ 
         ...prev, 
         roomId: payload.roomId, 
@@ -484,17 +473,14 @@ function App() {
     });
 
     wsClient.on('room_state', (payload: any) => {
-      console.log('Room state payload:', payload);
       // 确保pieces存在且有效
       const pieces = payload.pieces && payload.pieces.length > 0 
         ? payload.pieces 
         : (onlineState.pieces.length > 0 ? onlineState.pieces : INITIAL_PIECES.map(p => ({ ...p })));
-      console.log('Room state pieces:', pieces.length);
       setOnlineState(prev => ({
         ...prev,
         pieces: pieces,
         phase: payload.phase || prev.phase,
-        // 如果服务端没有发送 side，使用当前 side
         side: payload.side || prev.side,
         redConfirmed: payload.redConfirmed ?? prev.redConfirmed,
         blackConfirmed: payload.blackConfirmed ?? prev.blackConfirmed,
@@ -789,11 +775,6 @@ function App() {
       </div>
 
       <div className="control-panel" style={{ fontSize: '12px', color: '#AAA' }}>
-        {gameMode === 'online' && (
-          <div style={{ marginBottom: '4px', color: '#4CAF50' }}>
-            [调试] phase: {currentPhase} | side: {onlineState.side || 'null'}
-          </div>
-        )}
         {currentPhase === 'strategy' && (
           <>
             当前视角：

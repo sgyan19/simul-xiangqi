@@ -36,22 +36,12 @@ class WebSocketClient {
   }
 
   connect(): Promise<void> {
-    // 如果已经连接，直接返回
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      return Promise.resolve();
-    }
-    
     return new Promise((resolve, reject) => {
       try {
-        // 关闭旧连接
-        if (this.ws) {
-          this.ws.close();
-        }
-        
         this.ws = new WebSocket(this.url);
 
         this.ws.onopen = () => {
-          console.log('WebSocket 连接成功');
+          console.log('WebSocket connected');
           this.reconnectAttempts = 0;
           resolve();
         };
@@ -69,9 +59,8 @@ class WebSocketClient {
         };
 
         this.ws.onclose = () => {
-          console.log('WebSocket 连接关闭');
-          this.ws = null;
-          // 不自动重连，让用户手动操作
+          console.log('WebSocket closed');
+          this.attemptReconnect();
         };
 
         this.ws.onerror = (error) => {
@@ -87,10 +76,10 @@ class WebSocketClient {
   private attemptReconnect(): void {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
-      console.log(`尝试重新连接... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+      console.log(`Reconnecting... attempt ${this.reconnectAttempts}`);
       setTimeout(() => {
         this.connect().catch(() => {
-          // 重连失败，等待下一次尝试
+          // 重连失败
         });
       }, this.reconnectDelay * this.reconnectAttempts);
     }
@@ -103,15 +92,11 @@ class WebSocketClient {
     }
   }
 
-  isConnected(): boolean {
-    return this.ws !== null && this.ws.readyState === WebSocket.OPEN;
-  }
-
-  on(type: string, handler: MessageHandler): void {
+  on(type: string, handler: MessageHandler) {
     this.handlers.set(type, handler);
   }
 
-  off(type: string): void {
+  off(type: string) {
     this.handlers.delete(type);
   }
 
@@ -119,48 +104,8 @@ class WebSocketClient {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify({ type, payload }));
     } else {
-      console.error('WebSocket 未连接');
+      console.warn('WebSocket not connected');
     }
-  }
-
-  // 创建房间
-  createRoom(): void {
-    this.send('create_room');
-  }
-
-  // 加入房间
-  joinRoom(roomId: string): void {
-    this.send('join_room', { roomId });
-  }
-
-  // 选择阵营（创建房间后调用）
-  chooseSide(side: 'red' | 'black'): void {
-    this.send('choose_side', { side });
-  }
-
-  // 离开房间
-  leaveRoom(): void {
-    this.send('leave_room');
-  }
-
-  // 开始游戏
-  startGame(): void {
-    this.send('start_game');
-  }
-
-  // 提交移动
-  submitMove(from: [number, number], to: [number, number]): void {
-    this.send('submit_move', { from, to });
-  }
-
-  // 撤销移动
-  undoMove(): void {
-    this.send('undo_move');
-  }
-
-  // 重置游戏
-  resetGame(): void {
-    this.send('reset_game');
   }
 
   isConnected(): boolean {
@@ -168,5 +113,4 @@ class WebSocketClient {
   }
 }
 
-// 导出单例
 export const wsClient = new WebSocketClient();
