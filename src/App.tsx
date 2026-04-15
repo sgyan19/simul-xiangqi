@@ -428,16 +428,18 @@ function App() {
       });
 
     wsClient.on('room_created', (payload: any) => {
+      console.log('Room created payload:', payload);
       // 确保pieces存在且有效
       const pieces = payload.pieces && payload.pieces.length > 0 
         ? payload.pieces 
         : INITIAL_PIECES.map(p => ({ ...p }));
       // 使用服务端发送的 phase（等待状态）
       const phase = payload.phase || 'waiting';
+      console.log('Setting side to:', payload.side, 'phase to:', phase);
       setOnlineState(prev => ({ 
         ...prev, 
         roomId: payload.roomId, 
-        side: payload.side, 
+        side: payload.side || 'red', // 确保 side 不会是 null
         pieces: pieces,
         phase: phase,
         redConfirmed: false,
@@ -475,6 +477,7 @@ function App() {
     });
 
     wsClient.on('room_state', (payload: any) => {
+      console.log('Room state payload:', payload);
       // 确保pieces存在且有效
       const pieces = payload.pieces && payload.pieces.length > 0 
         ? payload.pieces 
@@ -484,6 +487,8 @@ function App() {
         ...prev,
         pieces: pieces,
         phase: payload.phase || prev.phase,
+        // 如果服务端没有发送 side，使用当前 side
+        side: payload.side || prev.side,
         redConfirmed: payload.redConfirmed ?? prev.redConfirmed,
         blackConfirmed: payload.blackConfirmed ?? prev.blackConfirmed,
         redPendingMove: payload.redPendingMove ?? prev.redPendingMove,
@@ -777,6 +782,11 @@ function App() {
       </div>
 
       <div className="control-panel" style={{ fontSize: '12px', color: '#AAA' }}>
+        {gameMode === 'online' && (
+          <div style={{ marginBottom: '4px', color: '#4CAF50' }}>
+            [调试] phase: {currentPhase} | side: {onlineState.side || 'null'}
+          </div>
+        )}
         {currentPhase === 'strategy' && (
           <>
             当前视角：
