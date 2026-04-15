@@ -128,10 +128,20 @@ const handleMessage = (ws: WebSocket, message: WSMessage): void => {
       player.roomId = roomId;
       clients.set(ws, player);
       
+      // 检查是否双方都已加入，自动开始游戏
+      if (room.redPlayer && room.blackPlayer) {
+        room.phase = 'strategy';
+      }
+      
       sendToClient(ws, { 
         type: 'joined', 
-        payload: { roomId, side: player.side, pieces: room.pieces } 
+        payload: { roomId, side: player.side, pieces: room.pieces, phase: room.phase } 
       });
+      
+      // 如果双方都已加入，发送 game_start 给双方
+      if (room.redPlayer && room.blackPlayer) {
+        broadcastGameStart(room);
+      }
       
       // 通知房间内的其他玩家
       broadcastRoomUpdate(room);
@@ -348,6 +358,15 @@ const sendRoomState = (ws: WebSocket, room: NonNullable<ReturnType<typeof getRoo
       blackOnline: !!room.blackPlayer,
     },
   });
+};
+
+// 广播游戏开始给所有相关玩家
+const broadcastGameStart = (room: NonNullable<ReturnType<typeof getRoom>>): void => {
+  for (const [ws, player] of clients) {
+    if (player.roomId === room.id) {
+      sendToClient(ws, { type: 'game_start' });
+    }
+  }
 };
 
 // 获取当前连接数

@@ -432,12 +432,14 @@ function App() {
       const pieces = payload.pieces && payload.pieces.length > 0 
         ? payload.pieces 
         : INITIAL_PIECES.map(p => ({ ...p }));
+      // 使用服务端发送的 phase（等待状态）
+      const phase = payload.phase || 'waiting';
       setOnlineState(prev => ({ 
         ...prev, 
         roomId: payload.roomId, 
         side: payload.side, 
         pieces: pieces,
-        phase: 'waiting',
+        phase: phase,
         redConfirmed: false,
         blackConfirmed: false,
         redPendingMove: null,
@@ -453,18 +455,23 @@ function App() {
         ? payload.pieces 
         : INITIAL_PIECES.map(p => ({ ...p }));
       console.log('Setting pieces:', pieces.length, 'pieces');
+      // 使用服务端发送的 phase，默认 strategy
+      const phase = payload.phase || 'strategy';
       setOnlineState(prev => ({ 
         ...prev, 
         roomId: payload.roomId, 
         side: payload.side, 
         pieces: pieces,
-        phase: 'strategy',
+        phase: phase,
         redConfirmed: false,
         blackConfirmed: false,
         redPendingMove: null,
         blackPendingMove: null,
       }));
       showMessage(`加入房间 ${payload.roomId}，你是${payload.side === 'red' ? '红方' : '黑方'}`);
+      if (phase === 'strategy') {
+        showMessage('双方已就位，可以开始对弈！');
+      }
     });
 
     wsClient.on('room_state', (payload: any) => {
@@ -494,6 +501,7 @@ function App() {
     });
 
     wsClient.on('game_start', () => {
+      setOnlineState(prev => ({ ...prev, phase: 'strategy' }));
       showMessage('游戏开始！');
     });
 
