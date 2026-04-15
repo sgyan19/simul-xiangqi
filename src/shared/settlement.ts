@@ -343,6 +343,122 @@ const isPathClearBetween = (
 };
 
 /**
+ * 检查棋子能否 capture 到指定位置
+ * 使用原始棋盘 pieces（capture 发生前）
+ */
+const canPieceCaptureAt = (piece: Piece, targetPos: Position, pieces: Piece[]): boolean => {
+  const [pCol, pRow] = piece.position;
+  const [tCol, tRow] = targetPos;
+  
+  switch (piece.type) {
+    case 'king':
+      // 将帅只能走一步，且必须在九宫内
+      if (Math.abs(tCol - pCol) + Math.abs(tRow - pRow) !== 1) return false;
+      return isInPalace(tCol, tRow, piece.side);
+    
+    case 'advisor':
+      // 士斜走一步，且必须在九宫内
+      if (Math.abs(tCol - pCol) === 1 && Math.abs(tRow - pRow) === 1) {
+        return isInPalace(tCol, tRow, piece.side);
+      }
+      return false;
+    
+    case 'elephant':
+      // 象田字走，过河限制
+      if (Math.abs(tCol - pCol) === 2 && Math.abs(tRow - pRow) === 2) {
+        const midCol = (pCol + tCol) / 2;
+        const midRow = (pRow + tRow) / 2;
+        const midPiece = getPieceAt(midCol, midRow, pieces);
+        if (!midPiece && !isElephantCrossed(tRow, piece.side)) {
+          return true;
+        }
+      }
+      return false;
+    
+    case 'horse':
+      // 马走日
+      const horseMoves = [
+        { leg: [0, 1], target: [1, 2] },
+        { leg: [0, 1], target: [-1, 2] },
+        { leg: [0, -1], target: [1, -2] },
+        { leg: [0, -1], target: [-1, -2] },
+        { leg: [1, 0], target: [2, 1] },
+        { leg: [1, 0], target: [2, -1] },
+        { leg: [-1, 0], target: [-2, 1] },
+        { leg: [-1, 0], target: [-2, -1] },
+      ];
+      for (const move of horseMoves) {
+        const legCol = pCol + move.leg[0];
+        const legRow = pRow + move.leg[1];
+        const targetCol = pCol + move.target[0];
+        const targetRow = pRow + move.target[1];
+        
+        if (targetCol === tCol && targetRow === tRow) {
+          // 检查蹩马腿
+          if (!getPieceAt(legCol, legRow, pieces)) {
+            return true;
+          }
+        }
+      }
+      return false;
+    
+    case 'chariot':
+      // 车直线，路径畅通
+      if (isPathClearBetween(pCol, pRow, tCol, tRow, pieces)) {
+        return true;
+      }
+      return false;
+    
+    case 'cannon':
+      // 炮吃子需要炮台
+      if (pCol !== tCol && pRow !== tRow) return false;
+      
+      const dc = pCol === tCol ? 0 : (tCol - pCol) / Math.abs(tCol - pCol);
+      const dr = pRow === tRow ? 0 : (tRow - pRow) / Math.abs(tRow - pRow);
+      
+      let midCol = pCol + dc;
+      let midRow = pRow + dr;
+      let foundPlatform = false;
+      
+      while (midCol !== tCol || midRow !== tRow) {
+        const midPiece = getPieceAt(midCol, midRow, pieces);
+        if (midPiece) {
+          if (foundPlatform) {
+            return false; // 两个炮台，不行
+          }
+          foundPlatform = true;
+        }
+        midCol += dc;
+        midRow += dr;
+      }
+      
+      // 目标必须是敌方棋子
+      const targetPiece = getPieceAt(tCol, tRow, pieces);
+      return foundPlatform && targetPiece !== undefined && targetPiece.side !== piece.side;
+    
+    case 'pawn':
+      // 兵
+      const forward = piece.side === 'red' ? -1 : 1;
+      const crossedRow = piece.side === 'red' ? 4 : 5;
+      
+      // 前进一格
+      if (tCol === pCol && tRow === pRow + forward) {
+        return true;
+      }
+      // 过河后可横向
+      if ((piece.side === 'red' && pRow <= crossedRow) || (piece.side === 'black' && pRow >= crossedRow)) {
+        if (tRow === pRow && (tCol === pCol - 1 || tCol === pCol + 1)) {
+          return true;
+        }
+      }
+      return false;
+    
+    default:
+      return false;
+  }
+};
+
+/**
  * 执行同时制象棋结算
  * @param pieces - 当前棋子数组
  * @param redAction - 红方行动
@@ -440,8 +556,9 @@ export const executeSettlement = (
       toRemoveByCapture.push(enemyAtTarget.id);
       
       // ===== 新增规则：保护判定 =====
-      // 检查红方 capture 的位置是否有黑方其他棋子可以 capture/move 到
-      // 且该棋子本回合策略阶段没有移动
+      // 红炮现在在 redAction.to 位置
+      // 检查黑方其他棋子（不含被吃的 enemyAtTarget）能否 capture 这个位置
+      // 用原始 pieces 检查（capture 前的棋盘）
       const redCapturer = pieces.find(p => 
         p.side === 'red' && p.position[0] === redAction.from[0] && p.position[1] === redAction.from[1]
       );
@@ -450,12 +567,10 @@ export const executeSettlement = (
         // 找到所有黑方棋子（排除被吃掉的）
         const remainingBlackPieces = pieces.filter(p => p.side === 'black' && p.id !== enemyAtTarget.id);
         
-        // 检查每个黑方棋子是否能到达红炮新位置（capture 后的位置）
         for (const blackPiece of remainingBlackPieces) {
           // 检查这个棋子本回合是否移动了
           let movedThisTurn = false;
           if (blackAction) {
-            // 黑方本回合有行动
             if (blackAction.from[0] === blackPiece.position[0] && 
                 blackAction.from[1] === blackPiece.position[1]) {
               movedThisTurn = true;
@@ -463,23 +578,13 @@ export const executeSettlement = (
           }
           
           if (!movedThisTurn) {
-            // 这个棋子本回合没有移动，检查它是否能到达红炮新位置
-            // 简化检查：同一行或同一列
-            const targetCol = redAction.to[0];
-            const targetRow = redAction.to[1];
-            const pieceCol = blackPiece.position[0];
-            const pieceRow = blackPiece.position[1];
+            // 本回合没移动，检查这个棋子能否 capture 到红炮新位置
+            const canCapture = canPieceCaptureAt(blackPiece, redAction.to as Position, pieces);
             
-            // 同一行或同一列，才可能到达
-            if (pieceCol === targetCol || pieceRow === targetRow) {
-              // 检查路径上是否有阻挡
-              const isPathClear = isPathClearBetween(pieceCol, pieceRow, targetCol, targetRow, pieces);
-              
-              if (isPathClear) {
-                // 路径畅通，红炮被保护，红炮也被移除
-                toRemoveByCapture.push(redCapturer.id);
-                break;
-              }
+            if (canCapture) {
+              // 红炮被保护，也移除红炮
+              toRemoveByCapture.push(redCapturer.id);
+              break;
             }
           }
         }
@@ -495,7 +600,6 @@ export const executeSettlement = (
     if (enemyAtTarget) {
       toRemoveByCapture.push(enemyAtTarget.id);
       
-      // ===== 新增规则：保护判定 =====
       const blackCapturer = pieces.find(p => 
         p.side === 'black' && p.position[0] === blackAction.from[0] && p.position[1] === blackAction.from[1]
       );
@@ -504,7 +608,6 @@ export const executeSettlement = (
         // 找到所有红方棋子（排除被吃掉的）
         const remainingRedPieces = pieces.filter(p => p.side === 'red' && p.id !== enemyAtTarget.id);
         
-        // 检查每个红方棋子是否能到达黑炮新位置
         for (const redPiece of remainingRedPieces) {
           // 检查这个棋子本回合是否移动了
           let movedThisTurn = false;
@@ -516,19 +619,12 @@ export const executeSettlement = (
           }
           
           if (!movedThisTurn) {
-            const targetCol = blackAction.to[0];
-            const targetRow = blackAction.to[1];
-            const pieceCol = redPiece.position[0];
-            const pieceRow = redPiece.position[1];
+            // 本回合没移动，检查能否 capture 到黑炮新位置
+            const canCapture = canPieceCaptureAt(redPiece, blackAction.to as Position, pieces);
             
-            // 同一行或同一列
-            if (pieceCol === targetCol || pieceRow === targetRow) {
-              const isPathClear = isPathClearBetween(pieceCol, pieceRow, targetCol, targetRow, pieces);
-              
-              if (isPathClear) {
-                toRemoveByCapture.push(blackCapturer.id);
-                break;
-              }
+            if (canCapture) {
+              toRemoveByCapture.push(blackCapturer.id);
+              break;
             }
           }
         }
