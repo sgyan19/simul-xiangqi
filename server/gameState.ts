@@ -24,10 +24,12 @@ export interface GameRoom {
   blackPendingMove: ServerPendingAction | null;
   winner: Side | 'draw' | null;
   createdAt: number;
-  // 长捉限制：按阵营追踪
-  redCaptureTarget: string | null;
+  // 长捉限制
+  redLastPiece: string | null;
+  redLastTarget: string | null;
   redCaptureCount: number;
-  blackCaptureTarget: string | null;
+  blackLastPiece: string | null;
+  blackLastTarget: string | null;
   blackCaptureCount: number;
 }
 
@@ -59,9 +61,11 @@ export const createRoom = (roomId: string): GameRoom => {
     winner: null,
     createdAt: Date.now(),
     // 长捉限制
-    redCaptureTarget: null,
+    redLastPiece: null,
+    redLastTarget: null,
     redCaptureCount: 0,
-    blackCaptureTarget: null,
+    blackLastPiece: null,
+    blackLastTarget: null,
     blackCaptureCount: 0,
   };
   rooms.set(roomId, room);
@@ -367,13 +371,14 @@ export const submitMove = (roomId: string, playerId: string, from: Position, to:
   const enemyAtTarget = room.pieces.find(p => p.side !== side && p.position[0] === to[0] && p.position[1] === to[1]);
   const actionType: ActionType = enemyAtTarget ? 'capture' : 'move';
   
-  // 长捉检查：如果是要 capture，检查同一阵营是否连续 capture 同一目标 3 次
+  // 长捉检查：比较"谁在捉"+"捉谁"
   if (actionType === 'capture') {
     const isRed = side === 'red';
-    const captureTarget = isRed ? room.redCaptureTarget : room.blackCaptureTarget;
-    const captureCount = isRed ? room.redCaptureCount : room.blackCaptureCount;
+    const lastPiece = isRed ? room.redLastPiece : room.blackLastPiece;
+    const lastTarget = isRed ? room.redLastTarget : room.blackLastTarget;
+    const count = isRed ? room.redCaptureCount : room.blackCaptureCount;
     
-    if (captureTarget === enemyAtTarget!.id && captureCount >= 3) {
+    if (piece.id === lastPiece && enemyAtTarget!.id === lastTarget && count >= 3) {
       return { success: false, error: '不允许长捉（3次）' };
     }
   }
@@ -504,60 +509,54 @@ const executeSettlement = (room: GameRoom): void => {
   
   finalPieces = finalPieces.filter(p => !toRemoveByCapture.includes(p.id));
   
-  // ===== 第四步：更新长捉计数（阵营级别）=====
-  let newRedCaptureTarget: string | null = null;
+  // ===== 第四步：更新长捉计数 =====
+  let newRedLastPiece: string | null = null;
+  let newRedLastTarget: string | null = null;
   let newRedCaptureCount = 0;
-  let newBlackCaptureTarget: string | null = null;
+  let newBlackLastPiece: string | null = null;
+  let newBlackLastTarget: string | null = null;
   let newBlackCaptureCount = 0;
 
-  // 处理红方行动
+  // 红方
   if (redAction) {
     if (redAction.actionType === 'move') {
-      newRedCaptureTarget = null;
+      newRedLastPiece = null;
+      newRedLastTarget = null;
       newRedCaptureCount = 0;
     } else {
-      // capture：从原始棋盘找目标位置的敌方棋子
-      const originalTargetPiece = room.pieces.find(p => p.side === 'black' && p.position[0] === redAction.to[0] && p.position[1] === redAction.to[1]);
-      const targetPieceId = originalTargetPiece?.id || null;
+      const pieceId = room.pieces.find(p => p.side === 'red' && p.position[0] === redAction.from[0] && p.position[1] === redAction.from[1])?.id || null;
+      const targetId = room.pieces.find(p => p.side === 'black' && p.position[0] === redAction.to[0] && p.position[1] === redAction.to[1])?.id || null;
       
-      if (originalTargetPiece) {
-        // 吃子成功，重置计数
-        newRedCaptureTarget = null;
-        newRedCaptureCount = 0;
+      if (pieceId === room.redLastPiece && targetId === room.redLastTarget) {
+        newRedLastPiece = pieceId;
+        newRedLastTarget = targetId;
+        newRedCaptureCount = room.redCaptureCount + 1;
       } else {
-        // 扑空，检查是否连续捉同一目标（按棋子 ID）
-        if (room.redCaptureTarget === targetPieceId) {
-          newRedCaptureCount = room.redCaptureCount + 1;
-        } else {
-          newRedCaptureCount = 1;
-        }
-        newRedCaptureTarget = targetPieceId;
+        newRedLastPiece = pieceId;
+        newRedLastTarget = targetId;
+        newRedCaptureCount = 1;
       }
     }
   }
 
-  // 处理黑方行动
+  // 黑方
   if (blackAction) {
     if (blackAction.actionType === 'move') {
-      newBlackCaptureTarget = null;
+      newBlackLastPiece = null;
+      newBlackLastTarget = null;
       newBlackCaptureCount = 0;
     } else {
-      // capture：从原始棋盘找目标位置的敌方棋子
-      const originalTargetPiece = room.pieces.find(p => p.side === 'red' && p.position[0] === blackAction.to[0] && p.position[1] === blackAction.to[1]);
-      const targetPieceId = originalTargetPiece?.id || null;
+      const pieceId = room.pieces.find(p => p.side === 'black' && p.position[0] === blackAction.from[0] && p.position[1] === blackAction.from[1])?.id || null;
+      const targetId = room.pieces.find(p => p.side === 'red' && p.position[0] === blackAction.to[0] && p.position[1] === blackAction.to[1])?.id || null;
       
-      if (originalTargetPiece) {
-        // 吃子成功，重置计数
-        newBlackCaptureTarget = null;
-        newBlackCaptureCount = 0;
+      if (pieceId === room.blackLastPiece && targetId === room.blackLastTarget) {
+        newBlackLastPiece = pieceId;
+        newBlackLastTarget = targetId;
+        newBlackCaptureCount = room.blackCaptureCount + 1;
       } else {
-        // 扑空，检查是否连续捉同一目标（按棋子 ID）
-        if (room.blackCaptureTarget === targetPieceId) {
-          newBlackCaptureCount = room.blackCaptureCount + 1;
-        } else {
-          newBlackCaptureCount = 1;
-        }
-        newBlackCaptureTarget = targetPieceId;
+        newBlackLastPiece = pieceId;
+        newBlackLastTarget = targetId;
+        newBlackCaptureCount = 1;
       }
     }
   }
@@ -566,9 +565,11 @@ const executeSettlement = (room: GameRoom): void => {
   room.pieces = finalPieces;
   
   // 更新阵营长捉计数
-  room.redCaptureTarget = newRedCaptureTarget;
+  room.redLastPiece = newRedLastPiece;
+  room.redLastTarget = newRedLastTarget;
   room.redCaptureCount = newRedCaptureCount;
-  room.blackCaptureTarget = newBlackCaptureTarget;
+  room.blackLastPiece = newBlackLastPiece;
+  room.blackLastTarget = newBlackLastTarget;
   room.blackCaptureCount = newBlackCaptureCount;
   
   // 检查胜负
@@ -608,9 +609,11 @@ export const resetRoom = (roomId: string): boolean => {
   room.blackPendingMove = null;
   room.winner = null;
   // 重置长捉计数
-  room.redCaptureTarget = null;
+  room.redLastPiece = null;
+  room.redLastTarget = null;
   room.redCaptureCount = 0;
-  room.blackCaptureTarget = null;
+  room.blackLastPiece = null;
+  room.blackLastTarget = null;
   room.blackCaptureCount = 0;
   
   return true;

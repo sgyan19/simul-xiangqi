@@ -63,10 +63,12 @@ export interface GameState {
   winner: Winner;
   settlementResult: SettlementResult | null;
   message: string; // 提示信息
-  // 长捉限制：按阵营追踪
-  redCaptureTarget: string | null;    // 红方上次 capture 的敌方棋子 ID
-  redCaptureCount: number;             // 红方连续 capture 同一目标次数
-  blackCaptureTarget: string | null;
+  // 长捉限制
+  redLastPiece: string | null;     // 红方上次 capture 的己方棋子 ID
+  redLastTarget: string | null;     // 红方上次 capture 的目标棋子 ID
+  redCaptureCount: number;          // 红方连续长捉计数
+  blackLastPiece: string | null;
+  blackLastTarget: string | null;
   blackCaptureCount: number;
 }
 
