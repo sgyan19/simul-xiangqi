@@ -267,6 +267,10 @@ const handleMessage = (ws: WebSocket, message: WSMessage): void => {
         return;
       }
       
+      // 在执行结算前保存 pending moves（结算后会清空）
+      const savedRedPendingMove = room.redPendingMove;
+      const savedBlackPendingMove = room.blackPendingMove;
+      
       // 执行结算
       const result = settleGame(player.roomId);
       
@@ -280,8 +284,8 @@ const handleMessage = (ws: WebSocket, message: WSMessage): void => {
                 payload: { 
                   winner: result.winner, 
                   reason: result.reason,
-                  redPendingMove: room.redPendingMove,
-                  blackPendingMove: room.blackPendingMove,
+                  redPendingMove: savedRedPendingMove,
+                  blackPendingMove: savedBlackPendingMove,
                 } 
               });
             }
@@ -295,8 +299,8 @@ const handleMessage = (ws: WebSocket, message: WSMessage): void => {
                 payload: { 
                   winner: null,
                   reason: null,
-                  redPendingMove: room.redPendingMove,
-                  blackPendingMove: room.blackPendingMove,
+                  redPendingMove: savedRedPendingMove,
+                  blackPendingMove: savedBlackPendingMove,
                 } 
               });
             }
