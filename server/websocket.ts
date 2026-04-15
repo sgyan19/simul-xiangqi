@@ -279,7 +279,24 @@ const handleMessage = (ws: WebSocket, message: WSMessage): void => {
                 type: 'game_over', 
                 payload: { 
                   winner: result.winner, 
-                  reason: result.reason 
+                  reason: result.reason,
+                  redPendingMove: room.redPendingMove,
+                  blackPendingMove: room.blackPendingMove,
+                } 
+              });
+            }
+          }
+        } else {
+          // 游戏继续，结算后进入下一回合
+          for (const [ws2, p2] of clients) {
+            if (p2.roomId === room.id) {
+              sendToClient(ws2, { 
+                type: 'game_over', 
+                payload: { 
+                  winner: null,
+                  reason: null,
+                  redPendingMove: room.redPendingMove,
+                  blackPendingMove: room.blackPendingMove,
                 } 
               });
             }

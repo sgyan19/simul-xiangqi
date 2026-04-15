@@ -590,6 +590,15 @@ function App() {
         setLastMoveTargets({ red: null, black: null });
       }
       
+      // 进入结算或结束阶段时，显示最后行动目标框
+      const isNowInSettlementOrEnded = payload.phase === 'settlement' || payload.phase === 'ended';
+      if (isNowInSettlementOrEnded && hasRedPendingMove && hasBlackPendingMove) {
+        setLastMoveTargets({
+          red: payload.redPendingMove?.to || null,
+          black: payload.blackPendingMove?.to || null,
+        });
+      }
+      
       // 同步视角：每次收到房间状态时，都确保视角与玩家阵营一致
       if (payload.side) {
         setViewSide(payload.side);
