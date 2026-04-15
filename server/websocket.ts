@@ -12,6 +12,8 @@ import {
   startGame,
   createRoom,
   generateRoomId,
+  settleGame,
+  addPlayerToRoom,
 } from './gameState';
 
 interface WSMessage {
@@ -63,29 +65,103 @@ export const initWebSocket = (server: Server): WebSocketServer => {
   return wss;
 };
 
+// 获取玩家ID（WebSocket 对象ID）
+const getPlayerId = (ws: WebSocket): string => {
+  return ws.toString();
+};
+
 // 处理消息
 const handleMessage = (ws: WebSocket, message: WSMessage): void => {
-  const player = clients.get(ws);
-  if (!player) return;
+  const playerId = getPlayerId(ws);
+  let player = clients.get(ws);
 
   switch (message.type) {
     case 'create_room': {
-      const newRoom = createRoom(generateRoomId());
-      // 创建房间后，玩家进入房间但未选择阵营
-      const player = clients.get(ws);
+      const roomId = generateRoomId();
+      const room = createRoom(roomId);
+      const playerId = getPlayerId(ws);
+      
+      // 创建者自动作为红方
+      room.redPlayer = playerId;
+      
       if (player) {
-        player.roomId = newRoom.id;
-        player.side = null; // 尚未选择阵营
+        player.roomId = roomId;
+        player.side = 'red';
         clients.set(ws, player);
       }
-      // 发送房间创建成功消息，不分配阵营
-      sendToClient(ws, { type: 'room_created', payload: { roomId: newRoom.id } });
+      
+      sendToClient(ws, { 
+        type: 'room_created', 
+        payload: { roomId, side: 'red', pieces: room.pieces } 
+      });
+      
+      broadcastRoomUpdate(room);
       break;
     }
 
-    case 'choose_side': {
-      const { side } = message.payload as { side: 'red' | 'black' };
-      const player = clients.get(ws);
+    case 'join_room': {
+      const { roomId } = message.payload as { roomId: string };
+      const playerId = getPlayerId(ws);
+      const room = getRoom(roomId);
+      
+      if (!room) {
+        sendToClient(ws, { type: 'error', payload: { message: '房间不存在' } });
+        return;
+      }
+      
+      if (!player) {
+        player = { ws, roomId: null, side: null };
+      }
+      
+      // 检查红方位置
+      if (!room.redPlayer) {
+        room.redPlayer = playerId;
+        player.side = 'red';
+      } else if (!room.blackPlayer) {
+        room.blackPlayer = playerId;
+        player.side = 'black';
+      } else {
+        sendToClient(ws, { type: 'error', payload: { message: '房间已满' } });
+        return;
+      }
+      
+      player.roomId = roomId;
+      clients.set(ws, player);
+      
+      sendToClient(ws, { 
+        type: 'joined', 
+        payload: { roomId, side: player.side, pieces: room.pieces } 
+      });
+      
+      // 通知房间内的其他玩家
+      broadcastRoomUpdate(room);
+      break;
+    }
+
+    case 'leave_room': {
+      if (player && player.roomId) {
+        const room = getRoom(player.roomId);
+        if (room) {
+          leaveRoom(player.roomId, getPlayerId(ws));
+          
+          // 如果房间空了，删除房间
+          if (!room.redPlayer && !room.blackPlayer) {
+            // 房间会被删除
+          } else {
+            broadcastRoomUpdate(room);
+          }
+        }
+        
+        player.roomId = null;
+        player.side = null;
+        clients.set(ws, player);
+        
+        sendToClient(ws, { type: 'left_room' });
+      }
+      break;
+    }
+
+    case 'start_game': {
       if (!player || !player.roomId) {
         sendToClient(ws, { type: 'error', payload: { message: '你不在任何房间中' } });
         return;
@@ -97,91 +173,66 @@ const handleMessage = (ws: WebSocket, message: WSMessage): void => {
         return;
       }
       
-      // 检查选择的阵营是否可用
-      if (side === 'red' && room.redPlayer) {
-        sendToClient(ws, { type: 'error', payload: { message: '红方已有玩家' } });
-        return;
-      }
-      if (side === 'black' && room.blackPlayer) {
-        sendToClient(ws, { type: 'error', payload: { message: '黑方已有玩家' } });
+      if (!room.redPlayer || !room.blackPlayer) {
+        sendToClient(ws, { type: 'error', payload: { message: '需要双方都在才能开始' } });
         return;
       }
       
-      // 检查是否已经在其他阵营
-      if (player.side) {
-        // 离开之前的阵营
-        if (player.side === 'red') room.redPlayer = null;
-        else room.blackPlayer = null;
-      }
-      
-      // 加入新阵营
-      if (side === 'red') {
-        room.redPlayer = ws.toString();
-      } else {
-        room.blackPlayer = ws.toString();
-      }
-      player.side = side;
-      clients.set(ws, player);
-      
-      sendToClient(ws, { type: 'joined', payload: { roomId: player.roomId, side } });
+      room.phase = 'strategy';
       broadcastRoomUpdate(room);
       break;
     }
 
-    case 'join_room': {
-      const { roomId } = message.payload as { roomId: string };
-      const playerId = ws.toString();
-      const room = getRoom(roomId);
-      const player = clients.get(ws);
-      if (!player) return;
-      
-      if (!room) {
-        sendToClient(ws, { type: 'error', payload: { message: '房间不存在' } });
+    case 'submit_move': {
+      if (!player || !player.roomId || !player.side) {
+        sendToClient(ws, { type: 'error', payload: { message: '你不在任何房间中' } });
         return;
       }
       
-      // 如果已经有 side，说明是重连
-      if (player.side) {
-        const currentSide = player.side;
-        player.roomId = roomId;
-        sendRoomState(ws, room, currentSide);
-        return;
-      }
+      const { from, to } = message.payload as { from: [number, number]; to: [number, number] };
+      const playerId = getPlayerId(ws);
+      const result = submitMove(player.roomId, playerId, from, to);
       
-      // 检查红方位置是否可用
-      if (!room.redPlayer) {
-        room.redPlayer = playerId;
-        player.side = 'red';
-        player.roomId = roomId;
-        clients.set(ws, player);
-        sendToClient(ws, { type: 'joined', payload: { roomId, side: 'red' } });
-        broadcastRoomUpdate(room);
-      } else if (!room.blackPlayer) {
-        room.blackPlayer = playerId;
-        player.side = 'black';
-        player.roomId = roomId;
-        clients.set(ws, player);
-        sendToClient(ws, { type: 'joined', payload: { roomId, side: 'black' } });
-        broadcastRoomUpdate(room);
+      if (result.success) {
+        const room = getRoom(player.roomId);
+        if (room) {
+          broadcastRoomUpdate(room);
+          
+          // 通知对手
+          for (const [ws2, p2] of clients) {
+            if (p2.roomId === room.id && p2.ws !== ws) {
+              sendToClient(ws2, { type: 'opponent_move', payload: {} });
+            }
+          }
+        }
       } else {
-        sendToClient(ws, { type: 'error', payload: { message: '房间已满' } });
+        sendToClient(ws, { type: 'error', payload: { message: result.error || '移动失败' } });
       }
       break;
     }
 
-    case 'leave_room': {
-      if (player.roomId) {
-        leaveRoom(player.roomId, ws.toString());
-        player.roomId = null;
-        player.side = null;
-        clients.set(ws, player);
-        sendToClient(ws, { type: 'left_room' });
+    case 'undo_move': {
+      if (!player || !player.roomId || !player.side) {
+        sendToClient(ws, { type: 'error', payload: { message: '你不在任何房间中' } });
+        return;
+      }
+      
+      const playerId = getPlayerId(ws);
+      const result = undoMove(player.roomId, playerId);
+      
+      if (result.success) {
+        const room = getRoom(player.roomId);
+        if (room) {
+          broadcastRoomUpdate(room);
+        }
+      } else {
+        sendToClient(ws, { type: 'error', payload: { message: result.error || '撤销失败' } });
       }
       break;
     }
 
-    case 'start_game': {
-      if (!player.roomId) {
+    case 'settle': {
+      if (!player || !player.roomId) {
         sendToClient(ws, { type: 'error', payload: { message: '你不在任何房间中' } });
         return;
       }
@@ -192,55 +243,36 @@ const handleMessage = (ws: WebSocket, message: WSMessage): void => {
         return;
       }
       
-      if (startGame(player.roomId)) {
+      if (!room.redPendingMove || !room.blackPendingMove) {
+        sendToClient(ws, { type: 'error', payload: { message: '双方都需要先走棋' } });
+        return;
+      }
+      
+      // 执行结算
+      const result = settleGame(player.roomId);
+      
+      if (result.success && room) {
+        if (result.winner) {
+          // 游戏结束
+          for (const [ws2, p2] of clients) {
+            if (p2.roomId === room.id) {
+              sendToClient(ws2, { 
+                type: 'game_over', 
+                payload: { 
+                  winner: result.winner, 
+                  reason: result.reason 
+                } 
+              });
+            }
+          }
+        }
         broadcastRoomUpdate(room);
-      } else {
-        sendToClient(ws, { type: 'error', payload: { message: '无法开始游戏，需要双方都在线' } });
-      }
-      break;
-    }
-
-    case 'submit_move': {
-      if (!player.roomId || !player.side) {
-        sendToClient(ws, { type: 'error', payload: { message: '你不在任何房间中' } });
-        return;
-      }
-      
-      const { from, to } = message.payload as { from: [number, number]; to: [number, number] };
-      const result = submitMove(player.roomId, ws.toString(), from, to);
-      
-      if (result.success) {
-        const room = getRoom(player.roomId);
-        if (room) {
-          broadcastRoomUpdate(room);
-        }
-      } else {
-        sendToClient(ws, { type: 'error', payload: { message: result.error } });
-      }
-      break;
-    }
-
-    case 'undo_move': {
-      if (!player.roomId || !player.side) {
-        sendToClient(ws, { type: 'error', payload: { message: '你不在任何房间中' } });
-        return;
-      }
-      
-      const result = undoMove(player.roomId, ws.toString());
-      
-      if (result.success) {
-        const room = getRoom(player.roomId);
-        if (room) {
-          broadcastRoomUpdate(room);
-        }
-      } else {
-        sendToClient(ws, { type: 'error', payload: { message: result.error } });
       }
       break;
     }
 
     case 'reset_game': {
-      if (!player.roomId) {
+      if (!player || !player.roomId) {
         sendToClient(ws, { type: 'error', payload: { message: '你不在任何房间中' } });
         return;
       }
@@ -263,8 +295,17 @@ const handleMessage = (ws: WebSocket, message: WSMessage): void => {
 const handleDisconnect = (ws: WebSocket): void => {
   const player = clients.get(ws);
   if (player && player.roomId) {
-    // 标记玩家离线，但不立即离开房间
-    // 玩家可以重新连接
+    const room = getRoom(player.roomId);
+    if (room) {
+      leaveRoom(player.roomId, getPlayerId(ws));
+      
+      // 通知房间内的其他玩家
+      for (const [ws2, p2] of clients) {
+        if (p2.roomId === room.id && p2.ws !== ws) {
+          sendToClient(ws2, { type: 'left_room' });
+        }
+      }
+    }
     console.log('玩家断开连接:', player.side, player.roomId);
   }
   clients.delete(ws);
@@ -278,28 +319,19 @@ const sendToClient = (ws: WebSocket, message: WSMessage): void => {
 };
 
 // 广播房间状态给所有相关玩家
-const broadcastRoomUpdate = (room: { id: string; redPlayer: string | null; blackPlayer: string | null }): void => {
+const broadcastRoomUpdate = (room: ReturnType<typeof getRoom>): void => {
+  if (!room) return;
+  
   for (const [ws, player] of clients) {
     if (player.roomId === room.id) {
-      const side = getPlayerSide(room, player.ws.toString());
+      const side = getPlayerSide(room, getPlayerId(player.ws));
       sendRoomState(ws, room, side);
     }
   }
 };
 
 // 发送房间状态给单个玩家
-const sendRoomState = (ws: WebSocket, room: {
-  id: string;
-  redPlayer: string | null;
-  blackPlayer: string | null;
-  pieces: unknown[];
-  phase: string;
-  redConfirmed: boolean;
-  blackConfirmed: boolean;
-  redPendingMove: { from: [number, number]; to: [number, number] } | null;
-  blackPendingMove: { from: [number, number]; to: [number, number] } | null;
-  winner: string | null;
-}, side: 'red' | 'black' | null): void => {
+const sendRoomState = (ws: WebSocket, room: NonNullable<ReturnType<typeof getRoom>>, side: 'red' | 'black' | null): void => {
   sendToClient(ws, {
     type: 'room_state',
     payload: {

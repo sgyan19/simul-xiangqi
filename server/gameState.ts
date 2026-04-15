@@ -489,3 +489,36 @@ export const startGame = (roomId: string): boolean => {
   room.phase = 'strategy';
   return true;
 };
+
+// 添加玩家到房间
+export const addPlayerToRoom = (roomId: string, playerId: string, side: Side): boolean => {
+  const room = rooms.get(roomId);
+  if (!room) return false;
+  
+  if (side === 'red') {
+    room.redPlayer = playerId;
+  } else {
+    room.blackPlayer = playerId;
+  }
+  return true;
+};
+
+// 手动触发结算（由玩家点击结算按钮触发）
+export const settleGame = (roomId: string): { success: boolean; winner?: Side | 'draw'; reason?: string } => {
+  const room = rooms.get(roomId);
+  if (!room) return { success: false };
+  if (!room.redPendingMove || !room.blackPendingMove) {
+    return { success: false };
+  }
+  
+  // 执行结算
+  executeSettlement(room);
+  
+  return { 
+    success: true, 
+    winner: room.winner || undefined,
+    reason: room.winner === 'red' ? '红帅被吃' : 
+            room.winner === 'black' ? '黑将被吃' : 
+            room.winner === 'draw' ? '将帅对面' : undefined
+  };
+};
