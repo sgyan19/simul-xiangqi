@@ -53,6 +53,8 @@ export interface SettlementResult {
 export interface HistorySnapshot {
   pieces: Piece[];
   roundNumber: number;
+  lastMoveTargets: { red: Position | null; black: Position | null };
+  checkStatus: { red: boolean; black: boolean };
 }
 
 // 游戏状态

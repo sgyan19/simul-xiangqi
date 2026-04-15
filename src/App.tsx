@@ -354,11 +354,11 @@ function App() {
     };
     setHistory(prev => [...prev, undoEntry]);
     
-    // 清除目标框
-    setLastMoveTargets({ red: null, black: null });
+    // 恢复行动框状态
+    setLastMoveTargets(lastSnapshot.lastMoveTargets);
     
-    // 清除将军状态
-    setCheckStatus({ red: false, black: false });
+    // 恢复将军状态
+    setCheckStatus(lastSnapshot.checkStatus);
     
     showMessage('悔棋成功');
   }, [gameState.phase, gameState.historySnapshots, showMessage]);
@@ -377,6 +377,8 @@ function App() {
       const snapshotBeforeSettlement = {
         pieces: gameState.pieces.map(p => ({ ...p })),
         roundNumber: currentRoundNumber,
+        lastMoveTargets: { ...lastMoveTargets },
+        checkStatus: { ...checkStatus },
       };
       
       await new Promise(resolve => setTimeout(resolve, 1000));
