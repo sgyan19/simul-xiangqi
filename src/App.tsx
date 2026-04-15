@@ -342,7 +342,7 @@ function App() {
     
     // 添加悔棋记录到历史记录（使用 logicRound 排序，gameRound 显示）
     const undoEntry: RoundHistoryEntry = {
-      logicRound: lastSnapshot.logicRound + 1,
+      logicRound: history.length, // 使用 history.length 确保唯一且递增
       gameRound: lastSnapshot.gameRound,
       redAction: null,
       blackAction: null,
@@ -384,7 +384,8 @@ function App() {
       // 保存当前 pending moves（因为异步执行时会变化）
       const redMove = gameState.redPendingMove;
       const blackMove = gameState.blackPendingMove;
-      const currentLogicRound = gameState.historySnapshots.length;
+      // logicRound 应该基于 history.length（累积的记录数），不是 historySnapshots.length（快照会因悔棋变少）
+      const currentLogicRound = history.length;
       // 游戏回合 = 非悔棋记录的结算次数 + 1
       const gameRoundCount = history.filter(
         entry => !entry.events.some(e => e.description.includes('悔棋'))
