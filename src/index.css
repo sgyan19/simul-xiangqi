@@ -1287,19 +1287,20 @@ body {
   border-radius: 4px;
 }
 
-.event-item.capture {
+.event-item.red-side {
   background: rgba(196, 30, 58, 0.1);
   color: var(--piece-red);
+}
+
+.event-item.black-side {
+  background: rgba(26, 26, 26, 0.3);
+  color: #CCC;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .event-item.collision {
   background: rgba(255, 215, 0, 0.1);
   color: var(--highlight);
-}
-
-.event-item.counter_attack {
-  background: rgba(76, 175, 80, 0.1);
-  color: var(--success);
 }
 
 .event-item.face_off {
@@ -1315,6 +1316,7 @@ body {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  margin-bottom: 8px;
 }
 
 .capture-section {
@@ -1332,15 +1334,16 @@ body {
   font-size: 11px;
 }
 
-.capture-item.red {
-  background: rgba(196, 30, 58, 0.15);
-  color: var(--piece-red);
+.capture-item.red-removed {
+  background: rgba(255, 140, 0, 0.2);
+  color: #FFA500;
+  border: 1px solid rgba(255, 140, 0, 0.3);
 }
 
-.capture-item.black {
-  background: rgba(26, 26, 26, 0.3);
-  color: var(--text-primary);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+.capture-item.black-removed {
+  background: rgba(156, 39, 176, 0.2);
+  color: #CE93D8;
+  border: 1px solid rgba(156, 39, 176, 0.3);
 }
 
 .piece-name {

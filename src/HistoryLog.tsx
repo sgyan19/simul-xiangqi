@@ -96,12 +96,17 @@ export default function HistoryLog({ history, isExpanded, onToggle }: HistoryLog
 
                 {entry.events.length > 0 && (
                   <div className="history-events">
-                    {entry.events.map((event, idx) => (
-                      <div key={idx} className={`event-item ${event.type}`}>
-                        <span className="event-icon">{getEventIcon(event.type)}</span>
-                        <span className="event-desc">{event.description}</span>
-                      </div>
-                    ))}
+                    {entry.events.map((event, idx) => {
+                      // 根据事件描述判断阵营
+                      const isRed = event.description.includes('红');
+                      const isBlack = event.description.includes('黑');
+                      return (
+                        <div key={idx} className={`event-item ${event.type} ${isRed ? 'red-side' : ''} ${isBlack ? 'black-side' : ''}`}>
+                          <span className="event-icon">{getEventIcon(event.type)}</span>
+                          <span className="event-desc">{event.description}</span>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
 
@@ -109,16 +114,16 @@ export default function HistoryLog({ history, isExpanded, onToggle }: HistoryLog
                   <div className="history-captures">
                     <div className="capture-section">
                       {entry.redPieceRemoved.map((r, idx) => (
-                        <div key={idx} className="capture-item red">
-                          <span className="piece-name">红{getPieceName(r.piece.type)}</span>
+                        <div key={idx} className="capture-item red-removed">
+                          <span className="piece-name">红{getPieceName(r.piece.type, 'red')}</span>
                           <span className="reason-tag">{getReasonLabel(r.reason)}</span>
                         </div>
                       ))}
                     </div>
                     <div className="capture-section">
                       {entry.blackPieceRemoved.map((r, idx) => (
-                        <div key={idx} className="capture-item black">
-                          <span className="piece-name">黑{getPieceName(r.piece.type)}</span>
+                        <div key={idx} className="capture-item black-removed">
+                          <span className="piece-name">黑{getPieceName(r.piece.type, 'black')}</span>
                           <span className="reason-tag">{getReasonLabel(r.reason)}</span>
                         </div>
                       ))}
