@@ -272,6 +272,7 @@ const handleMessage = (ws: WebSocket, message: WSMessage): void => {
       // 执行结算
       const result = settleGame(player.roomId);
       console.log('DEBUG settle: result:', result);
+      console.log('DEBUG after settle: lastRedMoveTo:', room.lastRedMoveTo, 'lastBlackMoveTo:', room.lastBlackMoveTo);
       
       if (result.success && room) {
         if (result.winner) {
@@ -283,23 +284,6 @@ const handleMessage = (ws: WebSocket, message: WSMessage): void => {
                 payload: { 
                   winner: result.winner, 
                   reason: result.reason,
-                  redPendingMove: savedRedPendingMove,
-                  blackPendingMove: savedBlackPendingMove,
-                } 
-              });
-            }
-          }
-        } else {
-          // 游戏继续，结算后进入下一回合
-          for (const [ws2, p2] of clients) {
-            if (p2.roomId === room.id) {
-              sendToClient(ws2, { 
-                type: 'game_over', 
-                payload: { 
-                  winner: null,
-                  reason: null,
-                  redPendingMove: savedRedPendingMove,
-                  blackPendingMove: savedBlackPendingMove,
                 } 
               });
             }
