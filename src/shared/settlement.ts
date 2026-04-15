@@ -507,7 +507,7 @@ export const executeSettlement = (
       // 记录移动事件
       events.push({
         type: 'move',
-        description: `[移动]${formatChessNotation(redAction.from, redAction.to, redPiece.type, 'red')}`,
+        description: `[红-移动]${formatChessNotation(redAction.from, redAction.to, redPiece.type, 'red')}`,
       });
     }
   }
@@ -521,7 +521,7 @@ export const executeSettlement = (
       // 记录移动事件
       events.push({
         type: 'move',
-        description: `[移动]${formatChessNotation(blackAction.from, blackAction.to, blackPiece.type, 'black')}`,
+        description: `[黑-移动]${formatChessNotation(blackAction.from, blackAction.to, blackPiece.type, 'black')}`,
       });
     }
   }

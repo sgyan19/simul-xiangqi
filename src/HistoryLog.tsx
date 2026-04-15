@@ -97,9 +97,9 @@ export default function HistoryLog({ history, isExpanded, onToggle }: HistoryLog
                 {entry.events.length > 0 && (
                   <div className="history-events">
                     {entry.events.map((event, idx) => {
-                      // 根据事件描述判断阵营
-                      const isRed = event.description.includes('红');
-                      const isBlack = event.description.includes('黑');
+                      // 根据事件描述中的阵营前缀判断
+                      const isRed = event.description.includes('红-');
+                      const isBlack = event.description.includes('黑-');
                       return (
                         <div key={idx} className={`event-item ${event.type} ${isRed ? 'red-side' : ''} ${isBlack ? 'black-side' : ''}`}>
                           <span className="event-icon">{getEventIcon(event.type)}</span>
