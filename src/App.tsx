@@ -210,6 +210,10 @@ function App() {
     const selectedPiece = gameState.selectedPiece;
     const side = selectedPiece.side;
     
+    // 从 pieces 中获取最新的棋子数据（确保引用正确）
+    const currentPiece = gameState.pieces.find(p => p.id === selectedPiece.id);
+    if (!currentPiece) return;
+    
     // 判断行动类型：目标是敌方棋子则为吃子，否则为移动
     const targetPiece = gameState.pieces.find(p => 
       p.side !== side && p.position[0] === to[0] && p.position[1] === to[1]
@@ -218,7 +222,7 @@ function App() {
     
     // 长捉检查：如果是要 capture，检查是否超过连续 3 次
     if (actionType === 'capture') {
-      const { lastCaptureTarget, captureSameTargetCount } = selectedPiece;
+      const { lastCaptureTarget, captureSameTargetCount } = currentPiece;
       // 如果上次 capture 目标与本次相同，且已达到 3 次，则禁止
       if (lastCaptureTarget && 
           lastCaptureTarget[0] === to[0] && 

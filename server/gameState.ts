@@ -344,7 +344,7 @@ export const submitMove = (roomId: string, playerId: string, from: Position, to:
   const side = getPlayerSide(room, playerId);
   if (!side) return { success: false, error: '你不是房间的玩家' };
   
-  // 检查棋子是否存在
+  // 从 room.pieces 中获取最新的棋子数据（确保引用正确）
   const piece = room.pieces.find(p => p.side === side && p.position[0] === from[0] && p.position[1] === from[1]);
   if (!piece) return { success: false, error: '该位置没有你的棋子' };
   
