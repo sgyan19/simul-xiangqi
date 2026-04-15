@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import {
   GameState,
   Piece,
@@ -173,6 +173,9 @@ function App() {
   const [historyExpanded, setHistoryExpanded] = useState(false);
   const [lastMoveTargets, setLastMoveTargets] = useState<{ red: Position | null; black: Position | null }>({ red: null, black: null });
   
+  // 使用 ref 存储悔棋所需的最新快照数据（避免闭包问题）
+  const undoSnapshotRef = useRef<{ lastMoveTargets: { red: Position | null; black: Position | null }; checkStatus: { red: boolean; black: boolean } } | null>(null);
+  
   // 联机模式悔棋请求状态
   const [undoRequestPending, setUndoRequestPending] = useState<{ from: 'red' | 'black' | null; waiting: boolean }>({ from: null, waiting: false });
 
@@ -310,7 +313,7 @@ function App() {
     // 获取上一个快照
     const lastSnapshot = gameState.historySnapshots[gameState.historySnapshots.length - 1];
     
-    // 恢复到快照状态
+    // 恢复棋盘状态
     setGameState(prev => {
       const newState: GameState = {
         ...prev,
@@ -352,13 +355,22 @@ function App() {
       endReason: null,
       isGameEnd: false,
     };
-    setHistory(prev => [...prev, undoEntry]);
+    setHistory(prev => {
+      console.log('[悔棋] 添加悔棋记录, 之前history长度:', prev.length);
+      return [...prev, undoEntry];
+    });
     
-    // 恢复行动框状态
-    setLastMoveTargets(lastSnapshot.lastMoveTargets);
-    
-    // 恢复将军状态
-    setCheckStatus(lastSnapshot.checkStatus);
+    // 从 ref 获取最新的行动框和将军状态
+    const undoData = undoSnapshotRef.current;
+    if (undoData) {
+      console.log('[悔棋] 恢复行动框状态:', undoData.lastMoveTargets);
+      setLastMoveTargets(undoData.lastMoveTargets);
+      setCheckStatus(undoData.checkStatus);
+    } else {
+      // 如果 ref 为空，清空行动框
+      console.log('[悔棋] ref为空，清空行动框');
+      setLastMoveTargets({ red: null, black: null });
+    }
     
     showMessage('悔棋成功');
   }, [gameState.phase, gameState.historySnapshots, showMessage]);
@@ -377,6 +389,12 @@ function App() {
       const snapshotBeforeSettlement = {
         pieces: gameState.pieces.map(p => ({ ...p })),
         roundNumber: currentRoundNumber,
+        lastMoveTargets: { ...lastMoveTargets },
+        checkStatus: { ...checkStatus },
+      };
+      
+      // 同时更新 ref（用于悔棋时获取最新状态）
+      undoSnapshotRef.current = {
         lastMoveTargets: { ...lastMoveTargets },
         checkStatus: { ...checkStatus },
       };
