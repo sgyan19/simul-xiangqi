@@ -701,8 +701,12 @@ function App() {
 
   // 在线模式：快速匹配
   const handleQuickMatch = useCallback(() => {
+    if (!onlineState.connected) {
+      showMessage('正在连接服务器，请稍候...');
+      return;
+    }
     wsClient.send('join_matchmaking');
-  }, []);
+  }, [onlineState.connected, showMessage]);
 
   // 在线模式：取消匹配
   const handleCancelMatch = useCallback(() => {

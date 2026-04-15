@@ -156,6 +156,7 @@ const tryMatchPlayers = (): void => {
 
 // 处理消息
 const handleMessage = (ws: WebSocket, message: WSMessage): void => {
+  console.log('收到消息:', message.type, message.payload);
   const playerId = getPlayerId(ws);
   let player = clients.get(ws);
 
