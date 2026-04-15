@@ -2,6 +2,7 @@
 // 负责棋盘规则、游戏逻辑、双人对战状态同步
 
 import { Piece, Position, Side, PieceType, INITIAL_PIECES, ActionType } from '../src/types';
+import { executeSettlement as sharedExecuteSettlement, LongChaseState } from '../src/shared/settlement';
 
 // 待执行行动
 interface ServerPendingAction {
@@ -423,167 +424,42 @@ export const undoMove = (roomId: string, playerId: string): { success: boolean; 
 
 // 执行结算
 const executeSettlement = (room: GameRoom): void => {
-  const redAction = room.redPendingMove;
-  const blackAction = room.blackPendingMove;
+  // 转换 ServerPendingAction 为 PendingAction
+  const redAction = room.redPendingMove ? {
+    from: room.redPendingMove.from,
+    to: room.redPendingMove.to,
+    actionType: room.redPendingMove.actionType,
+  } : null;
   
-  // 复制棋子数组
-  let finalPieces = room.pieces.map(p => ({ ...p }));
+  const blackAction = room.blackPendingMove ? {
+    from: room.blackPendingMove.from,
+    to: room.blackPendingMove.to,
+    actionType: room.blackPendingMove.actionType,
+  } : null;
   
-  // ===== 第一步：执行所有移动（move 和 capture 都移动到目标位置） =====
-  if (redAction) {
-    const redPiece = finalPieces.find(p => 
-      p.side === 'red' && p.position[0] === redAction.from[0] && p.position[1] === redAction.from[1]
-    );
-    if (redPiece) {
-      redPiece.position = [...redAction.to] as Position;
-    }
-  }
+  const chaseState: LongChaseState = {
+    redLastPiece: room.redLastPiece,
+    redLastTarget: room.redLastTarget,
+    redCaptureCount: room.redCaptureCount,
+    blackLastPiece: room.blackLastPiece,
+    blackLastTarget: room.blackLastTarget,
+    blackCaptureCount: room.blackCaptureCount,
+  };
   
-  if (blackAction) {
-    const blackPiece = finalPieces.find(p => 
-      p.side === 'black' && p.position[0] === blackAction.from[0] && p.position[1] === blackAction.from[1]
-    );
-    if (blackPiece) {
-      blackPiece.position = [...blackAction.to] as Position;
-    }
-  }
+  // 使用共享结算逻辑
+  const result = sharedExecuteSettlement(room.pieces, redAction, blackAction, chaseState);
   
-  // ===== 第二步：处理 move + move 冲突（只针对 move 类型的行动） =====
-  const toRemoveByMove: string[] = [];
+  // 更新房间状态
+  room.pieces = result.pieces;
+  room.redLastPiece = result.newChaseState.redLastPiece;
+  room.redLastTarget = result.newChaseState.redLastTarget;
+  room.redCaptureCount = result.newChaseState.redCaptureCount;
+  room.blackLastPiece = result.newChaseState.blackLastPiece;
+  room.blackLastTarget = result.newChaseState.blackLastTarget;
+  room.blackCaptureCount = result.newChaseState.blackCaptureCount;
   
-  if (redAction?.actionType === 'move' && blackAction?.actionType === 'move') {
-    // 两个都是 move，检查目标是否相同
-    if (redAction.to[0] === blackAction.to[0] && redAction.to[1] === blackAction.to[1]) {
-      // 找到移动后的棋子
-      const movedRedPiece = finalPieces.find(p => 
-        p.side === 'red' && p.position[0] === redAction.to[0] && p.position[1] === redAction.to[1]
-      );
-      const movedBlackPiece = finalPieces.find(p => 
-        p.side === 'black' && p.position[0] === blackAction.to[0] && p.position[1] === blackAction.to[1]
-      );
-      
-      if (movedRedPiece && movedBlackPiece) {
-        // 炮撞炮：同归于尽
-        if (movedRedPiece.type === 'cannon' && movedBlackPiece.type === 'cannon') {
-          toRemoveByMove.push(movedRedPiece.id, movedBlackPiece.id);
-        }
-        // 炮撞其他子：炮被吃
-        else if (movedRedPiece.type === 'cannon') {
-          toRemoveByMove.push(movedRedPiece.id);
-        }
-        else if (movedBlackPiece.type === 'cannon') {
-          toRemoveByMove.push(movedBlackPiece.id);
-        }
-        // 其他子撞其他子：同归于尽
-        else {
-          toRemoveByMove.push(movedRedPiece.id, movedBlackPiece.id);
-        }
-      }
-    }
-  }
-  
-  // 先移除因 move 冲突被吃的棋子
-  finalPieces = finalPieces.filter(p => !toRemoveByMove.includes(p.id));
-  
-  // ===== 第三步：处理 capture 吃子判定 =====
-  const toRemoveByCapture: string[] = [];
-  
-  if (redAction?.actionType === 'capture') {
-    const enemyAtTarget = finalPieces.find(p => 
-      p.side === 'black' && p.position[0] === redAction.to[0] && p.position[1] === redAction.to[1]
-    );
-    if (enemyAtTarget) {
-      toRemoveByCapture.push(enemyAtTarget.id);
-    }
-    // 如果目标位置没有敌方子，capture 扑空
-  }
-  
-  if (blackAction?.actionType === 'capture') {
-    const enemyAtTarget = finalPieces.find(p => 
-      p.side === 'red' && p.position[0] === blackAction.to[0] && p.position[1] === blackAction.to[1]
-    );
-    if (enemyAtTarget) {
-      toRemoveByCapture.push(enemyAtTarget.id);
-    }
-  }
-  
-  finalPieces = finalPieces.filter(p => !toRemoveByCapture.includes(p.id));
-  
-  // ===== 第四步：更新长捉计数 =====
-  let newRedLastPiece: string | null = null;
-  let newRedLastTarget: string | null = null;
-  let newRedCaptureCount = 0;
-  let newBlackLastPiece: string | null = null;
-  let newBlackLastTarget: string | null = null;
-  let newBlackCaptureCount = 0;
-
-  // 红方
-  if (redAction) {
-    if (redAction.actionType === 'move') {
-      newRedLastPiece = null;
-      newRedLastTarget = null;
-      newRedCaptureCount = 0;
-    } else {
-      const pieceId = room.pieces.find(p => p.side === 'red' && p.position[0] === redAction.from[0] && p.position[1] === redAction.from[1])?.id || null;
-      const targetId = room.pieces.find(p => p.side === 'black' && p.position[0] === redAction.to[0] && p.position[1] === redAction.to[1])?.id || null;
-      
-      if (pieceId === room.redLastPiece && targetId === room.redLastTarget) {
-        newRedLastPiece = pieceId;
-        newRedLastTarget = targetId;
-        newRedCaptureCount = room.redCaptureCount + 1;
-      } else {
-        newRedLastPiece = pieceId;
-        newRedLastTarget = targetId;
-        newRedCaptureCount = 1;
-      }
-    }
-  }
-
-  // 黑方
-  if (blackAction) {
-    if (blackAction.actionType === 'move') {
-      newBlackLastPiece = null;
-      newBlackLastTarget = null;
-      newBlackCaptureCount = 0;
-    } else {
-      const pieceId = room.pieces.find(p => p.side === 'black' && p.position[0] === blackAction.from[0] && p.position[1] === blackAction.from[1])?.id || null;
-      const targetId = room.pieces.find(p => p.side === 'red' && p.position[0] === blackAction.to[0] && p.position[1] === blackAction.to[1])?.id || null;
-      
-      if (pieceId === room.blackLastPiece && targetId === room.blackLastTarget) {
-        newBlackLastPiece = pieceId;
-        newBlackLastTarget = targetId;
-        newBlackCaptureCount = room.blackCaptureCount + 1;
-      } else {
-        newBlackLastPiece = pieceId;
-        newBlackLastTarget = targetId;
-        newBlackCaptureCount = 1;
-      }
-    }
-  }
-
-  // 更新棋子
-  room.pieces = finalPieces;
-  
-  // 更新阵营长捉计数
-  room.redLastPiece = newRedLastPiece;
-  room.redLastTarget = newRedLastTarget;
-  room.redCaptureCount = newRedCaptureCount;
-  room.blackLastPiece = newBlackLastPiece;
-  room.blackLastTarget = newBlackLastTarget;
-  room.blackCaptureCount = newBlackCaptureCount;
-  
-  // 检查胜负
-  const redKing = finalPieces.find(p => p.type === 'king' && p.side === 'red');
-  const blackKing = finalPieces.find(p => p.type === 'king' && p.side === 'black');
-  
-  if (!redKing && !blackKing) {
-    room.winner = 'draw';
-    room.phase = 'ended';
-  } else if (!redKing) {
-    room.winner = 'black';
-    room.phase = 'ended';
-  } else if (!blackKing) {
-    room.winner = 'red';
+  if (result.winner) {
+    room.winner = result.winner;
     room.phase = 'ended';
   } else {
     // 重置状态，继续游戏
