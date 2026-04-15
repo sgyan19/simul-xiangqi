@@ -596,7 +596,6 @@ function App() {
       
       // 收到room_state时，如果有lastMoveTo就显示目标框
       if (payload.lastRedMoveTo || payload.lastBlackMoveTo) {
-        console.log('DEBUG: Setting lastMoveTargets from room_state');
         setLastMoveTargets({
           red: payload.lastRedMoveTo || null,
           black: payload.lastBlackMoveTo || null,
@@ -605,6 +604,7 @@ function App() {
       
       // 更新对弈历史记录
       if (payload.roundHistory && Array.isArray(payload.roundHistory)) {
+        console.log('DEBUG: Updating history with', payload.roundHistory.length, 'entries');
         setHistory(payload.roundHistory);
       }
       
