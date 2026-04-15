@@ -228,11 +228,7 @@ export const getValidMoves = (piece: Piece, pieces: Piece[]): Position[] => {
 
 /**
  * 检查某方阵营是否有棋子可以 capture 到指定位置
- * @param side - 阵营
- * @param targetPos - 目标位置
- * @param pieces - 当前棋子数组
- * @param excludePieceId - 排除的棋子ID（通常是正在执行 capture 的棋子）
- * @returns 可以 capture 到该位置的棋子，如果没有返回 null
+ * 区别于 move，capture 需要在路径上有炮台
  */
 const findProtector = (
   side: 'red' | 'black',
@@ -245,15 +241,71 @@ const findProtector = (
   // 找到所有敌方棋子
   const enemyPieces = pieces.filter(p => p.side === enemySide && p.id !== excludePieceId);
   
-  // 检查是否有敌方棋子可以 move 到目标位置
+  // 检查是否有敌方棋子可以 capture 到目标位置
   for (const enemyPiece of enemyPieces) {
     const validMoves = getValidMoves(enemyPiece, pieces);
+    // 检查是否有 move 可以到达目标
+    // 注意：对于炮，move 和 capture 都可能被返回
+    // 我们需要检查是否有炮台可以 capture 到这里
     if (validMoves.some(m => m[0] === targetPos[0] && m[1] === targetPos[1])) {
-      return enemyPiece;
+      // 进一步验证：检查是否有有效的炮台
+      // 对于非炮棋子，只要在 validMoves 中就可以
+      if (enemyPiece.type !== 'cannon') {
+        return enemyPiece;
+      }
+      // 对于炮，需要确保炮台存在
+      // 重新检查炮的 capture 能力
+      const canCapture = checkCannonCapture(enemyPiece, targetPos, pieces);
+      if (canCapture) {
+        return enemyPiece;
+      }
     }
   }
   
   return null;
+};
+
+/**
+ * 检查炮是否可以 capture 到目标位置
+ */
+const checkCannonCapture = (cannon: Piece, targetPos: Position, pieces: Piece[]): boolean => {
+  const [cCol, cRow] = cannon.position;
+  const [tCol, tRow] = targetPos;
+  
+  // 必须是同一列或同一行
+  if (cCol !== tCol && cRow !== tRow) {
+    return false;
+  }
+  
+  const dc = cCol === tCol ? 0 : (tCol - cCol) / Math.abs(tCol - cCol);
+  const dr = cRow === tRow ? 0 : (tRow - cRow) / Math.abs(tRow - cRow);
+  
+  // 找到目标和起点之间的炮台
+  let midCol = cCol + dc;
+  let midRow = cRow + dr;
+  let foundPlatform = false;
+  
+  while (midCol !== tCol || midRow !== tRow) {
+    const midPiece = getPieceAt(midCol, midRow, pieces);
+    if (midPiece) {
+      if (foundPlatform) {
+        // 已经找到炮台，又遇到棋子，不是有效的 capture
+        return false;
+      }
+      foundPlatform = true;
+    }
+    midCol += dc;
+    midRow += dr;
+  }
+  
+  // 目标位置必须是敌方棋子
+  const targetPiece = getPieceAt(tCol, tRow, pieces);
+  if (!targetPiece || targetPiece.side === cannon.side) {
+    return false;
+  }
+  
+  // 需要有炮台且目标是敌方棋子
+  return foundPlatform;
 };
 
 /**
@@ -354,7 +406,7 @@ export const executeSettlement = (
       toRemoveByCapture.push(enemyAtTarget.id);
       
       // ===== 新增规则：保护判定 =====
-      // 检查红方 capture 的位置是否有黑方其他棋子可以 move 到
+      // 检查红方 capture 的位置是否有黑方其他棋子可以 capture 到
       // 且该棋子本回合策略阶段没有移动
       const redCapturer = pieces.find(p => 
         p.side === 'red' && p.position[0] === redAction.from[0] && p.position[1] === redAction.from[1]
@@ -364,7 +416,7 @@ export const executeSettlement = (
         // 找到所有黑方棋子（除了被吃掉的）
         const remainingBlackPieces = pieces.filter(p => p.side === 'black' && p.id !== enemyAtTarget.id);
         
-        // 检查是否有黑方棋子可以 move 到红方 capture 位置
+        // 检查是否有黑方棋子可以 capture 到红方 capture 位置
         for (const blackPiece of remainingBlackPieces) {
           // 检查这个棋子本回合是否移动了
           const movedThisTurn = blackAction && 
@@ -372,9 +424,11 @@ export const executeSettlement = (
             blackAction.from[1] === blackPiece.position[1];
           
           if (!movedThisTurn) {
-            // 这个棋子本回合没有移动，检查它是否可以 move 到红方 capture 位置
-            const validMoves = getValidMoves(blackPiece, pieces);
-            if (validMoves.some(m => m[0] === redAction.to[0] && m[1] === redAction.to[1])) {
+            // 这个棋子本回合没有移动，检查它是否可以 capture 到红方 capture 位置
+            const canCapture = checkCannonCapture(blackPiece, redAction.to as Position, pieces) ||
+              (blackPiece.type !== 'cannon' && getValidMoves(blackPiece, pieces).some(m => m[0] === redAction.to[0] && m[1] === redAction.to[1]));
+            
+            if (canCapture) {
               // 有保护，红方吃子方也被移除（相当于同归于尽）
               toRemoveByCapture.push(redCapturer.id);
               break;
@@ -402,7 +456,7 @@ export const executeSettlement = (
         // 找到所有红方棋子（除了被吃掉的）
         const remainingRedPieces = pieces.filter(p => p.side === 'red' && p.id !== enemyAtTarget.id);
         
-        // 检查是否有红方棋子可以 move 到黑方 capture 位置
+        // 检查是否有红方棋子可以 capture 到黑方 capture 位置
         for (const redPiece of remainingRedPieces) {
           // 检查这个棋子本回合是否移动了
           const movedThisTurn = redAction && 
@@ -410,9 +464,11 @@ export const executeSettlement = (
             redAction.from[1] === redPiece.position[1];
           
           if (!movedThisTurn) {
-            // 这个棋子本回合没有移动，检查它是否可以 move 到黑方 capture 位置
-            const validMoves = getValidMoves(redPiece, pieces);
-            if (validMoves.some(m => m[0] === blackAction.to[0] && m[1] === blackAction.to[1])) {
+            // 这个棋子本回合没有移动，检查它是否可以 capture 到黑方 capture 位置
+            const canCapture = checkCannonCapture(redPiece, blackAction.to as Position, pieces) ||
+              (redPiece.type !== 'cannon' && getValidMoves(redPiece, pieces).some(m => m[0] === blackAction.to[0] && m[1] === blackAction.to[1]));
+            
+            if (canCapture) {
               // 有保护，黑方吃子方也被移除（相当于同归于尽）
               toRemoveByCapture.push(blackCapturer.id);
               break;
