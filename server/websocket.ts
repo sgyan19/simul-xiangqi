@@ -425,6 +425,7 @@ const sendToClient = (ws: WebSocket, message: WSMessage): void => {
 // 广播房间状态给所有相关玩家
 const broadcastRoomUpdate = (room: ReturnType<typeof getRoom>): void => {
   if (!room) return;
+  console.log('DEBUG broadcastRoomUpdate: lastRedMoveTo:', room.lastRedMoveTo, 'lastBlackMoveTo:', room.lastBlackMoveTo);
   
   for (const [ws, player] of clients) {
     if (player.roomId === room.id) {

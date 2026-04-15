@@ -738,8 +738,11 @@ function App() {
     if (onlineState.phase !== 'strategy') return;
     if (!onlineState.redPendingMove || !onlineState.blackPendingMove) return;
     
+    console.log('DEBUG auto settle triggered, sending settle...');
+    
     // 双方都走棋后，自动结算（延迟一小段时间让玩家看清箭头）
     const timer = setTimeout(() => {
+      console.log('DEBUG sending settle message');
       wsClient.send('settle');
     }, 500);
     
