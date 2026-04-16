@@ -668,8 +668,16 @@ export const executeSettlement = (
       toRemoveByCapture.push(enemyAtTarget.id);
       
       if (blackCapturer) {
-        // 找到所有红方棋子（保留被吃的，因为被吃的棋子原来的位置可能有炮台）
-        const allRedPieces = pieces.filter(p => p.side === 'red');
+        // 找到所有红方棋子（排除被吃的 enemyAtTarget，因为被吃的棋子不能保护）
+        const allRedPieces = pieces.filter(p => p.side === 'red' && p.id !== enemyAtTarget.id);
+        console.log('[SETTLEMENT] 黑方保护判定:', {
+          blackCapturerId: blackCapturer.id,
+          blackCapturerType: blackCapturer.type,
+          blackActionTo: blackAction.to,
+          enemyAtTargetId: enemyAtTarget.id,
+          redAction: redAction,
+          allRedPiecesCount: allRedPieces.length,
+        });
         
         for (const redPiece of allRedPieces) {
           // 检查这个棋子本回合是否移动了
@@ -684,8 +692,16 @@ export const executeSettlement = (
           if (!movedThisTurn) {
             // 本回合没移动，检查能否 capture 到黑炮新位置
             const canCapture = canPieceCaptureAt(redPiece, blackAction.to as Position, pieces);
+            console.log('[SETTLEMENT] 检查红方棋子能否保护:', {
+              redPieceId: redPiece.id,
+              redPieceType: redPiece.type,
+              redPiecePosition: redPiece.position,
+              movedThisTurn,
+              canCapture,
+            });
             
             if (canCapture) {
+              console.log('[SETTLEMENT] 触发防反! 红方棋子保护了黑炮新位置');
               toRemoveByCapture.push(blackCapturer.id);
               blackPieceRemoved.push({
                 piece: { ...blackCapturer, position: [...blackAction.to] as Position },
