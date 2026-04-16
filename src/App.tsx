@@ -501,6 +501,12 @@ function App() {
         showMessage('连接失败，请刷新重试');
       });
 
+    // 监听连接断开消息
+    wsClient.on('disconnected', (payload: any) => {
+      console.log('收到连接断开消息:', payload);
+      setOnlineState(prev => ({ ...prev, connected: false }));
+    });
+
     // 监听连接成功消息
     wsClient.on('connected', (payload: any) => {
       console.log('收到连接成功消息:', payload);
@@ -786,9 +792,13 @@ function App() {
 
   // 在线模式：快速匹配
   const handleQuickMatch = useCallback(() => {
+    if (!onlineState.connected) {
+      showMessage('连接已断开，正在重新连接...');
+      return;
+    }
     console.log('handleQuickMatch called, connected:', onlineState.connected);
     wsClient.send('join_matchmaking');
-  }, [onlineState.connected]);
+  }, [onlineState.connected, showMessage]);
 
   // 在线模式：取消匹配
   const handleCancelMatch = useCallback(() => {

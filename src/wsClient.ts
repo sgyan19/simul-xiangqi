@@ -65,6 +65,11 @@ class WebSocketClient {
 
         this.ws.onclose = () => {
           console.log('WebSocket closed');
+          // 通知所有监听者连接断开
+          const handler = this.handlers.get('disconnected');
+          if (handler) {
+            handler({});
+          }
           this.attemptReconnect();
         };
 
