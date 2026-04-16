@@ -15,6 +15,10 @@ interface ChessBoardProps {
   onMovePiece: (to: Position) => void;
 }
 
+// 棋盘样式常量
+const BOARD_COLOR = '#8B4513';
+const LINE_WIDTH = 0.7;
+
 // 棋盘尺寸常量
 const COLS = 9;
 const ROWS = 10;
@@ -23,6 +27,10 @@ const ROWS = 10;
 // 每个格子的中心点 = 格子索引 * CELL_PERCENT
 const CELL_WIDTH = 100 / (COLS - 1);
 const CELL_HEIGHT = 100 / (ROWS - 1);
+
+// 位置标记尺寸常量
+const MARK_SIZE = CELL_WIDTH * 0.2;     // 直角边长度
+const MARK_THICKNESS = CELL_WIDTH * 0.08; // 直角边宽度
 
 // 坐标转换：逻辑坐标 -> 百分比
 // 红方视角（flipped=false）：col从左到右，row从下到上
@@ -63,8 +71,8 @@ const BoardBackground = () => {
           y1={`${y}%`}
           x2="100%"
           y2={`${y}%`}
-          stroke="#8B4513"
-          strokeWidth="0.7"
+          stroke={BOARD_COLOR}
+          strokeWidth={LINE_WIDTH}
         />
       );
     } else if (i === 5) {
@@ -76,8 +84,8 @@ const BoardBackground = () => {
           y1={`${y}%`}
           x2="100%"
           y2={`${y}%`}
-          stroke="#8B4513"
-          strokeWidth="0.7"
+          stroke={BOARD_COLOR}
+          strokeWidth={LINE_WIDTH}
         />
       );
     } else {
@@ -88,8 +96,8 @@ const BoardBackground = () => {
           y1={`${y}%`}
           x2="100%"
           y2={`${y}%`}
-          stroke="#8B4513"
-          strokeWidth="0.7"
+          stroke={BOARD_COLOR}
+          strokeWidth={LINE_WIDTH}
         />
       );
     }
@@ -107,8 +115,8 @@ const BoardBackground = () => {
           y1="0%"
           x2={`${x}%`}
           y2={`${riverTop}%`}
-          stroke="#8B4513"
-          strokeWidth="0.7"
+          stroke={BOARD_COLOR}
+          strokeWidth={LINE_WIDTH}
         />
       );
       lines.push(
@@ -118,8 +126,8 @@ const BoardBackground = () => {
           y1={`${riverBottom}%`}
           x2={`${x}%`}
           y2="100%"
-          stroke="#8B4513"
-          strokeWidth="0.7"
+          stroke={BOARD_COLOR}
+          strokeWidth={LINE_WIDTH}
         />
       );
     } else {
@@ -131,8 +139,8 @@ const BoardBackground = () => {
           y1="0%"
           x2={`${x}%`}
           y2={`${riverTop}%`}
-          stroke="#8B4513"
-          strokeWidth="0.7"
+          stroke={BOARD_COLOR}
+          strokeWidth={LINE_WIDTH}
         />
       );
       // 下半部分（汉界以下）
@@ -143,8 +151,8 @@ const BoardBackground = () => {
           y1={`${riverBottom}%`}
           x2={`${x}%`}
           y2="100%"
-          stroke="#8B4513"
-          strokeWidth="0.7"
+          stroke={BOARD_COLOR}
+          strokeWidth={LINE_WIDTH}
         />
       );
     }
@@ -159,8 +167,8 @@ const BoardBackground = () => {
 
   // 红方九宫 X 形
   lines.push(
-    <line key="palace-red-1" x1={`${redPalaceX1}%`} y1={`${redPalaceTop}%`} x2={`${redPalaceX2}%`} y2={`${redPalaceBottom}%`} stroke="#8B4513" strokeWidth="0.7" />,
-    <line key="palace-red-2" x1={`${redPalaceX2}%`} y1={`${redPalaceTop}%`} x2={`${redPalaceX1}%`} y2={`${redPalaceBottom}%`} stroke="#8B4513" strokeWidth="0.7" />
+    <line key="palace-red-1" x1={`${redPalaceX1}%`} y1={`${redPalaceTop}%`} x2={`${redPalaceX2}%`} y2={`${redPalaceBottom}%`} stroke={BOARD_COLOR} strokeWidth={LINE_WIDTH} />,
+    <line key="palace-red-2" x1={`${redPalaceX2}%`} y1={`${redPalaceTop}%`} x2={`${redPalaceX1}%`} y2={`${redPalaceBottom}%`} stroke={BOARD_COLOR} strokeWidth={LINE_WIDTH} />
   );
 
   // 黑方九宫（上方，row 0-2，即视觉上的上方）
@@ -171,8 +179,8 @@ const BoardBackground = () => {
 
   // 黑方九宫 X 形
   lines.push(
-    <line key="palace-black-1" x1={`${blackPalaceX1}%`} y1={`${blackPalaceTop}%`} x2={`${blackPalaceX2}%`} y2={`${blackPalaceBottom}%`} stroke="#8B4513" strokeWidth="0.7" />,
-    <line key="palace-black-2" x1={`${blackPalaceX2}%`} y1={`${blackPalaceTop}%`} x2={`${blackPalaceX1}%`} y2={`${blackPalaceBottom}%`} stroke="#8B4513" strokeWidth="0.7" />
+    <line key="palace-black-1" x1={`${blackPalaceX1}%`} y1={`${blackPalaceTop}%`} x2={`${blackPalaceX2}%`} y2={`${blackPalaceBottom}%`} stroke={BOARD_COLOR} strokeWidth={LINE_WIDTH} />,
+    <line key="palace-black-2" x1={`${blackPalaceX2}%`} y1={`${blackPalaceTop}%`} x2={`${blackPalaceX1}%`} y2={`${blackPalaceBottom}%`} stroke={BOARD_COLOR} strokeWidth={LINE_WIDTH} />
   );
 
   // 绘制位置标记的辅助函数（L形直角拐角）
@@ -182,25 +190,22 @@ const BoardBackground = () => {
     prefix: string,
     quadrants: ('tl' | 'tr' | 'bl' | 'br')[]
   ) => {
-    const size = CELL_WIDTH * 0.2; // 直角边长度
-    const thickness = CELL_WIDTH * 0.08; // 直角边宽度
-
     const quadrantDrawers: Record<string, JSX.Element[]> = {
       tl: [
-        <line key={`${prefix}-tl-h`} x1={`${centerX - thickness}%`} y1={`${centerY - size}%`} x2={`${centerX - thickness}%`} y2={`${centerY - thickness}%`} stroke="#8B4513" strokeWidth="0.7" />,
-        <line key={`${prefix}-tl-v`} x1={`${centerX - size}%`} y1={`${centerY - thickness}%`} x2={`${centerX - thickness}%`} y2={`${centerY - thickness}%`} stroke="#8B4513" strokeWidth="0.7" />
+        <line key={`${prefix}-tl-h`} x1={`${centerX - MARK_THICKNESS}%`} y1={`${centerY - MARK_SIZE}%`} x2={`${centerX - MARK_THICKNESS}%`} y2={`${centerY - MARK_THICKNESS}%`} stroke={BOARD_COLOR} strokeWidth={LINE_WIDTH} />,
+        <line key={`${prefix}-tl-v`} x1={`${centerX - MARK_SIZE}%`} y1={`${centerY - MARK_THICKNESS}%`} x2={`${centerX - MARK_THICKNESS}%`} y2={`${centerY - MARK_THICKNESS}%`} stroke={BOARD_COLOR} strokeWidth={LINE_WIDTH} />
       ],
       tr: [
-        <line key={`${prefix}-tr-h`} x1={`${centerX + thickness}%`} y1={`${centerY - size}%`} x2={`${centerX + thickness}%`} y2={`${centerY - thickness}%`} stroke="#8B4513" strokeWidth="0.7" />,
-        <line key={`${prefix}-tr-v`} x1={`${centerX + size}%`} y1={`${centerY - thickness}%`} x2={`${centerX + thickness}%`} y2={`${centerY - thickness}%`} stroke="#8B4513" strokeWidth="0.7" />
+        <line key={`${prefix}-tr-h`} x1={`${centerX + MARK_THICKNESS}%`} y1={`${centerY - MARK_SIZE}%`} x2={`${centerX + MARK_THICKNESS}%`} y2={`${centerY - MARK_THICKNESS}%`} stroke={BOARD_COLOR} strokeWidth={LINE_WIDTH} />,
+        <line key={`${prefix}-tr-v`} x1={`${centerX + MARK_SIZE}%`} y1={`${centerY - MARK_THICKNESS}%`} x2={`${centerX + MARK_THICKNESS}%`} y2={`${centerY - MARK_THICKNESS}%`} stroke={BOARD_COLOR} strokeWidth={LINE_WIDTH} />
       ],
       bl: [
-        <line key={`${prefix}-bl-h`} x1={`${centerX - thickness}%`} y1={`${centerY + size}%`} x2={`${centerX - thickness}%`} y2={`${centerY + thickness}%`} stroke="#8B4513" strokeWidth="0.7" />,
-        <line key={`${prefix}-bl-v`} x1={`${centerX - size}%`} y1={`${centerY + thickness}%`} x2={`${centerX - thickness}%`} y2={`${centerY + thickness}%`} stroke="#8B4513" strokeWidth="0.7" />
+        <line key={`${prefix}-bl-h`} x1={`${centerX - MARK_THICKNESS}%`} y1={`${centerY + MARK_SIZE}%`} x2={`${centerX - MARK_THICKNESS}%`} y2={`${centerY + MARK_THICKNESS}%`} stroke={BOARD_COLOR} strokeWidth={LINE_WIDTH} />,
+        <line key={`${prefix}-bl-v`} x1={`${centerX - MARK_SIZE}%`} y1={`${centerY + MARK_THICKNESS}%`} x2={`${centerX - MARK_THICKNESS}%`} y2={`${centerY + MARK_THICKNESS}%`} stroke={BOARD_COLOR} strokeWidth={LINE_WIDTH} />
       ],
       br: [
-        <line key={`${prefix}-br-h`} x1={`${centerX + thickness}%`} y1={`${centerY + size}%`} x2={`${centerX + thickness}%`} y2={`${centerY + thickness}%`} stroke="#8B4513" strokeWidth="0.7" />,
-        <line key={`${prefix}-br-v`} x1={`${centerX + size}%`} y1={`${centerY + thickness}%`} x2={`${centerX + thickness}%`} y2={`${centerY + thickness}%`} stroke="#8B4513" strokeWidth="0.7" />
+        <line key={`${prefix}-br-h`} x1={`${centerX + MARK_THICKNESS}%`} y1={`${centerY + MARK_SIZE}%`} x2={`${centerX + MARK_THICKNESS}%`} y2={`${centerY + MARK_THICKNESS}%`} stroke={BOARD_COLOR} strokeWidth={LINE_WIDTH} />,
+        <line key={`${prefix}-br-v`} x1={`${centerX + MARK_SIZE}%`} y1={`${centerY + MARK_THICKNESS}%`} x2={`${centerX + MARK_THICKNESS}%`} y2={`${centerY + MARK_THICKNESS}%`} stroke={BOARD_COLOR} strokeWidth={LINE_WIDTH} />
       ]
     };
 
@@ -272,7 +277,7 @@ const BoardBackground = () => {
         y="50%"
         textAnchor="middle"
         dominantBaseline="middle"
-        fill="#8B4513"
+        fill={BOARD_COLOR}
         fontSize="5"
         fontFamily="'SimSun', 'STSong', serif"
         fontWeight="bold"
@@ -285,7 +290,7 @@ const BoardBackground = () => {
         y="50%"
         textAnchor="middle"
         dominantBaseline="middle"
-        fill="#8B4513"
+        fill={BOARD_COLOR}
         fontSize="5"
         fontFamily="'SimSun', 'STSong', serif"
         fontWeight="bold"
