@@ -579,14 +579,14 @@ export const executeSettlement = (
       
       if (movedRedPiece && movedBlackPiece) {
         // 移动到同一位置的处理
-        // 炮撞炮：同归于尽
+        // 炮撞炮：撞兑
         if (movedRedPiece.type === 'cannon' && movedBlackPiece.type === 'cannon') {
           toRemoveByMove.push(movedRedPiece.id, movedBlackPiece.id);
           redPieceRemoved.push({ piece: { ...movedRedPiece }, reason: 'exchange' });
           blackPieceRemoved.push({ piece: { ...movedBlackPiece }, reason: 'exchange' });
           events.push({
             type: 'collision',
-            description: `[同归于尽]红炮与黑炮同归于尽`,
+            description: `[撞兑]红炮与黑炮撞兑`,
           });
         }
         // 炮撞非炮：炮被吃，非炮存活
@@ -595,7 +595,7 @@ export const executeSettlement = (
           redPieceRemoved.push({ piece: { ...movedRedPiece }, reason: 'exchange' });
           events.push({
             type: 'collision',
-            description: `[同归于尽]红${getPieceNameWithId(movedRedPiece, 'red')}撞黑${getPieceNameWithId(movedBlackPiece, 'black')}，红炮死`,
+            description: `[撞兑]红${getPieceNameWithId(movedRedPiece, 'red')}撞黑${getPieceNameWithId(movedBlackPiece, 'black')}，红炮死`,
           });
         }
         else if (movedBlackPiece.type === 'cannon') {
@@ -603,17 +603,17 @@ export const executeSettlement = (
           blackPieceRemoved.push({ piece: { ...movedBlackPiece }, reason: 'exchange' });
           events.push({
             type: 'collision',
-            description: `[同归于尽]黑${getPieceNameWithId(movedBlackPiece, 'black')}撞红${getPieceNameWithId(movedRedPiece, 'red')}，黑炮死`,
+            description: `[撞兑]黑${getPieceNameWithId(movedBlackPiece, 'black')}撞红${getPieceNameWithId(movedRedPiece, 'red')}，黑炮死`,
           });
         }
-        // 其他子撞其他子：同归于尽
+        // 其他子撞其他子：撞兑
         else {
           toRemoveByMove.push(movedRedPiece.id, movedBlackPiece.id);
           redPieceRemoved.push({ piece: { ...movedRedPiece }, reason: 'exchange' });
           blackPieceRemoved.push({ piece: { ...movedBlackPiece }, reason: 'exchange' });
           events.push({
             type: 'collision',
-            description: `[同归于尽]红${getPieceNameWithId(movedRedPiece, 'red')}与黑${getPieceNameWithId(movedBlackPiece, 'black')}同归于尽`,
+            description: `[撞兑]红${getPieceNameWithId(movedRedPiece, 'red')}与黑${getPieceNameWithId(movedBlackPiece, 'black')}撞兑`,
           });
         }
       }
@@ -869,7 +869,7 @@ export const executeSettlement = (
       blackPieceRemoved.push({ piece: { ...blackKing }, reason: 'face_off' });
       events.push({
         type: 'face_off',
-        description: '[将对将]双方同归于尽',
+        description: '[将对将]双方撞兑',
       });
       
       finalPieces = finalPieces.filter(p => p.type !== 'king');
