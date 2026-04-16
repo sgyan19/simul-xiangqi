@@ -175,6 +175,38 @@ const BoardBackground = () => {
     <line key="palace-black-2" x1={`${blackPalaceX2}%`} y1={`${blackPalaceTop}%`} x2={`${blackPalaceX1}%`} y2={`${blackPalaceBottom}%`} stroke="#8B4513" strokeWidth="0.7" />
   );
 
+  // 绘制位置标记的辅助函数（L形直角拐角）
+  const drawCornerMarks = (
+    centerX: number,
+    centerY: number,
+    prefix: string,
+    quadrants: ('tl' | 'tr' | 'bl' | 'br')[]
+  ) => {
+    const size = CELL_WIDTH * 0.2; // 直角边长度
+    const thickness = CELL_WIDTH * 0.08; // 直角边宽度
+
+    const quadrantDrawers: Record<string, JSX.Element[]> = {
+      tl: [
+        <line key={`${prefix}-tl-h`} x1={`${centerX - thickness}%`} y1={`${centerY - size}%`} x2={`${centerX - thickness}%`} y2={`${centerY - thickness}%`} stroke="#8B4513" strokeWidth="0.7" />,
+        <line key={`${prefix}-tl-v`} x1={`${centerX - size}%`} y1={`${centerY - thickness}%`} x2={`${centerX - thickness}%`} y2={`${centerY - thickness}%`} stroke="#8B4513" strokeWidth="0.7" />
+      ],
+      tr: [
+        <line key={`${prefix}-tr-h`} x1={`${centerX + thickness}%`} y1={`${centerY - size}%`} x2={`${centerX + thickness}%`} y2={`${centerY - thickness}%`} stroke="#8B4513" strokeWidth="0.7" />,
+        <line key={`${prefix}-tr-v`} x1={`${centerX + size}%`} y1={`${centerY - thickness}%`} x2={`${centerX + thickness}%`} y2={`${centerY - thickness}%`} stroke="#8B4513" strokeWidth="0.7" />
+      ],
+      bl: [
+        <line key={`${prefix}-bl-h`} x1={`${centerX - thickness}%`} y1={`${centerY + size}%`} x2={`${centerX - thickness}%`} y2={`${centerY + thickness}%`} stroke="#8B4513" strokeWidth="0.7" />,
+        <line key={`${prefix}-bl-v`} x1={`${centerX - size}%`} y1={`${centerY + thickness}%`} x2={`${centerX - thickness}%`} y2={`${centerY + thickness}%`} stroke="#8B4513" strokeWidth="0.7" />
+      ],
+      br: [
+        <line key={`${prefix}-br-h`} x1={`${centerX + thickness}%`} y1={`${centerY + size}%`} x2={`${centerX + thickness}%`} y2={`${centerY + thickness}%`} stroke="#8B4513" strokeWidth="0.7" />,
+        <line key={`${prefix}-br-v`} x1={`${centerX + size}%`} y1={`${centerY + thickness}%`} x2={`${centerX + thickness}%`} y2={`${centerY + thickness}%`} stroke="#8B4513" strokeWidth="0.7" />
+      ]
+    };
+
+    quadrants.forEach(q => lines.push(...quadrantDrawers[q]));
+  };
+
   // 炮的位置标记（四个象限各画一个L形直角拐角）
   // 红炮：col 1, row 7 和 col 7, row 7
   // 黑炮：col 1, row 2 和 col 7, row 2
@@ -185,34 +217,38 @@ const BoardBackground = () => {
     { col: 7, row: 7 },  // 红炮2
   ];
 
-  // 绘制炮位置的四个L形直角拐角（象米字样式）
   cannonPositions.forEach(({ col, row }, idx) => {
     const centerX = col * CELL_WIDTH;
     const centerY = row * CELL_HEIGHT;
-    const size = CELL_WIDTH * 0.25; // 直角边长度
-    const thickness = CELL_WIDTH * 0.08; // 直角边宽度（从中心偏移）
+    drawCornerMarks(centerX, centerY, `cannon-${idx}`, ['tl', 'tr', 'bl', 'br']);
+  });
 
-    // 四个象限各画一个L形直角拐角
-    // 左上角 (↖)
-    lines.push(
-      <line key={`cannon-${idx}-tl-h`} x1={`${centerX - thickness}%`} y1={`${centerY - size}%`} x2={`${centerX - thickness}%`} y2={`${centerY - thickness}%`} stroke="#8B4513" strokeWidth="0.7" />,
-      <line key={`cannon-${idx}-tl-v`} x1={`${centerX - size}%`} y1={`${centerY - thickness}%`} x2={`${centerX - thickness}%`} y2={`${centerY - thickness}%`} stroke="#8B4513" strokeWidth="0.7" />
-    );
-    // 右上角 (↗)
-    lines.push(
-      <line key={`cannon-${idx}-tr-h`} x1={`${centerX + thickness}%`} y1={`${centerY - size}%`} x2={`${centerX + thickness}%`} y2={`${centerY - thickness}%`} stroke="#8B4513" strokeWidth="0.7" />,
-      <line key={`cannon-${idx}-tr-v`} x1={`${centerX + size}%`} y1={`${centerY - thickness}%`} x2={`${centerX + thickness}%`} y2={`${centerY - thickness}%`} stroke="#8B4513" strokeWidth="0.7" />
-    );
-    // 左下角 (↙)
-    lines.push(
-      <line key={`cannon-${idx}-bl-h`} x1={`${centerX - thickness}%`} y1={`${centerY + size}%`} x2={`${centerX - thickness}%`} y2={`${centerY + thickness}%`} stroke="#8B4513" strokeWidth="0.7" />,
-      <line key={`cannon-${idx}-bl-v`} x1={`${centerX - size}%`} y1={`${centerY + thickness}%`} x2={`${centerX - thickness}%`} y2={`${centerY + thickness}%`} stroke="#8B4513" strokeWidth="0.7" />
-    );
-    // 右下角 (↘)
-    lines.push(
-      <line key={`cannon-${idx}-br-h`} x1={`${centerX + thickness}%`} y1={`${centerY + size}%`} x2={`${centerX + thickness}%`} y2={`${centerY + thickness}%`} stroke="#8B4513" strokeWidth="0.7" />,
-      <line key={`cannon-${idx}-br-v`} x1={`${centerX + size}%`} y1={`${centerY + thickness}%`} x2={`${centerX + thickness}%`} y2={`${centerY + thickness}%`} stroke="#8B4513" strokeWidth="0.7" />
-    );
+  // 兵/卒的位置标记
+  // 红方兵：col 0, 2, 4, 6, 8，row 3
+  // 黑方卒：col 0, 2, 4, 6, 8，row 6
+  const pawnPositions = [
+    { col: 0, row: 3 },  // 红边兵
+    { col: 2, row: 3 },  // 红兵
+    { col: 4, row: 3 },  // 红兵
+    { col: 6, row: 3 },  // 红兵
+    { col: 8, row: 3 },  // 红边兵
+    { col: 0, row: 6 },  // 黑边卒
+    { col: 2, row: 6 },  // 黑卒
+    { col: 4, row: 6 },  // 黑卒
+    { col: 6, row: 6 },  // 黑卒
+    { col: 8, row: 6 },  // 黑边卒
+  ];
+
+  pawnPositions.forEach(({ col, row }, idx) => {
+    const centerX = col * CELL_WIDTH;
+    const centerY = row * CELL_HEIGHT;
+    // 边卒/兵（col 0 或 col 8）只有两个象限（右侧/左侧超出棋盘，不用画）
+    const quadrants: ('tl' | 'tr' | 'bl' | 'br')[] = col === 0
+      ? ['tr', 'br'] // 边兵只有右上和右下
+      : col === 8
+        ? ['tl', 'bl'] // 边兵只有左上和解下
+        : ['tl', 'tr', 'bl', 'br']; // 中间兵有四个象限
+    drawCornerMarks(centerX, centerY, `pawn-${idx}`, quadrants);
   });
 
   // 楚河汉界区域
