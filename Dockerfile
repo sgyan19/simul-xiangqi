@@ -36,7 +36,7 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/package.json ./
 
 # 安装生产依赖（包含 express）
-RUN pnpm install --prod --frozen-lockfile
+RUN pnpm install --prod
 
 # 设置环境变量
 ENV NODE_ENV=production
