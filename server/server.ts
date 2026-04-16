@@ -55,9 +55,9 @@ async function startServer(): Promise<Server> {
     process.exit(1);
   });
 
-  server.listen(port, () => {
-    console.log(`\n✨ Server running at http://${hostname}:${port}`);
-    console.log(`📝 WebSocket available at ws://${hostname}:${port}/ws`);
+  server.listen(port, '0.0.0.0', () => {
+    console.log(`\n✨ Server running at http://0.0.0.0:${port}`);
+    console.log(`📝 WebSocket available at ws://0.0.0.0:${port}/ws`);
     console.log(`📝 Environment: ${isDev ? 'development' : 'production'}\n`);
   });
 
