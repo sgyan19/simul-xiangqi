@@ -118,9 +118,12 @@ function App() {
 
   // 切换游戏模式时清理状态
   const handleSetGameMode = useCallback((mode: 'local' | 'online') => {
-    // 切换模式时清理选中状态
+    // 切换模式时清理所有相关状态
     setSelectedPiece(null);
     setValidMoves([]);
+    setHistory([]);  // 清空对弈记录
+    setLastMoveTargets({ red: null, black: null });  // 清空行动目标框
+    setCheckStatus({ red: false, black: false });  // 清空将军状态
     setGameMode(mode);
   }, []);
 
