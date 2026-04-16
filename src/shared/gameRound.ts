@@ -16,7 +16,7 @@ export function getNextLogicRound(history: RoundHistoryEntry[]): number {
 /**
  * 计算下一个 gameRound（用于显示）
  * 规则：
- * - 如果有悔棋记录，说明有回合被撤销了，新走的应该重新走被撤销的那个回合
+ * - 如果有悔棋记录，说明有回合被撤销了，新走的回合号 = 被撤销回合号 + 1
  * - 如果没有悔棋记录，基于非悔棋记录数计算新的回合号
  */
 export function calculateGameRound(history: RoundHistoryEntry[]): number {
@@ -25,8 +25,8 @@ export function calculateGameRound(history: RoundHistoryEntry[]): number {
   );
   
   if (lastUndoEntry) {
-    // 有悔棋记录，使用被撤销的回合号
-    return lastUndoEntry.gameRound;
+    // 有悔棋记录，新回合号 = 被撤销回合号 + 1
+    return lastUndoEntry.gameRound + 1;
   }
   
   // 无悔棋记录，基于非悔棋记录数计算
