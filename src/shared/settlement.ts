@@ -671,11 +671,15 @@ export const executeSettlement = (
   finalPieces = finalPieces.filter(p => !toRemoveByCapture.includes(p.id));
   
   // ===== 第四步：基于最终棋盘状态检查防反 =====
-  // 只有 capture 动作才可能触发防反（move 移动后不触发即时防反）
+  // 只有 capture 动作且实际吃到子才触发防反
   const toRemoveByCounterAttack: string[] = [];
   
   // 检查红方吃子后是否被黑方反吃
-  if (redAction?.actionType === 'capture') {
+  // 确认 capture 成功：目标位置必须有黑方棋子
+  const redCaptureSuccess = redAction?.actionType === 'capture' && 
+    finalPieces.some(p => p.side === 'black' && p.position[0] === redAction.to[0] && p.position[1] === redAction.to[1]);
+  
+  if (redCaptureSuccess) {
     // 红方吃子后移动到的位置
     const redCapturerNewPos: Position = [redAction.to[0], redAction.to[1]];
     
@@ -715,7 +719,11 @@ export const executeSettlement = (
   }
   
   // 检查黑方吃子后是否被红方反吃
-  if (blackAction?.actionType === 'capture') {
+  // 确认 capture 成功：目标位置必须有红方棋子
+  const blackCaptureSuccess = blackAction?.actionType === 'capture' && 
+    finalPieces.some(p => p.side === 'red' && p.position[0] === blackAction.to[0] && p.position[1] === blackAction.to[1]);
+  
+  if (blackCaptureSuccess) {
     // 黑方吃子后移动到的位置
     const blackCapturerNewPos: Position = [blackAction.to[0], blackAction.to[1]];
     
