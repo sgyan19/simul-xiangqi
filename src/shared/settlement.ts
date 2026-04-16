@@ -405,29 +405,23 @@ const canPieceCaptureAt = (piece: Piece, targetPos: Position, pieces: Piece[]): 
       return false;
     
     case 'chariot':
-      // 车直线，路径畅通即可
-      return isPathClearBetween(pCol, pRow, tCol, tRow, pieces);
+      // 车直线，路径畅通
+      if (isPathClearBetween(pCol, pRow, tCol, tRow, pieces)) {
+        return true;
+      }
+      return false;
     
     case 'cannon':
-      // 炮吃子需要炮台，必须在同一行或同一列
-      // 先验证是否在同一直线上
+      // 炮吃子需要炮台（保护判定时不需要检查目标阵营）
       if (pCol !== tCol && pRow !== tRow) return false;
       
-      // 计算方向增量（只有不在同一点时才计算，否则会除以0）
-      let dc = 0;
-      let dr = 0;
-      if (pCol !== tCol) {
-        dc = (tCol - pCol) / Math.abs(tCol - pCol);
-      }
-      if (pRow !== tRow) {
-        dr = (tRow - pRow) / Math.abs(tRow - pRow);
-      }
+      const dc = pCol === tCol ? 0 : (tCol - pCol) / Math.abs(tCol - pCol);
+      const dr = pRow === tRow ? 0 : (tRow - pRow) / Math.abs(tRow - pRow);
       
       let midCol = pCol + dc;
       let midRow = pRow + dr;
       let foundPlatform = false;
       
-      // 扫描路径上的每个位置（不包括起点和终点）
       while (midCol !== tCol || midRow !== tRow) {
         const midPiece = getPieceAt(midCol, midRow, pieces);
         if (midPiece) {
@@ -440,7 +434,7 @@ const canPieceCaptureAt = (piece: Piece, targetPos: Position, pieces: Piece[]): 
         midRow += dr;
       }
       
-      // 需要恰好一个炮台
+      // 保护判定只需要炮台存在，不需要检查目标阵营
       return foundPlatform;
     
     case 'pawn':
@@ -674,8 +668,8 @@ export const executeSettlement = (
       toRemoveByCapture.push(enemyAtTarget.id);
       
       if (blackCapturer) {
-        // 找到所有红方棋子（排除被吃的 enemyAtTarget）
-        const allRedPieces = pieces.filter(p => p.side === 'red' && p.id !== enemyAtTarget.id);
+        // 找到所有红方棋子（保留被吃的，因为被吃的棋子原来的位置可能有炮台）
+        const allRedPieces = pieces.filter(p => p.side === 'red');
         
         for (const redPiece of allRedPieces) {
           // 检查这个棋子本回合是否移动了
