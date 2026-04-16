@@ -18,6 +18,7 @@ import { RoundHistoryEntry } from './shared/history';
 import { HistorySnapshot, createSnapshotBeforeSettlement, createSettlementEntry, createUndoEntry } from './shared/gameStore';
 import ChessBoard from './ChessBoard';
 import { wsClient } from './wsClient';
+import { playPickupSound, playPlaceSound, playCaptureSound, playDoubleCaptureSound, playSettleSound, setSoundEnabled } from './sounds';
 
 // 在线游戏状态
 interface OnlineState {
@@ -77,6 +78,7 @@ const createInitialOnlineState = (): OnlineState => ({
 
 function App() {
   const [gameMode, setGameMode] = useState<'local' | 'online'>('local');
+  const [soundEnabled, setSoundEnabledState] = useState<boolean>(true);
   const [gameState, setGameState] = useState<GameState>(createInitialState);
   const [onlineState, setOnlineState] = useState<OnlineState>(createInitialOnlineState);
   const [showToast, setShowToast] = useState<string | null>(null);
@@ -97,6 +99,13 @@ function App() {
 
   // 联机模式：用于跟踪需要重新选择的棋子（在取消确认后）
   const pendingReselectPieceRef = useRef<Piece | null>(null);
+
+  // 音效开关切换
+  const handleToggleSound = useCallback(() => {
+    const newValue = !soundEnabled;
+    setSoundEnabledState(newValue);
+    setSoundEnabled(newValue);
+  }, [soundEnabled]);
 
   // 显示提示
   const showMessage = useCallback((msg: string, duration = 2000) => {
@@ -136,6 +145,9 @@ function App() {
 
     const validMoves = getValidMoves(piece, gameState.pieces);
     
+    // 播放提棋子音效
+    playPickupSound();
+    
     setGameState(prev => ({
       ...prev,
       selectedPiece: piece,
@@ -167,6 +179,13 @@ function App() {
         showMessage('不允许长捉（3次）');
         return;
       }
+    }
+    
+    // 播放落子音效（吃子用不同的音效）
+    if (actionType === 'capture') {
+      playCaptureSound();
+    } else {
+      playPlaceSound();
     }
     
     const pendingMove: PendingAction = {
@@ -323,6 +342,15 @@ function App() {
       // 使用共用模块创建历史记录
       const entryWithRound = createSettlementEntry(history, historyEntry);
       setHistory(prev => [...prev, entryWithRound]);
+
+      // 结算后播放音效
+      if (historyEntry.events.some(e => e.type === 'collision')) {
+        // 同归于尽
+        playDoubleCaptureSound();
+      } else if (historyEntry.events.some(e => e.type === 'capture')) {
+        // 吃子
+        playCaptureSound();
+      }
 
       // 检查将军状态
       const redInCheck = isCheck('red', finalPieces);
@@ -602,6 +630,22 @@ function App() {
       const winnerText = payload.winner === 'draw' ? '和棋！' : 
                          payload.winner === 'red' ? '红方胜利！' : '黑方胜利！';
       showMessage(winnerText + (payload.reason ? ' ' + payload.reason : ''), 3000);
+      
+      // 根据结果播放结算音效
+      if (payload.events) {
+        if (payload.events.some((e: any) => e.type === 'collision')) {
+          playDoubleCaptureSound();
+        } else if (payload.events.some((e: any) => e.type === 'capture')) {
+          playCaptureSound();
+        }
+      }
+      if (payload.winner === 'draw') {
+        playSettleSound('draw');
+      } else if (payload.winner === onlineState.side) {
+        playSettleSound('win');
+      } else {
+        playSettleSound('lose');
+      }
     });
 
     wsClient.on('left_room', () => {
@@ -684,6 +728,8 @@ function App() {
     }
 
     const moves = getValidMoves(piece, onlineState.pieces);
+    // 播放提棋子音效
+    playPickupSound();
     setSelectedPiece(piece);
     setValidMoves(moves);
   }, [onlineState.phase, onlineState.side, onlineState.redConfirmed, onlineState.blackConfirmed, onlineState.pieces, selectedPiece, showMessage]);
@@ -693,10 +739,21 @@ function App() {
     if (!selectedPiece || !onlineState.roomId) return;
     
     const from = selectedPiece.position;
+    
+    // 检测是吃子还是移动，播放相应音效
+    const targetPiece = onlineState.pieces.find(p => 
+      p.side !== selectedPiece.side && p.position[0] === to[0] && p.position[1] === to[1]
+    );
+    if (targetPiece) {
+      playCaptureSound();
+    } else {
+      playPlaceSound();
+    }
+    
     wsClient.send('submit_move', { from, to });
     setSelectedPiece(null);
     setValidMoves([]);
-  }, [selectedPiece, onlineState.roomId]);
+  }, [selectedPiece, onlineState.roomId, onlineState.pieces]);
 
   // 在线模式：结算
   const handleSettleOnline = useCallback(() => {
@@ -782,6 +839,16 @@ function App() {
             联机
           </button>
         </div>
+
+        {/* 音效开关 */}
+        <button
+          className={`mode-btn ${soundEnabled ? 'active' : ''}`}
+          onClick={handleToggleSound}
+          title={soundEnabled ? '音效已开启' : '音效已关闭'}
+          style={{ marginLeft: 'auto' }}
+        >
+          {soundEnabled ? '🔊' : '🔇'}
+        </button>
 
         {/* 在线状态 */}
         {gameMode === 'online' && (
