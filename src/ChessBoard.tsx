@@ -42,31 +42,80 @@ const getPosition = (col: number, row: number, flipped: boolean): { left: string
 const BoardBackground = () => {
   const lines: ReactNode[] = [];
   
+  // 楚河汉界区域（row 4.5 附近）
+  // 上半区域终点 y = 4 * CELL_HEIGHT = 44.44%
+  // 下半区域起点 y = 5 * CELL_HEIGHT = 55.56%
+  const riverTop = 4 * CELL_HEIGHT;      // 44.44%
+  const riverBottom = 5 * CELL_HEIGHT;   // 55.56%
+  
   // 横向线条 (10条)
   for (let i = 0; i < ROWS; i++) {
-    lines.push(
-      <line
-        key={`h${i}`}
-        x1="0%"
-        y1={`${i * CELL_HEIGHT}%`}
-        x2="100%"
-        y2={`${i * CELL_HEIGHT}%`}
-        stroke="#8B4513"
-        strokeWidth="2"
-      />
-    );
+    const y = i * CELL_HEIGHT;
+    let y2 = y;
+    
+    // 如果是楚河汉界附近的线，需要断开
+    if (i === 4) {
+      // 上半部分最后一条线，到楚河汉界顶部为止
+      lines.push(
+        <line
+          key={`h${i}`}
+          x1="0%"
+          y1={`${y}%`}
+          x2="100%"
+          y2={`${y}%`}
+          stroke="#8B4513"
+          strokeWidth="2"
+        />
+      );
+    } else if (i === 5) {
+      // 下半部分第一条线，从楚河汉界底部开始
+      lines.push(
+        <line
+          key={`h${i}`}
+          x1="0%"
+          y1={`${y}%`}
+          x2="100%"
+          y2={`${y}%`}
+          stroke="#8B4513"
+          strokeWidth="2"
+        />
+      );
+    } else {
+      lines.push(
+        <line
+          key={`h${i}`}
+          x1="0%"
+          y1={`${y}%`}
+          x2="100%"
+          y2={`${y}%`}
+          stroke="#8B4513"
+          strokeWidth="2"
+        />
+      );
+    }
   }
 
   // 竖向线条 (9条)
   for (let i = 0; i < COLS; i++) {
     const x = i * CELL_WIDTH;
     if (i === 0 || i === COLS - 1) {
-      // 边线到头
+      // 边线到头（中间楚河汉界区域断开）
       lines.push(
         <line
           key={`v${i}`}
           x1={`${x}%`}
           y1="0%"
+          x2={`${x}%`}
+          y2={`${riverTop}%`}
+          stroke="#8B4513"
+          strokeWidth="2"
+        />
+      );
+      lines.push(
+        <line
+          key={`v${i}_bottom`}
+          x1={`${x}%`}
+          y1={`${riverBottom}%`}
           x2={`${x}%`}
           y2="100%"
           stroke="#8B4513"
@@ -81,7 +130,7 @@ const BoardBackground = () => {
           x1={`${x}%`}
           y1="0%"
           x2={`${x}%`}
-          y2={`${5 * CELL_HEIGHT}%`}
+          y2={`${riverTop}%`}
           stroke="#8B4513"
           strokeWidth="2"
         />
@@ -91,7 +140,7 @@ const BoardBackground = () => {
         <line
           key={`v${i}b`}
           x1={`${x}%`}
-          y1={`${5 * CELL_HEIGHT}%`}
+          y1={`${riverBottom}%`}
           x2={`${x}%`}
           y2="100%"
           stroke="#8B4513"
@@ -141,27 +190,27 @@ const BoardBackground = () => {
     >
       {lines}
       
-      {/* 楚河文字 */}
+      {/* 楚河文字 - 居中在左侧格子中心 (col 2, x=22.22%) */}
       <text
-        x="22%"
-        y="48%"
+        x="22.22%"
+        y="50%"
         textAnchor="middle"
         dominantBaseline="middle"
         fill="#8B4513"
-        fontSize="6"
+        fontSize="5"
         fontFamily="'SimSun', 'STSong', serif"
         fontWeight="bold"
       >
         楚 河
       </text>
-      {/* 汉界文字 */}
+      {/* 汉界文字 - 居中在右侧格子中心 (col 7, x=77.78%) */}
       <text
-        x="78%"
-        y="48%"
+        x="77.78%"
+        y="50%"
         textAnchor="middle"
         dominantBaseline="middle"
         fill="#8B4513"
-        fontSize="6"
+        fontSize="5"
         fontFamily="'SimSun', 'STSong', serif"
         fontWeight="bold"
       >
