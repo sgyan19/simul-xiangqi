@@ -43,6 +43,11 @@ class WebSocketClient {
         this.ws.onopen = () => {
           console.log('WebSocket connected');
           this.reconnectAttempts = 0;
+          // 通知所有监听者连接成功
+          const handler = this.handlers.get('connected');
+          if (handler) {
+            handler({});
+          }
           resolve();
         };
 
