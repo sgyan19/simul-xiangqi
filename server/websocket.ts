@@ -521,18 +521,23 @@ const handleMessage = (ws: WebSocket, message: WSMessage): void => {
       if (result.success) {
         const room = getRoom(player.roomId);
         if (room) {
-          // 通知双方重置请求
+          // 通知对方有重置请求
           for (const [ws2, p2] of clients) {
-            if (p2.roomId === room.id) {
+            if (p2.roomId === room.id && p2.ws !== ws) {
               sendToClient(ws2, { 
                 type: 'reset_requested', 
                 payload: { from: player.side } 
               });
             }
           }
+          // 通知请求方等待对方同意
+          sendToClient(ws, { 
+            type: 'reset_waiting', 
+            payload: { to: player.side === 'red' ? 'black' : 'red' } 
+          });
         }
       } else {
-        sendToClient(ws, { type: 'error', payload: { message: result.error || '操作失败' } });
+        sendToClient(ws, { type: 'error', payload: { message: result.error || '请求失败' } });
       }
       break;
     }
