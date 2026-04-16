@@ -610,33 +610,14 @@ export const executeSettlement = (
       );
       
       if (movedRedPiece && movedBlackPiece) {
-        // 记录冲突事件
+        // 移动到同一位置：同归于尽（所有棋子类型统一处理）
+        toRemoveByMove.push(movedRedPiece.id, movedBlackPiece.id);
+        redPieceRemoved.push({ piece: { ...movedRedPiece }, reason: 'exchange' });
+        blackPieceRemoved.push({ piece: { ...movedBlackPiece }, reason: 'exchange' });
         events.push({
           type: 'collision',
-          description: `[兑子]红${getPieceName(movedRedPiece.type, 'red')}与黑${getPieceName(movedBlackPiece.type, 'black')}同归于尽`,
+          description: `[同归于尽]红${getPieceName(movedRedPiece.type, 'red')}与黑${getPieceName(movedBlackPiece.type, 'black')}同归于尽`,
         });
-        
-        // 炮撞炮：同归于尽
-        if (movedRedPiece.type === 'cannon' && movedBlackPiece.type === 'cannon') {
-          toRemoveByMove.push(movedRedPiece.id, movedBlackPiece.id);
-          redPieceRemoved.push({ piece: { ...movedRedPiece }, reason: 'exchange' });
-          blackPieceRemoved.push({ piece: { ...movedBlackPiece }, reason: 'exchange' });
-        }
-        // 炮撞其他子：炮被吃
-        else if (movedRedPiece.type === 'cannon') {
-          toRemoveByMove.push(movedRedPiece.id);
-          redPieceRemoved.push({ piece: { ...movedRedPiece }, reason: 'exchange' });
-        }
-        else if (movedBlackPiece.type === 'cannon') {
-          toRemoveByMove.push(movedBlackPiece.id);
-          blackPieceRemoved.push({ piece: { ...movedBlackPiece }, reason: 'exchange' });
-        }
-        // 其他子撞其他子：同归于尽
-        else {
-          toRemoveByMove.push(movedRedPiece.id, movedBlackPiece.id);
-          redPieceRemoved.push({ piece: { ...movedRedPiece }, reason: 'exchange' });
-          blackPieceRemoved.push({ piece: { ...movedBlackPiece }, reason: 'exchange' });
-        }
       }
     }
   }
