@@ -1033,16 +1033,81 @@ body {
 
 /* ===== 回合号显示 ===== */
 .round-display {
-  width: 100%;
-  max-width: 400px;
   text-align: center;
-  padding: 8px 16px;
-  font-size: 16px;
+  padding: 4px 16px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--highlight);
   background: rgba(255, 215, 0, 0.1);
   border: 1px solid rgba(255, 215, 0, 0.3);
   border-radius: 8px;
+  white-space: nowrap;
+}
+
+/* ===== 游戏信息行（红方 | 回合 | 黑方）===== */
+.game-info-row {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+}
+
+.side-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  min-width: 100px;
+}
+
+.side-status:first-child {
+  justify-content: flex-start;
+}
+
+.side-status:last-child {
+  justify-content: flex-end;
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.status-dot.red {
+  background: var(--piece-red);
+}
+
+.status-dot.black {
+  background: var(--piece-black);
+  border: 1px solid #666;
+}
+
+.status-dot.confirmed {
+  box-shadow: 0 0 6px currentColor;
+}
+
+.status-dot.waiting {
+  opacity: 0.5;
+}
+
+.check-warning {
+  color: #FF4444;
+  font-weight: bold;
+  font-size: 12px;
+}
+
+.move-hint {
+  font-size: 10px;
+  color: #FFD700;
+}
+
+.move-hint.gray {
+  color: #888;
 }
 
 /* ===== 房间信息栏 ===== */

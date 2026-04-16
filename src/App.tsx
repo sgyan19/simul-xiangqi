@@ -916,62 +916,16 @@ function App() {
           className={`mode-btn ${soundEnabled ? 'active' : ''}`}
           onClick={handleToggleSound}
           title={soundEnabled ? '音效已开启' : '音效已关闭'}
-          style={{ marginLeft: 'auto' }}
         >
           {soundEnabled ? '🔊' : '🔇'}
         </button>
 
         {/* 在线状态 */}
         {gameMode === 'online' && (
-          <span className={`conn-status ${onlineState.connected ? 'online' : 'offline'}`}>
+          <span className={`conn-status ${onlineState.connected ? 'online' : 'offline'}`} style={{ marginLeft: 'auto' }}>
             {onlineState.connected ? '已连接' : '未连接'}
           </span>
         )}
-
-        <div className="status-item">
-          <span
-            className={`status-dot red ${currentRedConfirmed ? 'confirmed' : 'waiting'}`}
-          />
-          <span>红方</span>
-          {checkStatus.red && <span style={{ color: '#FF4444', fontWeight: 'bold' }}>被将军!</span>}
-          {/* 联机模式不显示对方的具体行动 */}
-          {currentRedPendingMove && (gameMode === 'local' || onlineState.side === 'red') && (
-            <span style={{ fontSize: '10px', color: '#FFD700' }}>
-              {formatMove(currentRedPendingMove)}
-            </span>
-          )}
-          {/* 联机模式：只显示对方是否已走棋 */}
-          {gameMode === 'online' && onlineState.side === 'black' && (
-            <span style={{ fontSize: '10px', color: '#888' }}>
-              {currentRedConfirmed ? '已走棋' : '等待中'}
-            </span>
-          )}
-        </div>
-
-        <span className={`phase-badge ${currentPhase}`}>
-          {currentPhase === 'strategy' ? '策略阶段' : 
-           currentPhase === 'settlement' ? '结算中' : '结束'}
-        </span>
-
-        <div className="status-item">
-          <span
-            className={`status-dot black ${currentBlackConfirmed ? 'confirmed' : 'waiting'}`}
-          />
-          <span>黑方</span>
-          {checkStatus.black && <span style={{ color: '#FF4444', fontWeight: 'bold' }}>被将军!</span>}
-          {/* 联机模式不显示对方的具体行动 */}
-          {currentBlackPendingMove && (gameMode === 'local' || onlineState.side === 'black') && (
-            <span style={{ fontSize: '10px', color: '#FFD700' }}>
-              {formatMove(currentBlackPendingMove)}
-            </span>
-          )}
-          {/* 联机模式：只显示对方是否已走棋 */}
-          {gameMode === 'online' && onlineState.side === 'red' && (
-            <span style={{ fontSize: '10px', color: '#888' }}>
-              {currentBlackConfirmed ? '已走棋' : '等待中'}
-            </span>
-          )}
-        </div>
       </div>
 
       {/* 在线模式房间信息（顶部小条） */}
@@ -982,18 +936,48 @@ function App() {
           <span>你是: <strong style={{ color: onlineState.side === 'red' ? '#C41E3A' : '#333' }}>
             {onlineState.side === 'red' ? '红方' : onlineState.side === 'black' ? '黑方' : '观战'}
           </strong></span>
-          <span className="divider">|</span>
-          <span>第 <strong>{onlineState.gameRound}</strong> 回合</span>
           <button className="btn btn-small" onClick={handleLeaveRoom}>
             离开
           </button>
         </div>
       )}
 
-      {/* 回合号显示 */}
-      <div className="round-display">
-        当前回合 [{currentRound}]
+      {/* 红方状态 | 当前回合 | 黑方状态 */}
+      <div className="game-info-row">
+        <div className="side-status">
+          <span className={`status-dot red ${currentRedConfirmed ? 'confirmed' : 'waiting'}`} />
+          <span>红方</span>
+          {checkStatus.red && <span className="check-warning">被将军!</span>}
+          {currentRedPendingMove && (gameMode === 'local' || onlineState.side === 'red') && (
+            <span className="move-hint">{formatMove(currentRedPendingMove)}</span>
+          )}
+          {gameMode === 'online' && onlineState.side === 'black' && (
+            <span className="move-hint">{currentRedConfirmed ? '已走棋' : '等待中'}</span>
+          )}
+        </div>
+
+        <div className="round-display">
+          第 {currentRound} 回合
+        </div>
+
+        <div className="side-status">
+          <span className={`status-dot black ${currentBlackConfirmed ? 'confirmed' : 'waiting'}`} />
+          <span>黑方</span>
+          {checkStatus.black && <span className="check-warning">被将军!</span>}
+          {currentBlackPendingMove && (gameMode === 'local' || onlineState.side === 'black') && (
+            <span className="move-hint">{formatMove(currentBlackPendingMove)}</span>
+          )}
+          {gameMode === 'online' && onlineState.side === 'red' && (
+            <span className="move-hint">{currentBlackConfirmed ? '已走棋' : '等待中'}</span>
+          )}
+        </div>
       </div>
+
+      {/* 阶段提示 */}
+      <span className={`phase-badge ${currentPhase}`}>
+        {currentPhase === 'strategy' ? '策略阶段' : 
+         currentPhase === 'settlement' ? '结算中' : '结束'}
+      </span>
 
       {/* 棋盘 */}
       <ChessBoard
