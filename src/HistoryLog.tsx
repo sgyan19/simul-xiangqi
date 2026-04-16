@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useMemo } from 'react';
+import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { RoundHistoryEntry, getPieceName } from './shared/history';
 import { PendingAction } from './types';
 
@@ -21,6 +21,61 @@ const getReasonLabel = (reason: string): string => {
     default:
       return reason;
   }
+};
+
+// 导出历史记录为文本
+const exportHistoryToText = (history: RoundHistoryEntry[]): string => {
+  if (history.length === 0) {
+    return '暂无对弈记录';
+  }
+
+  const sorted = [...history].sort((a, b) => a.logicRound - b.logicRound);
+  const lines: string[] = [];
+  
+  lines.push('='.repeat(50));
+  lines.push('同时制象棋对弈记录');
+  lines.push('='.repeat(50));
+  lines.push('');
+
+  for (const entry of sorted) {
+    lines.push(`--- 第 ${entry.gameRound} 回合 ---`);
+    
+    if (entry.redAction || entry.blackAction) {
+      const redText = entry.redAction 
+        ? `${entry.redAction.actionType === 'capture' ? '捉' : '移动'} ${entry.redAction.from}→${entry.redAction.to}`
+        : 'pass';
+      const blackText = entry.blackAction 
+        ? `${entry.blackAction.actionType === 'capture' ? '捉' : '移动'} ${entry.blackAction.from}→${entry.blackAction.to}`
+        : 'pass';
+      
+      lines.push(`红方: ${redText}`);
+      lines.push(`黑方: ${blackText}`);
+    }
+
+    if (entry.events.length > 0) {
+      for (const event of entry.events) {
+        lines.push(`  [${event.type}] ${event.description}`);
+      }
+    }
+
+    if (entry.redPieceRemoved.length > 0 || entry.blackPieceRemoved.length > 0) {
+      const redRemoved = entry.redPieceRemoved.map(r => `红${getPieceName(r.piece.type, 'red')}(${getReasonLabel(r.reason)})`).join(', ');
+      const blackRemoved = entry.blackPieceRemoved.map(r => `黑${getPieceName(r.piece.type, 'black')}(${getReasonLabel(r.reason)})`).join(', ');
+      if (redRemoved) lines.push(`  红方损失: ${redRemoved}`);
+      if (blackRemoved) lines.push(`  黑方损失: ${blackRemoved}`);
+    }
+
+    if (entry.endReason) {
+      lines.push(`【结算】${entry.endReason}`);
+    }
+
+    lines.push('');
+  }
+
+  lines.push('='.repeat(50));
+  lines.push('对弈结束');
+
+  return lines.join('\n');
 };
 
 const getEventIcon = (type: string): string => {
@@ -58,6 +113,18 @@ export default function HistoryLog({ history, isExpanded, onToggle }: HistoryLog
     }
   }, [history.length, isExpanded, sortDesc]);
 
+  // 导出历史记录
+  const handleExport = useCallback(() => {
+    const text = exportHistoryToText(history);
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `象棋对弈记录_${new Date().toISOString().slice(0, 10)}.txt`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }, [history]);
+
   return (
     <div className="history-log-container">
       <button className="history-toggle-btn" onClick={onToggle}>
@@ -80,6 +147,13 @@ export default function HistoryLog({ history, isExpanded, onToggle }: HistoryLog
             onClick={() => setSortDesc(false)}
           >
             最早优先
+          </button>
+          <button 
+            className="export-btn"
+            onClick={handleExport}
+            disabled={history.length === 0}
+          >
+            Dump
           </button>
         </div>
       )}
@@ -121,7 +195,7 @@ export default function HistoryLog({ history, isExpanded, onToggle }: HistoryLog
                     <span className="side-dot red"></span>
                     <span className="action-text">
                       {entry.redAction
-                        ? `${entry.redAction.actionType === 'capture' ? '吃' : '走'}`
+                        ? `${entry.redAction.actionType === 'capture' ? '捉' : '移动'}`
                         : 'pass'}
                     </span>
                   </div>
@@ -129,7 +203,7 @@ export default function HistoryLog({ history, isExpanded, onToggle }: HistoryLog
                     <span className="side-dot black"></span>
                     <span className="action-text">
                       {entry.blackAction
-                        ? `${entry.blackAction.actionType === 'capture' ? '吃' : '走'}`
+                        ? `${entry.blackAction.actionType === 'capture' ? '捉' : '移动'}`
                         : 'pass'}
                     </span>
                   </div>
