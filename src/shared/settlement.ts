@@ -703,7 +703,7 @@ export const executeSettlement = (
     if (redCapturerInFinal) {
       console.log('[防反检查] 红方吃子后检查黑方反击:', {
         redCapturerNewPos,
-        redCapturerInFinal: { id: redCapturerInFinal.id, type: redCapturerInFinal.type },
+        redCapturerInFinal: { id: redCapturerInFinal.id, type: redCapturerInFinal.type, pos: redCapturerInFinal.position },
         blackPieces: finalPieces.filter(p => p.side === 'black').map(p => ({ id: p.id, type: p.type, pos: p.position })),
       });
       
@@ -721,6 +721,7 @@ export const executeSettlement = (
         const canCapture = canCapturePosition(blackPiece, redCapturerNewPos, finalPieces);
         console.log('[防反检查] 检查黑方棋子能否攻击:', {
           blackPiece: { id: blackPiece.id, type: blackPiece.type, pos: blackPiece.position },
+          targetPos: redCapturerNewPos,
           movedThisTurn,
           canCapture,
         });
