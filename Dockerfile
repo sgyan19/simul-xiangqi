@@ -35,8 +35,8 @@ COPY --from=builder /app/public ./public
 # 复制 package.json 用于安装生产依赖
 COPY --from=builder /app/package.json ./
 
-# 安装生产依赖（包含 express）
-RUN pnpm install --prod
+# 安装依赖（包含 devDependencies 中的 vite）
+RUN pnpm install
 
 # 设置环境变量
 ENV NODE_ENV=production
