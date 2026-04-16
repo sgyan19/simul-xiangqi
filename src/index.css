@@ -246,7 +246,19 @@ body {
 }
 
 .piece.hidden .piece-inner {
-  filter: grayscale(0.8) brightness(0.7);
+  position: relative;
+}
+
+.piece.hidden .piece-inner::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(128, 128, 128, 0.5);
+  border-radius: 50%;
+  z-index: -1;
 }
 
 .piece.capturing {
