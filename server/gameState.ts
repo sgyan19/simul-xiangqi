@@ -44,8 +44,10 @@ export interface GameRoom {
   lastBlackMoveTo: Position | null;
   // 对弈历史记录
   roundHistory: RoundHistoryEntry[];
-  // 当前逻辑回合数
+  // 当前逻辑回合数（用于排序）
   logicRound: number;
+  // 当前游戏回合数（用于显示）
+  gameRound: number;
   // 将军状态
   redInCheck: boolean;
   blackInCheck: boolean;
@@ -234,6 +236,8 @@ export const createRoom = (roomId: string): GameRoom => {
     roundHistory: [],
     // 当前逻辑回合数
     logicRound: 0,
+    // 当前游戏回合数
+    gameRound: 1,
     // 将军状态
     redInCheck: false,
     blackInCheck: false,
@@ -656,6 +660,9 @@ const executeSettlement = (room: GameRoom): void => {
   const historyEntry = createSettlementEntry(room.roundHistory, result.historyEntry);
   room.roundHistory.push(historyEntry);
   
+  // 结算成功，进入下一回合
+  room.gameRound++;
+  
   // 保存目标位置（用于客户端显示目标框，在清空pendingMove之前）
   room.lastRedMoveTo = room.redPendingMove?.to || null;
   room.lastBlackMoveTo = room.blackPendingMove?.to || null;
@@ -697,6 +704,8 @@ export const resetRoom = (roomId: string): boolean => {
   room.historySnapshots = [];
   // 重置对弈历史记录
   room.roundHistory = [];
+  // 重置回合号
+  room.gameRound = 1;
   // 重置最后行动目标
   room.lastRedMoveTo = null;
   room.lastBlackMoveTo = null;
@@ -808,6 +817,9 @@ const executeUndo = (room: GameRoom): void => {
   // 使用共用模块创建悔棋记录
   const undoEntry = createUndoEntry(room.roundHistory, lastSnapshot);
   room.roundHistory.push(undoEntry);
+  
+  // 悔棋，回到上一回合
+  room.gameRound--;
   
   // 清除悔棋请求
   room.undoRequestFrom = null;

@@ -16,34 +16,49 @@ export function getNextLogicRound(history: RoundHistoryEntry[]): number {
 /**
  * 计算下一个 gameRound（用于显示）
  * 规则：
- * - 找到最后一个悔棋记录
- * - 如果悔棋之后有新结算，说明是对那个回合的重新走，使用相同回合号
- * - 如果悔棋之后没有新结算，返回被撤销的回合号
- * - 如果没有悔棋，正常递增回合号
+ * - 同一回合被多次重走（多次悔药），一直显示相同编号
+ * - 直到某次重走之后没有再悔药，才进入下一回合
+ * 
+ * 思路：用 pendingRound 追踪被重走的回合号，用 retries 追踪当前是第几次重试
  */
 export function calculateGameRound(history: RoundHistoryEntry[]): number {
-  // 找到最后一个悔棋记录
-  const lastUndoIndex = history.findLastIndex(
-    entry => entry.events.some(e => e.description.includes('悔棋'))
-  );
+  // 找到最后一个非悔棋记录
+  let lastNonUndoIndex = -1;
+  let lastNonUndoRetries = 0; // 该结算时的 retries
+  let retries = 0; // 当前的 retries
   
-  if (lastUndoIndex >= 0) {
-    // 有悔棋
-    if (lastUndoIndex < history.length - 1) {
-      // 悔棋之后有新结算，找到悔棋之后最近的那个非悔棋记录
-      for (let i = history.length - 1; i > lastUndoIndex; i--) {
-        const entry = history[i];
-        if (!entry.events.some(e => e.description.includes('悔棋'))) {
-          // 这就是新结算，使用它的 gameRound
-          return entry.gameRound;
-        }
-      }
+  for (let i = history.length - 1; i >= 0; i--) {
+    const entry = history[i];
+    if (entry.events.some(e => e.description.includes('悔棋'))) {
+      retries++;
+    } else {
+      // 找到非悔棋记录
+      lastNonUndoIndex = i;
+      lastNonUndoRetries = retries;
+      break;
     }
-    // 悔棋之后没有新结算，返回被撤销的回合号
-    return history[lastUndoIndex].gameRound;
   }
   
-  // 没有悔棋，正常递增
+  if (lastNonUndoIndex >= 0) {
+    // 检查该非悔棋记录之后是否有新的悔棋（新一轮重试）
+    const totalRetries = history.filter(
+      entry => entry.events.some(e => e.description.includes('悔棋'))
+    ).length;
+    
+    if (totalRetries > lastNonUndoRetries) {
+      // 有新的悔棋（进入了新一轮重试），继续显示被重走的回合号
+      // 找到被重走的那个回合的编号
+      for (let i = lastNonUndoIndex - 1; i >= 0; i--) {
+        if (!history[i].events.some(e => e.description.includes('悔棋'))) {
+          return history[i].gameRound;
+        }
+      }
+      // 如果没找到（理论上不会），返回 1
+      return 1;
+    }
+  }
+  
+  // 没有新的重试，正常递增
   const validRoundCount = history.filter(
     entry => !entry.events.some(e => e.description.includes('悔棋'))
   ).length;

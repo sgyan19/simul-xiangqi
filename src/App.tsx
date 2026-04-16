@@ -34,6 +34,7 @@ interface OnlineState {
   winner: Side | 'draw' | null;
   message: string;
   isMatchmaking: boolean; // 是否正在匹配中
+  gameRound: number; // 游戏回合号
 }
 
 // 初始游戏状态
@@ -74,6 +75,7 @@ const createInitialOnlineState = (): OnlineState => ({
   winner: null,
   message: '',
   isMatchmaking: false,
+  gameRound: 1,
 });
 
 function App() {
@@ -596,6 +598,7 @@ function App() {
         redPendingMove: 'redPendingMove' in payload ? payload.redPendingMove : prev.redPendingMove,
         blackPendingMove: 'blackPendingMove' in payload ? payload.blackPendingMove : prev.blackPendingMove,
         winner: payload.winner ?? prev.winner,
+        gameRound: 'gameRound' in payload ? payload.gameRound : prev.gameRound,
       }));
       
       // 同步将军状态
@@ -966,6 +969,8 @@ function App() {
           <span>你是: <strong style={{ color: onlineState.side === 'red' ? '#C41E3A' : '#333' }}>
             {onlineState.side === 'red' ? '红方' : onlineState.side === 'black' ? '黑方' : '观战'}
           </strong></span>
+          <span className="divider">|</span>
+          <span>第 <strong>{onlineState.gameRound}</strong> 回合</span>
           <button className="btn btn-small" onClick={handleLeaveRoom}>
             离开
           </button>
