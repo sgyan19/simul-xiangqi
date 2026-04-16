@@ -569,14 +569,10 @@ function App() {
     });
 
     wsClient.on('room_state', (payload: any) => {
-      const pieces = payload.pieces && payload.pieces.length > 0 
-        ? payload.pieces 
-        : (onlineState.pieces.length > 0 ? onlineState.pieces : INITIAL_PIECES.map(p => ({ ...p })));
-      
       // 检查棋子位置是否发生变化，如果 selectedPiece 对应的棋子位置变了，需要清除选择
       let shouldClearSelection = false;
       if (selectedPiece) {
-        const updatedPiece = pieces.find((p: Piece) => p.id === selectedPiece.id);
+        const updatedPiece = (payload.pieces || []).find((p: Piece) => p.id === selectedPiece.id);
         if (!updatedPiece || 
             updatedPiece.position[0] !== selectedPiece.position[0] || 
             updatedPiece.position[1] !== selectedPiece.position[1]) {
@@ -584,15 +580,21 @@ function App() {
         }
       }
       
+      // pieces 始终使用服务端数据
+      const pieces = payload.pieces && payload.pieces.length > 0 
+        ? payload.pieces 
+        : (onlineState.pieces.length > 0 ? onlineState.pieces : INITIAL_PIECES.map(p => ({ ...p })));
+      
       setOnlineState(prev => ({
         ...prev,
-        pieces: pieces,
+        pieces,
         phase: payload.phase ?? prev.phase,
         side: payload.side ?? prev.side,
         redConfirmed: payload.redConfirmed ?? prev.redConfirmed,
         blackConfirmed: payload.blackConfirmed ?? prev.blackConfirmed,
-        redPendingMove: payload.redPendingMove ?? prev.redPendingMove,
-        blackPendingMove: payload.blackPendingMove ?? prev.blackPendingMove,
+        // pendingMove 只在服务端返回有效数据时才更新
+        redPendingMove: 'redPendingMove' in payload ? payload.redPendingMove : prev.redPendingMove,
+        blackPendingMove: 'blackPendingMove' in payload ? payload.blackPendingMove : prev.blackPendingMove,
         winner: payload.winner ?? prev.winner,
       }));
       
