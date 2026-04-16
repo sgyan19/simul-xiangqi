@@ -604,10 +604,18 @@ function App() {
         winner: payload.winner ?? prev.winner,
       }));
       
-      // 联机模式：计算并更新将军状态
-      const redInCheck = isCheck('red', pieces);
-      const blackInCheck = isCheck('black', pieces);
-      setCheckStatus({ red: redInCheck, black: blackInCheck });
+      // 联机模式：使用服务端将军状态（如有），否则客户端计算
+      if (payload.checkStatus) {
+        setCheckStatus({
+          red: payload.checkStatus.red ?? false,
+          black: payload.checkStatus.black ?? false,
+        });
+      } else {
+        // 兼容旧版本服务端：客户端计算将军状态
+        const redInCheck = isCheck('red', pieces);
+        const blackInCheck = isCheck('black', pieces);
+        setCheckStatus({ red: redInCheck, black: blackInCheck });
+      }
       
       // 如果棋子位置发生变化，清除选中状态，让用户重新选择
       if (shouldClearSelection) {

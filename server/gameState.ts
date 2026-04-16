@@ -46,6 +46,9 @@ export interface GameRoom {
   roundHistory: RoundHistoryEntry[];
   // 当前逻辑回合数
   logicRound: number;
+  // 将军状态
+  redInCheck: boolean;
+  blackInCheck: boolean;
 }
 
 // 棋盘尺寸
@@ -231,6 +234,9 @@ export const createRoom = (roomId: string): GameRoom => {
     roundHistory: [],
     // 当前逻辑回合数
     logicRound: 0,
+    // 将军状态
+    redInCheck: false,
+    blackInCheck: false,
   };
   rooms.set(roomId, room);
   return room;
@@ -639,6 +645,10 @@ const executeSettlement = (room: GameRoom): void => {
   room.blackLastTarget = result.newChaseState.blackLastTarget;
   room.blackCaptureCount = result.newChaseState.blackCaptureCount;
   
+  // 计算并保存将军状态（用于发送给客户端）
+  room.redInCheck = isKingInCheck('red', room.pieces);
+  room.blackInCheck = isKingInCheck('black', room.pieces);
+  
   // 保存快照
   room.historySnapshots.push(snapshot);
   
@@ -693,6 +703,9 @@ export const resetRoom = (roomId: string): boolean => {
   // 重置悔棋请求
   room.undoRequestFrom = null;
   room.undoRequestedTo = null;
+  // 重置将军状态
+  room.redInCheck = false;
+  room.blackInCheck = false;
   
   return true;
 };

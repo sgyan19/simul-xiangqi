@@ -580,6 +580,11 @@ const sendRoomState = (ws: WebSocket, room: NonNullable<ReturnType<typeof getRoo
       lastBlackMoveTo: room.lastBlackMoveTo,
       // 对弈历史记录
       roundHistory: room.roundHistory,
+      // 将军状态
+      checkStatus: {
+        red: room.redInCheck,
+        black: room.blackInCheck,
+      },
     },
   });
 };
