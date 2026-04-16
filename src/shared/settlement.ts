@@ -405,23 +405,35 @@ const canPieceCaptureAt = (piece: Piece, targetPos: Position, pieces: Piece[]): 
       return false;
     
     case 'chariot':
-      // 车直线，路径畅通
+      // 车直线，路径畅通，且目标必须是敌方棋子
       if (isPathClearBetween(pCol, pRow, tCol, tRow, pieces)) {
-        return true;
+        const targetPiece = getPieceAt(tCol, tRow, pieces);
+        if (targetPiece && targetPiece.side !== piece.side) {
+          return true;
+        }
       }
       return false;
     
     case 'cannon':
-      // 炮吃子需要炮台（保护判定时不需要检查目标阵营）
+      // 炮吃子需要炮台，必须在同一行或同一列
+      // 先验证是否在同一直线上
       if (pCol !== tCol && pRow !== tRow) return false;
       
-      const dc = pCol === tCol ? 0 : (tCol - pCol) / Math.abs(tCol - pCol);
-      const dr = pRow === tRow ? 0 : (tRow - pRow) / Math.abs(tRow - pRow);
+      // 计算方向增量（只有不在同一点时才计算，否则会除以0）
+      let dc = 0;
+      let dr = 0;
+      if (pCol !== tCol) {
+        dc = (tCol - pCol) / Math.abs(tCol - pCol);
+      }
+      if (pRow !== tRow) {
+        dr = (tRow - pRow) / Math.abs(tRow - pRow);
+      }
       
       let midCol = pCol + dc;
       let midRow = pRow + dr;
       let foundPlatform = false;
       
+      // 扫描路径上的每个位置（不包括起点和终点）
       while (midCol !== tCol || midRow !== tRow) {
         const midPiece = getPieceAt(midCol, midRow, pieces);
         if (midPiece) {
@@ -434,7 +446,7 @@ const canPieceCaptureAt = (piece: Piece, targetPos: Position, pieces: Piece[]): 
         midRow += dr;
       }
       
-      // 保护判定只需要炮台存在，不需要检查目标阵营
+      // 需要恰好一个炮台
       return foundPlatform;
     
     case 'pawn':
