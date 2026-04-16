@@ -175,6 +175,38 @@ const BoardBackground = () => {
     <line key="palace-black-2" x1={`${blackPalaceX2}%`} y1={`${blackPalaceTop}%`} x2={`${blackPalaceX1}%`} y2={`${blackPalaceBottom}%`} stroke="#8B4513" strokeWidth="0.7" />
   );
 
+  // 炮的位置标记（小方框，表示炮的初始位置）
+  // 红炮：col 1, row 7 和 col 7, row 7
+  // 黑炮：col 1, row 2 和 col 7, row 2
+  const cannonPositions = [
+    { col: 1, row: 2 },  // 黑炮1
+    { col: 7, row: 2 },  // 黑炮2
+    { col: 1, row: 7 },  // 红炮1
+    { col: 7, row: 7 },  // 红炮2
+  ];
+
+  // 绘制炮位置的小方框
+  cannonPositions.forEach(({ col, row }, idx) => {
+    const centerX = col * CELL_WIDTH;
+    const centerY = row * CELL_HEIGHT;
+    const offset = CELL_WIDTH * 0.25; // 小方框的大小
+
+    lines.push(
+      // 左上角
+      <line key={`cannon-${idx}-tl`} x1={`${centerX - offset}%`} y1={`${centerY - offset}%`} x2={`${centerX}%`} y2={`${centerY - offset}%`} stroke="#8B4513" strokeWidth="0.7" />,
+      <line key={`cannon-${idx}-lt`} x1={`${centerX - offset}%`} y1={`${centerY - offset}%`} x2={`${centerX - offset}%`} y2={`${centerY}%`} stroke="#8B4513" strokeWidth="0.7" />,
+      // 右上角
+      <line key={`cannon-${idx}-tr`} x1={`${centerX + offset}%`} y1={`${centerY - offset}%`} x2={`${centerX}%`} y2={`${centerY - offset}%`} stroke="#8B4513" strokeWidth="0.7" />,
+      <line key={`cannon-${idx}-rt`} x1={`${centerX + offset}%`} y1={`${centerY - offset}%`} x2={`${centerX + offset}%`} y2={`${centerY}%`} stroke="#8B4513" strokeWidth="0.7" />,
+      // 左下角
+      <line key={`cannon-${idx}-bl`} x1={`${centerX - offset}%`} y1={`${centerY + offset}%`} x2={`${centerX}%`} y2={`${centerY + offset}%`} stroke="#8B4513" strokeWidth="0.7" />,
+      <line key={`cannon-${idx}-lb`} x1={`${centerX - offset}%`} y1={`${centerY + offset}%`} x2={`${centerX - offset}%`} y2={`${centerY}%`} stroke="#8B4513" strokeWidth="0.7" />,
+      // 右下角
+      <line key={`cannon-${idx}-br`} x1={`${centerX + offset}%`} y1={`${centerY + offset}%`} x2={`${centerX}%`} y2={`${centerY + offset}%`} stroke="#8B4513" strokeWidth="0.7" />,
+      <line key={`cannon-${idx}-rb`} x1={`${centerX + offset}%`} y1={`${centerY + offset}%`} x2={`${centerX + offset}%`} y2={`${centerY}%`} stroke="#8B4513" strokeWidth="0.7" />
+    );
+  });
+
   // 楚河汉界区域
   // 楚河汉界是第5行的空白区域（第5行是楚河，第6行是汉界，但中间是空的）
   // 实际上楚河汉界是第5行（row=4或row=5）
