@@ -605,14 +605,15 @@ function App() {
         redPendingMove: 'redPendingMove' in payload ? payload.redPendingMove : prev.redPendingMove,
         blackPendingMove: 'blackPendingMove' in payload ? payload.blackPendingMove : prev.blackPendingMove,
         winner: payload.winner ?? prev.winner,
-        gameRound: 'gameRound' in payload ? payload.gameRound : prev.gameRound,
+        // 确保 gameRound 是数字
+        gameRound: typeof payload.gameRound === 'number' ? payload.gameRound : prev.gameRound,
       }));
       
       // 同步将军状态
-      if (payload.checkStatus) {
+      if (payload.checkStatus && typeof payload.checkStatus === 'object') {
         setCheckStatus({
-          red: payload.checkStatus.red ?? false,
-          black: payload.checkStatus.black ?? false,
+          red: Boolean(payload.checkStatus.red),
+          black: Boolean(payload.checkStatus.black),
         });
       } else {
         const redInCheck = isCheck('red', pieces);
@@ -881,10 +882,10 @@ function App() {
   // 选择棋子的处理函数
   const handleSelect = gameMode === 'local' ? handleSelectPiece : handleSelectPieceOnline;
 
-  // 计算当前回合号（直接从状态读取）
+  // 计算当前回合号（直接从状态读取，确保是数字）
   const currentRound = gameMode === 'local' 
-    ? gameState.currentRound
-    : onlineState.gameRound;
+    ? (typeof gameState.currentRound === 'number' ? gameState.currentRound : 1)
+    : (typeof onlineState.gameRound === 'number' ? onlineState.gameRound : 1);
   const handleMove = gameMode === 'local' ? handleMovePiece : handleMovePieceOnline;
   const handleSettleFn = gameMode === 'local' ? handleSettle : handleSettleOnline;
   const handleRedoMoveFn = gameMode === 'local' ? handleRedoMove : handleRedoMoveOnline;
