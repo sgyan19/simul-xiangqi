@@ -674,8 +674,8 @@ export const executeSettlement = (
       toRemoveByCapture.push(enemyAtTarget.id);
       
       if (blackCapturer) {
-        // 找到所有红方棋子（保留被吃的，因为被吃的棋子原来的位置可能有炮台）
-        const allRedPieces = pieces.filter(p => p.side === 'red');
+        // 找到所有红方棋子（排除被吃的 enemyAtTarget）
+        const allRedPieces = pieces.filter(p => p.side === 'red' && p.id !== enemyAtTarget.id);
         
         for (const redPiece of allRedPieces) {
           // 检查这个棋子本回合是否移动了
