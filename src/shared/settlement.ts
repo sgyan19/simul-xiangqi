@@ -490,13 +490,17 @@ const canPieceCaptureAt = (piece: Piece, targetPos: Position, pieces: Piece[]): 
  * @param redAction - 红方行动
  * @param blackAction - 黑方行动
  * @param chaseState - 当前长捉状态
+ * @param redMovedPieceId - 红方本回合移动的棋子 ID（用于防反检查）
+ * @param blackMovedPieceId - 黑方本回合移动的棋子 ID（用于防反检查）
  * @returns 结算结果
  */
 export const executeSettlement = (
   pieces: Piece[],
   redAction: PendingAction | null,
   blackAction: PendingAction | null,
-  chaseState: LongChaseState
+  chaseState: LongChaseState,
+  redMovedPieceId: string | null = null,
+  blackMovedPieceId: string | null = null
 ): SettlementResultData => {
   // 复制棋子数组
   let finalPieces = pieces.map(p => ({ ...p }));
@@ -524,25 +528,12 @@ export const executeSettlement = (
   
   // ===== 第一步：执行所有移动（move 和 capture 都移动到目标位置） =====
   
-  // ===== 标记本回合移动过的棋子（用于防反检查）=====
+  // ===== 本回合移动过的棋子（用于防反检查，直接使用传入参数）=====
   const redMovedPieceIds = new Set<string>();
   const blackMovedPieceIds = new Set<string>();
   
-  // 记录红方本回合移动的棋子
-  if (redAction) {
-    const piece = pieces.find(p => 
-      p.side === 'red' && p.position[0] === redAction.from[0] && p.position[1] === redAction.from[1]
-    );
-    if (piece) redMovedPieceIds.add(piece.id);
-  }
-  
-  // 记录黑方本回合移动的棋子
-  if (blackAction) {
-    const piece = pieces.find(p => 
-      p.side === 'black' && p.position[0] === blackAction.from[0] && p.position[1] === blackAction.from[1]
-    );
-    if (piece) blackMovedPieceIds.add(piece.id);
-  }
+  if (redMovedPieceId) redMovedPieceIds.add(redMovedPieceId);
+  if (blackMovedPieceId) blackMovedPieceIds.add(blackMovedPieceId);
   
   if (redAction) {
     const redPiece = finalPieces.find(p => 

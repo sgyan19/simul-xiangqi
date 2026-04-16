@@ -27,6 +27,9 @@ export interface GameRoom {
   blackPendingMove: ServerPendingAction | null;
   winner: Side | 'draw' | null;
   createdAt: number;
+  // 本回合移动的棋子 ID（用于防反检查）
+  redMovedPieceId: string | null;
+  blackMovedPieceId: string | null;
   // 长捉限制
   redLastPiece: string | null;
   redLastTarget: string | null;
@@ -217,6 +220,9 @@ export const createRoom = (roomId: string): GameRoom => {
     blackPendingMove: null,
     winner: null,
     createdAt: Date.now(),
+    // 本回合移动的棋子 ID
+    redMovedPieceId: null,
+    blackMovedPieceId: null,
     // 长捉限制
     redLastPiece: null,
     redLastTarget: null,
@@ -568,9 +574,11 @@ export const submitMove = (roomId: string, playerId: string, from: Position, to:
   if (side === 'red') {
     room.redPendingMove = { from, to, actionType };
     room.redConfirmed = true;
+    room.redMovedPieceId = piece.id; // 记录本回合移动的红方棋子
   } else {
     room.blackPendingMove = { from, to, actionType };
     room.blackConfirmed = true;
+    room.blackMovedPieceId = piece.id; // 记录本回合移动的黑方棋子
   }
   
   // 如果双方都确认，进入结算阶段
@@ -594,9 +602,11 @@ export const undoMove = (roomId: string, playerId: string): { success: boolean; 
   if (side === 'red') {
     room.redPendingMove = null;
     room.redConfirmed = false;
+    room.redMovedPieceId = null; // 清除移动记录
   } else {
     room.blackPendingMove = null;
     room.blackConfirmed = false;
+    room.blackMovedPieceId = null; // 清除移动记录
   }
   
   return { success: true };
@@ -639,7 +649,14 @@ const executeSettlement = (room: GameRoom): void => {
   );
   
   // 使用共享结算逻辑
-  const result = sharedExecuteSettlement(room.pieces, redAction, blackAction, chaseState);
+  const result = sharedExecuteSettlement(
+    room.pieces, 
+    redAction, 
+    blackAction, 
+    chaseState,
+    room.redMovedPieceId,
+    room.blackMovedPieceId
+  );
   
   // 更新房间状态
   room.pieces = result.pieces;
@@ -678,6 +695,9 @@ const executeSettlement = (room: GameRoom): void => {
     room.blackConfirmed = false;
     room.redPendingMove = null;
     room.blackPendingMove = null;
+    // 清除本回合移动记录
+    room.redMovedPieceId = null;
+    room.blackMovedPieceId = null;
   }
 };
 

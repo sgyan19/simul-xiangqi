@@ -66,6 +66,9 @@ export interface GameState {
   winner: Winner;
   settlementResult: SettlementResult | null;
   message: string; // 提示信息
+  // 本回合移动的棋子 ID（用于防反检查）
+  redMovedPieceId: string | null;
+  blackMovedPieceId: string | null;
   // 长捉限制
   redLastPiece: string | null;     // 红方上次 capture 的己方棋子 ID
   redLastTarget: string | null;     // 红方上次 capture 的目标棋子 ID

@@ -35,6 +35,9 @@ interface OnlineState {
   message: string;
   isMatchmaking: boolean; // 是否正在匹配中
   gameRound: number; // 游戏回合号
+  // 本回合移动的棋子 ID（用于防反检查）
+  redMovedPieceId: string | null;
+  blackMovedPieceId: string | null;
 }
 
 // 初始游戏状态
@@ -51,6 +54,9 @@ const createInitialState = (): GameState => ({
   winner: null,
   settlementResult: null,
   message: '',
+  // 本回合移动的棋子 ID（用于防反检查）
+  redMovedPieceId: null,
+  blackMovedPieceId: null,
   // 长捉限制
   redLastPiece: null,
   redLastTarget: null,
@@ -78,6 +84,9 @@ const createInitialOnlineState = (): OnlineState => ({
   message: '',
   isMatchmaking: false,
   gameRound: 1,
+  // 本回合移动的棋子 ID（用于防反检查）
+  redMovedPieceId: null,
+  blackMovedPieceId: null,
 });
 
 function App() {
@@ -211,9 +220,11 @@ function App() {
       if (side === 'red') {
         newState.redPendingMove = pendingMove;
         newState.redConfirmed = true;
+        newState.redMovedPieceId = selectedPiece.id; // 记录本回合移动的红方棋子
       } else {
         newState.blackPendingMove = pendingMove;
         newState.blackConfirmed = true;
+        newState.blackMovedPieceId = selectedPiece.id; // 记录本回合移动的黑方棋子
       }
       newState.selectedPiece = null;
       newState.validMoves = [];
@@ -244,9 +255,11 @@ function App() {
       if (side === 'red') {
         newState.redPendingMove = null;
         newState.redConfirmed = false;
+        newState.redMovedPieceId = null; // 清除移动记录
       } else {
         newState.blackPendingMove = null;
         newState.blackConfirmed = false;
+        newState.blackMovedPieceId = null; // 清除移动记录
       }
       return newState;
     });
@@ -351,7 +364,9 @@ function App() {
           blackLastPiece: gameState.blackLastPiece,
           blackLastTarget: gameState.blackLastTarget,
           blackCaptureCount: gameState.blackCaptureCount,
-        }
+        },
+        gameState.redMovedPieceId,
+        gameState.blackMovedPieceId
       );
 
       // 使用共用模块创建历史记录
@@ -395,6 +410,9 @@ function App() {
         blackConfirmed: false,
         redPendingMove: null,
         blackPendingMove: null,
+        // 清除本回合移动记录
+        redMovedPieceId: null,
+        blackMovedPieceId: null,
         // 更新长捉计数
         redLastPiece: newChaseState.redLastPiece,
         redLastTarget: newChaseState.redLastTarget,
