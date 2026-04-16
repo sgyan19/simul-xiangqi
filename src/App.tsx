@@ -764,6 +764,14 @@ function App() {
     // 重置请求的回应
     wsClient.on('reset_response', (payload: any) => {
       setResetRequestPending({ from: null, waiting: false });
+      if (payload.accepted) {
+        // 对方同意重置，重置本地状态
+        setHistory([]);
+        setLastMoveTargets({ red: null, black: null });
+        setCheckStatus({ red: false, black: false });
+        setSelectedPiece(null);
+        setValidMoves([]);
+      }
       showMessage(payload.message, 2000);
     });
 
