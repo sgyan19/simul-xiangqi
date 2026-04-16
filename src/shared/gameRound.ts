@@ -16,20 +16,33 @@ export function getNextLogicRound(history: RoundHistoryEntry[]): number {
 /**
  * 计算下一个 gameRound（用于显示）
  * 规则：
- * - 如果有悔棋记录，说明有回合被撤销了，新走的回合号 = 被撤销回合号 + 1
- * - 如果没有悔棋记录，基于非悔棋记录数计算新的回合号
+ * - 如果最后一个非悔棋记录之后有悔棋，重新走应该显示相同的回合号
+ * - 只有在成功走完一个回合后，才递增到下一个回合号
  */
 export function calculateGameRound(history: RoundHistoryEntry[]): number {
-  const lastUndoEntry = [...history].reverse().find(
-    entry => entry.events.some(e => e.description.includes('悔棋'))
-  );
-  
-  if (lastUndoEntry) {
-    // 有悔棋记录，新回合号 = 被撤销回合号 + 1
-    return lastUndoEntry.gameRound + 1;
+  // 找到最后一个非悔棋记录的索引
+  let lastNonUndoIndex = -1;
+  for (let i = history.length - 1; i >= 0; i--) {
+    if (!history[i].events.some(e => e.description.includes('悔棋'))) {
+      lastNonUndoIndex = i;
+      break;
+    }
   }
   
-  // 无悔棋记录，基于非悔棋记录数计算
+  if (lastNonUndoIndex >= 0) {
+    const lastNonUndoEntry = history[lastNonUndoIndex];
+    // 检查最后一个非悔棋记录之后是否有悔棋
+    const hasUndoAfterLastNonUndo = history.slice(lastNonUndoIndex + 1).some(
+      entry => entry.events.some(e => e.description.includes('悔棋'))
+    );
+    
+    if (hasUndoAfterLastNonUndo) {
+      // 有悔棋，重新走同一个回合
+      return lastNonUndoEntry.gameRound;
+    }
+  }
+  
+  // 没有悔棋，正常递增
   const validRoundCount = history.filter(
     entry => !entry.events.some(e => e.description.includes('悔棋'))
   ).length;
