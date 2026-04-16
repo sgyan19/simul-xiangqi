@@ -874,9 +874,9 @@ function App() {
   // 选择棋子的处理函数
   const handleSelect = gameMode === 'local' ? handleSelectPiece : handleSelectPieceOnline;
 
-  // 计算当前回合号
+  // 计算当前回合号（基于历史记录中的 gameRound）
   const currentRound = gameMode === 'local' 
-    ? history.filter(h => h.type === 'settlement').length + 1 
+    ? (history.length > 0 ? (history[history.length - 1].gameRound ?? 1) : 1)
     : onlineState.gameRound;
   const handleMove = gameMode === 'local' ? handleMovePiece : handleMovePieceOnline;
   const handleSettleFn = gameMode === 'local' ? handleSettle : handleSettleOnline;
