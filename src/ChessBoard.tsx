@@ -175,7 +175,7 @@ const BoardBackground = () => {
     <line key="palace-black-2" x1={`${blackPalaceX2}%`} y1={`${blackPalaceTop}%`} x2={`${blackPalaceX1}%`} y2={`${blackPalaceBottom}%`} stroke="#8B4513" strokeWidth="0.7" />
   );
 
-  // 炮的位置标记（小方框，表示炮的初始位置）
+  // 炮的位置标记（四角短线，表示炮的初始位置）
   // 红炮：col 1, row 7 和 col 7, row 7
   // 黑炮：col 1, row 2 和 col 7, row 2
   const cannonPositions = [
@@ -185,33 +185,36 @@ const BoardBackground = () => {
     { col: 7, row: 7 },  // 红炮2
   ];
 
-  // 绘制炮位置的小方框（四角短线）
+  // 绘制炮位置的四角短线
   cannonPositions.forEach(({ col, row }, idx) => {
     const centerX = col * CELL_WIDTH;
     const centerY = row * CELL_HEIGHT;
-    const size = CELL_WIDTH * 0.25; // 短线长度
+    const size = CELL_WIDTH * 0.3; // 短线长度
 
-    // 每个角由两条短线组成，交叉于一点
-    // 左上角：线段在左边界和上边界
-    if (col > 0) {
+    // 左列(col 1)：画左上角和左下角
+    if (col === 1) {
+      // 左上角：水平线在左，垂直线在上
       lines.push(
-        // 左上角
-        <line key={`cannon-${idx}-tl1`} x1={`${centerX - size}%`} y1={`${centerY - size}%`} x2={`${centerX - size}%`} y2={`${centerY}%`} stroke="#8B4513" strokeWidth="0.7" />,
-        <line key={`cannon-${idx}-tl2`} x1={`${centerX - size}%`} y1={`${centerY - size}%`} x2={`${centerX}%`} y2={`${centerY - size}%`} stroke="#8B4513" strokeWidth="0.7" />,
-        // 右下角
-        <line key={`cannon-${idx}-br1`} x1={`${centerX + size}%`} y1={`${centerY + size}%`} x2={`${centerX + size}%`} y2={`${centerY}%`} stroke="#8B4513" strokeWidth="0.7" />,
-        <line key={`cannon-${idx}-br2`} x1={`${centerX + size}%`} y1={`${centerY + size}%`} x2={`${centerX}%`} y2={`${centerY + size}%`} stroke="#8B4513" strokeWidth="0.7" />,
+        <line key={`cannon-${idx}-tl-h`} x1={`${centerX - size}%`} y1={`${centerY - size}%`} x2={`${centerX}%`} y2={`${centerY - size}%`} stroke="#8B4513" strokeWidth="0.7" />,
+        <line key={`cannon-${idx}-tl-v`} x1={`${centerX - size}%`} y1={`${centerY - size}%`} x2={`${centerX - size}%`} y2={`${centerY}%`} stroke="#8B4513" strokeWidth="0.7" />
+      );
+      // 左下角：水平线在左，垂直线在下
+      lines.push(
+        <line key={`cannon-${idx}-bl-h`} x1={`${centerX - size}%`} y1={`${centerY + size}%`} x2={`${centerX}%`} y2={`${centerY + size}%`} stroke="#8B4513" strokeWidth="0.7" />,
+        <line key={`cannon-${idx}-bl-v`} x1={`${centerX - size}%`} y1={`${centerY + size}%`} x2={`${centerX - size}%`} y2={`${centerY}%`} stroke="#8B4513" strokeWidth="0.7" />
       );
     }
-    // 右
-    if (col < COLS - 1) {
+    // 右列(col 7)：画右上角和右下角
+    if (col === 7) {
+      // 右上角：水平线在右，垂直线在上
       lines.push(
-        // 右上角
-        <line key={`cannon-${idx}-tr1`} x1={`${centerX + size}%`} y1={`${centerY - size}%`} x2={`${centerX + size}%`} y2={`${centerY}%`} stroke="#8B4513" strokeWidth="0.7" />,
-        <line key={`cannon-${idx}-tr2`} x1={`${centerX + size}%`} y1={`${centerY - size}%`} x2={`${centerX}%`} y2={`${centerY - size}%`} stroke="#8B4513" strokeWidth="0.7" />,
-        // 左下角
-        <line key={`cannon-${idx}-bl1`} x1={`${centerX - size}%`} y1={`${centerY + size}%`} x2={`${centerX - size}%`} y2={`${centerY}%`} stroke="#8B4513" strokeWidth="0.7" />,
-        <line key={`cannon-${idx}-bl2`} x1={`${centerX - size}%`} y1={`${centerY + size}%`} x2={`${centerX}%`} y2={`${centerY + size}%`} stroke="#8B4513" strokeWidth="0.7" />,
+        <line key={`cannon-${idx}-tr-h`} x1={`${centerX + size}%`} y1={`${centerY - size}%`} x2={`${centerX}%`} y2={`${centerY - size}%`} stroke="#8B4513" strokeWidth="0.7" />,
+        <line key={`cannon-${idx}-tr-v`} x1={`${centerX + size}%`} y1={`${centerY - size}%`} x2={`${centerX + size}%`} y2={`${centerY}%`} stroke="#8B4513" strokeWidth="0.7" />
+      );
+      // 右下角：水平线在右，垂直线在下
+      lines.push(
+        <line key={`cannon-${idx}-br-h`} x1={`${centerX + size}%`} y1={`${centerY + size}%`} x2={`${centerX}%`} y2={`${centerY + size}%`} stroke="#8B4513" strokeWidth="0.7" />,
+        <line key={`cannon-${idx}-br-v`} x1={`${centerX + size}%`} y1={`${centerY + size}%`} x2={`${centerX + size}%`} y2={`${centerY}%`} stroke="#8B4513" strokeWidth="0.7" />
       );
     }
   });
