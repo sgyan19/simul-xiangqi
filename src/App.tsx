@@ -521,6 +521,8 @@ function App() {
         blackConfirmed: false,
         redPendingMove: null,
         blackPendingMove: null,
+        // 确保 gameRound 是数字
+        gameRound: typeof payload.gameRound === 'number' ? payload.gameRound : prev.gameRound,
       }));
       showMessage(`房间 ${payload.roomId} 已创建，你是${payload.side === 'red' ? '红方' : '黑方'}`);
     });
@@ -583,6 +585,8 @@ function App() {
         blackConfirmed: false,
         redPendingMove: null,
         blackPendingMove: null,
+        // 确保 gameRound 是数字
+        gameRound: typeof payload.gameRound === 'number' ? payload.gameRound : prev.gameRound,
       }));
       // 加入房间后，自动切换到自己的视角
       if (payload.side) {

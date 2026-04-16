@@ -181,7 +181,7 @@ const handleMessage = (ws: WebSocket, message: WSMessage): void => {
       
       sendToClient(ws, { 
         type: 'room_created', 
-        payload: { roomId, side: 'red', pieces: room.pieces } 
+        payload: { roomId, side: 'red', pieces: room.pieces, gameRound: room.gameRound } 
       });
       
       broadcastRoomUpdate(room);
@@ -281,7 +281,7 @@ const handleMessage = (ws: WebSocket, message: WSMessage): void => {
       
       sendToClient(ws, { 
         type: 'joined', 
-        payload: { roomId, side: player.side, pieces: room.pieces, phase: room.phase } 
+        payload: { roomId, side: player.side, pieces: room.pieces, phase: room.phase, gameRound: room.gameRound } 
       });
       
       // 如果双方都已加入，发送 game_start 给双方
