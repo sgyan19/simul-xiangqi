@@ -175,7 +175,7 @@ const BoardBackground = () => {
     <line key="palace-black-2" x1={`${blackPalaceX2}%`} y1={`${blackPalaceTop}%`} x2={`${blackPalaceX1}%`} y2={`${blackPalaceBottom}%`} stroke="#8B4513" strokeWidth="0.7" />
   );
 
-  // 炮的位置标记（矩形框，表示炮的初始位置）
+  // 炮的位置标记（十字交叉样式，表示炮的初始位置）
   // 红炮：col 1, row 7 和 col 7, row 7
   // 黑炮：col 1, row 2 和 col 7, row 2
   const cannonPositions = [
@@ -185,23 +185,36 @@ const BoardBackground = () => {
     { col: 7, row: 7 },  // 红炮2
   ];
 
-  // 绘制炮位置的矩形标记
+  // 绘制炮位置的十字交叉标记（米字的一角，即对角线）
   cannonPositions.forEach(({ col, row }, idx) => {
     const centerX = col * CELL_WIDTH;
     const centerY = row * CELL_HEIGHT;
-    const halfW = CELL_WIDTH * 0.3; // 半宽
-    const halfH = CELL_HEIGHT * 0.3; // 半高
+    const size = CELL_WIDTH * 0.25; // 交叉线段长度
 
-    // 画一个矩形框（4条线）
+    // 画十字交叉（两条对角线，形成米字的一角）
+    // 左上到右下
     lines.push(
-      // 上边
-      <line key={`cannon-${idx}-top`} x1={`${centerX - halfW}%`} y1={`${centerY - halfH}%`} x2={`${centerX + halfW}%`} y2={`${centerY - halfH}%`} stroke="#8B4513" strokeWidth="0.7" />,
-      // 下边
-      <line key={`cannon-${idx}-bottom`} x1={`${centerX - halfW}%`} y1={`${centerY + halfH}%`} x2={`${centerX + halfW}%`} y2={`${centerY + halfH}%`} stroke="#8B4513" strokeWidth="0.7" />,
-      // 左边
-      <line key={`cannon-${idx}-left`} x1={`${centerX - halfW}%`} y1={`${centerY - halfH}%`} x2={`${centerX - halfW}%`} y2={`${centerY + halfH}%`} stroke="#8B4513" strokeWidth="0.7" />,
-      // 右边
-      <line key={`cannon-${idx}-right`} x1={`${centerX + halfW}%`} y1={`${centerY - halfH}%`} x2={`${centerX + halfW}%`} y2={`${centerY + halfH}%`} stroke="#8B4513" strokeWidth="0.7" />
+      <line
+        key={`cannon-${idx}-1`}
+        x1={`${centerX - size}%`}
+        y1={`${centerY - size}%`}
+        x2={`${centerX + size}%`}
+        y2={`${centerY + size}%`}
+        stroke="#8B4513"
+        strokeWidth="0.7"
+      />
+    );
+    // 右上到左下
+    lines.push(
+      <line
+        key={`cannon-${idx}-2`}
+        x1={`${centerX + size}%`}
+        y1={`${centerY - size}%`}
+        x2={`${centerX - size}%`}
+        y2={`${centerY + size}%`}
+        stroke="#8B4513"
+        strokeWidth="0.7"
+      />
     );
   });
 
