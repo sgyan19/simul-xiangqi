@@ -782,6 +782,8 @@ function App() {
     setHistory([]);
     setGameState(createInitialState());
     setLastMoveTargets({ red: null, black: null });
+    setSelectedPiece(null);
+    setValidMoves([]);
   }, []);
 
   // 联机模式：监听双方走棋，自动结算

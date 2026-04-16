@@ -662,7 +662,7 @@ export const resetRoom = (roomId: string): boolean => {
   if (!room) return false;
   
   room.pieces = INITIAL_PIECES.map(p => ({ ...p }));
-  room.phase = 'waiting';
+  room.phase = 'strategy'; // 直接开始新游戏
   room.currentOperatedSide = 'red';
   room.redConfirmed = false;
   room.blackConfirmed = false;
