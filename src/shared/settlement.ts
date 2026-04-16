@@ -20,6 +20,72 @@ export interface SettlementResultData {
   historyEntry: RoundHistoryEntry;
 }
 
+// ==================== 保护判定辅助函数 ====================
+
+interface CounterAttackResult {
+  capturerToRemove: boolean;
+  removalRecord?: {
+    piece: Piece;
+    reason: 'counter_attack';
+    removedBy: { side: 'red' | 'black'; pieceType: string; pieceId: string };
+  };
+  event?: SettlementEvent;
+}
+
+/**
+ * 检查保护判定：如果吃子方的目标被对方其他棋子保护，则吃子方也被移除（防守反击）
+ * @param capturerSide 吃子方阵营
+ * @param capturer 吃子的棋子
+ * @param capturerAction 吃子方的动作
+ * @param opponentAction 对方本回合的动作（可能为null）
+ * @param pieces 原始棋盘状态
+ * @returns 反击结果
+ */
+const checkCounterAttack = (
+  capturerSide: 'red' | 'black',
+  capturer: Piece,
+  capturerAction: PendingAction,
+  opponentAction: PendingAction | null,
+  pieces: Piece[]
+): CounterAttackResult => {
+  const opponentSide = capturerSide === 'red' ? 'black' : 'red';
+  const opponentPieces = pieces.filter(p => p.side === opponentSide);
+  
+  for (const opponentPiece of opponentPieces) {
+    // 检查对方棋子本回合是否移动了
+    let movedThisTurn = false;
+    if (opponentAction) {
+      if (opponentAction.from[0] === opponentPiece.position[0] && 
+          opponentAction.from[1] === opponentPiece.position[1]) {
+        movedThisTurn = true;
+      }
+    }
+    
+    if (!movedThisTurn) {
+      // 本回合没移动，检查能否 capture 到吃子方新位置
+      const canCapture = canPieceCaptureAt(opponentPiece, capturerAction.to as Position, pieces);
+      
+      if (canCapture) {
+        // 吃子方被保护，触发防反
+        return {
+          capturerToRemove: true,
+          removalRecord: {
+            piece: { ...capturer, position: [...capturerAction.to] as Position },
+            reason: 'counter_attack',
+            removedBy: { side: opponentSide, pieceType: opponentPiece.type, pieceId: opponentPiece.id },
+          },
+          event: {
+            type: 'counter_attack',
+            description: `[防反]${capturerSide === 'red' ? '红' : '黑'}${getPieceName(capturer.type, capturerSide)}被${opponentSide === 'red' ? '红' : '黑'}${getPieceName(opponentPiece.type, opponentSide)}反吃`,
+          },
+        };
+      }
+    }
+  }
+  
+  return { capturerToRemove: false };
+};
+
 // ==================== 棋子移动规则 ====================
 
 const COLS = 9;
@@ -600,42 +666,15 @@ export const executeSettlement = (
       
       toRemoveByCapture.push(enemyAtTarget.id);
       
-      // ===== 新增规则：保护判定 =====
-      // 红炮现在在 redAction.to 位置
-      // 检查黑方其他棋子（不含被吃的 enemyAtTarget）能否 capture 这个位置
-      // 用原始 pieces 检查（capture 前的棋盘）
+      // ===== 保护判定 =====
+      // 检查被吃棋子的同阵营棋子能否保护吃子方新位置
       if (redCapturer) {
-        // 找到所有黑方棋子（排除被吃掉的）
-        const remainingBlackPieces = pieces.filter(p => p.side === 'black' && p.id !== enemyAtTarget.id);
-        
-        for (const blackPiece of remainingBlackPieces) {
-          // 检查这个棋子本回合是否移动了
-          let movedThisTurn = false;
-          if (blackAction) {
-            if (blackAction.from[0] === blackPiece.position[0] && 
-                blackAction.from[1] === blackPiece.position[1]) {
-              movedThisTurn = true;
-            }
-          }
-          
-          if (!movedThisTurn) {
-            // 本回合没移动，检查这个棋子能否 capture 到红炮新位置
-            const canCapture = canPieceCaptureAt(blackPiece, redAction.to as Position, pieces);
-            
-            if (canCapture) {
-              // 红炮被保护，也移除红炮（防守反击）
-              toRemoveByCapture.push(redCapturer.id);
-              redPieceRemoved.push({
-                piece: { ...redCapturer, position: [...redAction.to] as Position },
-                reason: 'counter_attack',
-                removedBy: { side: 'black', pieceType: blackPiece.type, pieceId: blackPiece.id },
-              });
-              events.push({
-                type: 'counter_attack',
-                description: `[防反]红${getPieceName(redCapturer.type, 'red')}被黑${getPieceName(blackPiece.type, 'black')}反吃`,
-              });
-              break;
-            }
+        const counterResult = checkCounterAttack('red', redCapturer, redAction, blackAction, pieces);
+        if (counterResult.capturerToRemove && counterResult.removalRecord) {
+          toRemoveByCapture.push(redCapturer.id);
+          redPieceRemoved.push(counterResult.removalRecord);
+          if (counterResult.event) {
+            events.push(counterResult.event);
           }
         }
       }
@@ -667,53 +706,15 @@ export const executeSettlement = (
       
       toRemoveByCapture.push(enemyAtTarget.id);
       
+      // ===== 保护判定 =====
+      // 检查被吃棋子的同阵营棋子能否保护吃子方新位置
       if (blackCapturer) {
-        // 找到所有红方棋子（排除被吃的 enemyAtTarget，因为被吃的棋子不能保护）
-        const allRedPieces = pieces.filter(p => p.side === 'red' && p.id !== enemyAtTarget.id);
-        console.log('[SETTLEMENT] 黑方保护判定:', {
-          blackCapturerId: blackCapturer.id,
-          blackCapturerType: blackCapturer.type,
-          blackActionTo: blackAction.to,
-          enemyAtTargetId: enemyAtTarget.id,
-          redAction: redAction,
-          allRedPiecesCount: allRedPieces.length,
-        });
-        
-        for (const redPiece of allRedPieces) {
-          // 检查这个棋子本回合是否移动了
-          let movedThisTurn = false;
-          if (redAction) {
-            if (redAction.from[0] === redPiece.position[0] && 
-                redAction.from[1] === redPiece.position[1]) {
-              movedThisTurn = true;
-            }
-          }
-          
-          if (!movedThisTurn) {
-            // 本回合没移动，检查能否 capture 到黑炮新位置
-            const canCapture = canPieceCaptureAt(redPiece, blackAction.to as Position, pieces);
-            console.log('[SETTLEMENT] 检查红方棋子能否保护:', {
-              redPieceId: redPiece.id,
-              redPieceType: redPiece.type,
-              redPiecePosition: redPiece.position,
-              movedThisTurn,
-              canCapture,
-            });
-            
-            if (canCapture) {
-              console.log('[SETTLEMENT] 触发防反! 红方棋子保护了黑炮新位置');
-              toRemoveByCapture.push(blackCapturer.id);
-              blackPieceRemoved.push({
-                piece: { ...blackCapturer, position: [...blackAction.to] as Position },
-                reason: 'counter_attack',
-                removedBy: { side: 'red', pieceType: redPiece.type, pieceId: redPiece.id },
-              });
-              events.push({
-                type: 'counter_attack',
-                description: `[防反]黑${getPieceName(blackCapturer.type, 'black')}被红${getPieceName(redPiece.type, 'red')}反吃`,
-              });
-              break;
-            }
+        const counterResult = checkCounterAttack('black', blackCapturer, blackAction, redAction, pieces);
+        if (counterResult.capturerToRemove && counterResult.removalRecord) {
+          toRemoveByCapture.push(blackCapturer.id);
+          blackPieceRemoved.push(counterResult.removalRecord);
+          if (counterResult.event) {
+            events.push(counterResult.event);
           }
         }
       }
