@@ -185,26 +185,35 @@ const BoardBackground = () => {
     { col: 7, row: 7 },  // 红炮2
   ];
 
-  // 绘制炮位置的小方框
+  // 绘制炮位置的小方框（四角短线）
   cannonPositions.forEach(({ col, row }, idx) => {
     const centerX = col * CELL_WIDTH;
     const centerY = row * CELL_HEIGHT;
-    const offset = CELL_WIDTH * 0.25; // 小方框的大小
+    const size = CELL_WIDTH * 0.25; // 短线长度
 
-    lines.push(
-      // 左上角
-      <line key={`cannon-${idx}-tl`} x1={`${centerX - offset}%`} y1={`${centerY - offset}%`} x2={`${centerX}%`} y2={`${centerY - offset}%`} stroke="#8B4513" strokeWidth="0.7" />,
-      <line key={`cannon-${idx}-lt`} x1={`${centerX - offset}%`} y1={`${centerY - offset}%`} x2={`${centerX - offset}%`} y2={`${centerY}%`} stroke="#8B4513" strokeWidth="0.7" />,
-      // 右上角
-      <line key={`cannon-${idx}-tr`} x1={`${centerX + offset}%`} y1={`${centerY - offset}%`} x2={`${centerX}%`} y2={`${centerY - offset}%`} stroke="#8B4513" strokeWidth="0.7" />,
-      <line key={`cannon-${idx}-rt`} x1={`${centerX + offset}%`} y1={`${centerY - offset}%`} x2={`${centerX + offset}%`} y2={`${centerY}%`} stroke="#8B4513" strokeWidth="0.7" />,
-      // 左下角
-      <line key={`cannon-${idx}-bl`} x1={`${centerX - offset}%`} y1={`${centerY + offset}%`} x2={`${centerX}%`} y2={`${centerY + offset}%`} stroke="#8B4513" strokeWidth="0.7" />,
-      <line key={`cannon-${idx}-lb`} x1={`${centerX - offset}%`} y1={`${centerY + offset}%`} x2={`${centerX - offset}%`} y2={`${centerY}%`} stroke="#8B4513" strokeWidth="0.7" />,
-      // 右下角
-      <line key={`cannon-${idx}-br`} x1={`${centerX + offset}%`} y1={`${centerY + offset}%`} x2={`${centerX}%`} y2={`${centerY + offset}%`} stroke="#8B4513" strokeWidth="0.7" />,
-      <line key={`cannon-${idx}-rb`} x1={`${centerX + offset}%`} y1={`${centerY + offset}%`} x2={`${centerX + offset}%`} y2={`${centerY}%`} stroke="#8B4513" strokeWidth="0.7" />
-    );
+    // 每个角由两条短线组成，交叉于一点
+    // 左上角：线段在左边界和上边界
+    if (col > 0) {
+      lines.push(
+        // 左上角
+        <line key={`cannon-${idx}-tl1`} x1={`${centerX - size}%`} y1={`${centerY - size}%`} x2={`${centerX - size}%`} y2={`${centerY}%`} stroke="#8B4513" strokeWidth="0.7" />,
+        <line key={`cannon-${idx}-tl2`} x1={`${centerX - size}%`} y1={`${centerY - size}%`} x2={`${centerX}%`} y2={`${centerY - size}%`} stroke="#8B4513" strokeWidth="0.7" />,
+        // 右下角
+        <line key={`cannon-${idx}-br1`} x1={`${centerX + size}%`} y1={`${centerY + size}%`} x2={`${centerX + size}%`} y2={`${centerY}%`} stroke="#8B4513" strokeWidth="0.7" />,
+        <line key={`cannon-${idx}-br2`} x1={`${centerX + size}%`} y1={`${centerY + size}%`} x2={`${centerX}%`} y2={`${centerY + size}%`} stroke="#8B4513" strokeWidth="0.7" />,
+      );
+    }
+    // 右
+    if (col < COLS - 1) {
+      lines.push(
+        // 右上角
+        <line key={`cannon-${idx}-tr1`} x1={`${centerX + size}%`} y1={`${centerY - size}%`} x2={`${centerX + size}%`} y2={`${centerY}%`} stroke="#8B4513" strokeWidth="0.7" />,
+        <line key={`cannon-${idx}-tr2`} x1={`${centerX + size}%`} y1={`${centerY - size}%`} x2={`${centerX}%`} y2={`${centerY - size}%`} stroke="#8B4513" strokeWidth="0.7" />,
+        // 左下角
+        <line key={`cannon-${idx}-bl1`} x1={`${centerX - size}%`} y1={`${centerY + size}%`} x2={`${centerX - size}%`} y2={`${centerY}%`} stroke="#8B4513" strokeWidth="0.7" />,
+        <line key={`cannon-${idx}-bl2`} x1={`${centerX - size}%`} y1={`${centerY + size}%`} x2={`${centerX}%`} y2={`${centerY + size}%`} stroke="#8B4513" strokeWidth="0.7" />,
+      );
+    }
   });
 
   // 楚河汉界区域
