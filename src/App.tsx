@@ -531,6 +531,8 @@ function App() {
       }
       // 清除最后行动目标框（新游戏开始）
       setLastMoveTargets({ red: null, black: null });
+      // 清除将军状态（新游戏开始）
+      setCheckStatus({ red: false, black: false });
       showMessage(`匹配成功！你是${payload.side === 'red' ? '红方' : '黑方'}`, 3000);
     });
 
@@ -558,6 +560,8 @@ function App() {
       }
       // 清除最后行动目标框（新游戏开始）
       setLastMoveTargets({ red: null, black: null });
+      // 清除将军状态（新游戏开始）
+      setCheckStatus({ red: false, black: false });
       showMessage(`加入房间 ${payload.roomId}，你是${payload.side === 'red' ? '红方' : '黑方'}`);
       if (phase === 'strategy') {
         showMessage('双方已就位，可以开始对弈！');
@@ -599,6 +603,11 @@ function App() {
         blackPendingMove: hasBlackPendingMove ? payload.blackPendingMove : prev.blackPendingMove,
         winner: payload.winner ?? prev.winner,
       }));
+      
+      // 联机模式：计算并更新将军状态
+      const redInCheck = isCheck('red', pieces);
+      const blackInCheck = isCheck('black', pieces);
+      setCheckStatus({ red: redInCheck, black: blackInCheck });
       
       // 如果棋子位置发生变化，清除选中状态，让用户重新选择
       if (shouldClearSelection) {
