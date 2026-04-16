@@ -523,6 +523,27 @@ export const executeSettlement = (
     : null;
   
   // ===== 第一步：执行所有移动（move 和 capture 都移动到目标位置） =====
+  
+  // ===== 标记本回合移动过的棋子（用于防反检查）=====
+  const redMovedPieceIds = new Set<string>();
+  const blackMovedPieceIds = new Set<string>();
+  
+  // 记录红方本回合移动的棋子
+  if (redAction) {
+    const piece = pieces.find(p => 
+      p.side === 'red' && p.position[0] === redAction.from[0] && p.position[1] === redAction.from[1]
+    );
+    if (piece) redMovedPieceIds.add(piece.id);
+  }
+  
+  // 记录黑方本回合移动的棋子
+  if (blackAction) {
+    const piece = pieces.find(p => 
+      p.side === 'black' && p.position[0] === blackAction.from[0] && p.position[1] === blackAction.from[1]
+    );
+    if (piece) blackMovedPieceIds.add(piece.id);
+  }
+  
   if (redAction) {
     const redPiece = finalPieces.find(p => 
       p.side === 'red' && p.position[0] === redAction.from[0] && p.position[1] === redAction.from[1]
@@ -709,14 +730,8 @@ export const executeSettlement = (
       
       // 检查黑方棋子能否捉到这个位置
       for (const blackPiece of finalPieces.filter(p => p.side === 'black')) {
-        // 检查黑方棋子本回合是否移动了
-        let movedThisTurn = false;
-        if (blackAction) {
-          if (blackAction.from[0] === blackPiece.position[0] && 
-              blackAction.from[1] === blackPiece.position[1]) {
-            movedThisTurn = true;
-          }
-        }
+        // 检查黑方棋子本回合是否移动了（使用 Set 判断）
+        const movedThisTurn = blackMovedPieceIds.has(blackPiece.id);
         
         const canCapture = canCapturePosition(blackPiece, redCapturerNewPos, finalPieces);
         console.log('[防反检查] 检查黑方棋子能否攻击:', {
@@ -766,14 +781,8 @@ export const executeSettlement = (
     if (blackCapturerInFinal) {
       // 检查红方棋子能否捉到这个位置
       for (const redPiece of finalPieces.filter(p => p.side === 'red')) {
-        // 检查红方棋子本回合是否移动了
-        let movedThisTurn = false;
-        if (redAction) {
-          if (redAction.from[0] === redPiece.position[0] && 
-              redAction.from[1] === redPiece.position[1]) {
-            movedThisTurn = true;
-          }
-        }
+        // 检查红方棋子本回合是否移动了（使用 Set 判断）
+        const movedThisTurn = redMovedPieceIds.has(redPiece.id);
         
         if (!movedThisTurn && canCapturePosition(redPiece, blackCapturerNewPos, finalPieces)) {
           // 黑方棋子被红方反吃
