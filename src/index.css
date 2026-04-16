@@ -242,10 +242,11 @@ body {
 
 .piece.hidden {
   cursor: default;
+  pointer-events: none;
 }
 
 .piece.hidden .piece-inner {
-  opacity: 0.3;
+  filter: grayscale(0.8) brightness(0.7);
 }
 
 .piece.capturing {
