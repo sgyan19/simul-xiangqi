@@ -573,6 +573,17 @@ function App() {
       const wasInSettlement = onlineState.phase === 'settlement' || onlineState.phase === 'ended';
       const isNowInStrategy = payload.phase === 'strategy';
       
+      // 检查棋子位置是否发生变化，如果 selectedPiece 对应的棋子位置变了，需要清除选择
+      let shouldClearSelection = false;
+      if (selectedPiece) {
+        const updatedPiece = pieces.find((p: Piece) => p.id === selectedPiece.id);
+        if (!updatedPiece || 
+            updatedPiece.position[0] !== selectedPiece.position[0] || 
+            updatedPiece.position[1] !== selectedPiece.position[1]) {
+          shouldClearSelection = true;
+        }
+      }
+      
       setOnlineState(prev => ({
         ...prev,
         pieces: pieces,
@@ -584,6 +595,12 @@ function App() {
         blackPendingMove: hasBlackPendingMove ? payload.blackPendingMove : prev.blackPendingMove,
         winner: payload.winner ?? prev.winner,
       }));
+      
+      // 如果棋子位置发生变化，清除选中状态，让用户重新选择
+      if (shouldClearSelection) {
+        setSelectedPiece(null);
+        setValidMoves([]);
+      }
       
       // 新一回合开始时清除目标框（仅当没有lastMoveTo时）
       if (wasInSettlement && isNowInStrategy) {
@@ -729,16 +746,20 @@ function App() {
       return;
     }
 
+    // 每次都从 onlineState.pieces 中获取最新的棋子对象，确保位置与服务端同步
+    const currentPiece = onlineState.pieces.find(p => p.id === piece.id);
+    if (!currentPiece) return; // 棋子可能被吃掉了
+
     if (selectedPiece?.id === piece.id) {
       setSelectedPiece(null);
       setValidMoves([]);
       return;
     }
 
-    const moves = getValidMoves(piece, onlineState.pieces);
+    const moves = getValidMoves(currentPiece, onlineState.pieces);
     // 播放提棋子音效
     playPickupSound();
-    setSelectedPiece(piece);
+    setSelectedPiece(currentPiece);
     setValidMoves(moves);
   }, [onlineState.phase, onlineState.side, onlineState.redConfirmed, onlineState.blackConfirmed, onlineState.pieces, selectedPiece, showMessage]);
 
@@ -746,11 +767,20 @@ function App() {
   const handleMovePieceOnline = useCallback((to: Position) => {
     if (!selectedPiece || !onlineState.roomId) return;
     
-    const from = selectedPiece.position;
+    // 确保使用的是最新的棋子位置（从 onlineState.pieces 中获取）
+    const currentPiece = onlineState.pieces.find(p => p.id === selectedPiece.id);
+    if (!currentPiece) {
+      // 棋子可能已经被移除，重置状态
+      setSelectedPiece(null);
+      setValidMoves([]);
+      return;
+    }
+    
+    const from = currentPiece.position;
     
     // 检测是吃子还是移动，播放相应音效
     const targetPiece = onlineState.pieces.find(p => 
-      p.side !== selectedPiece.side && p.position[0] === to[0] && p.position[1] === to[1]
+      p.side !== currentPiece.side && p.position[0] === to[0] && p.position[1] === to[1]
     );
     if (targetPiece) {
       playCaptureSound();
