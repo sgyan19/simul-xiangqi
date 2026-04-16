@@ -573,14 +573,6 @@ function App() {
         ? payload.pieces 
         : (onlineState.pieces.length > 0 ? onlineState.pieces : INITIAL_PIECES.map(p => ({ ...p })));
       
-      // 正确处理 null 值：检查字段是否存在，而不是使用 ?? 操作符
-      const hasRedPendingMove = 'redPendingMove' in payload;
-      const hasBlackPendingMove = 'blackPendingMove' in payload;
-      
-      // 检查是否进入新的策略阶段（新一回合），清除目标框
-      const wasInSettlement = onlineState.phase === 'settlement' || onlineState.phase === 'ended';
-      const isNowInStrategy = payload.phase === 'strategy';
-      
       // 检查棋子位置是否发生变化，如果 selectedPiece 对应的棋子位置变了，需要清除选择
       let shouldClearSelection = false;
       if (selectedPiece) {
@@ -599,43 +591,41 @@ function App() {
         side: payload.side ?? prev.side,
         redConfirmed: payload.redConfirmed ?? prev.redConfirmed,
         blackConfirmed: payload.blackConfirmed ?? prev.blackConfirmed,
-        redPendingMove: hasRedPendingMove ? payload.redPendingMove : prev.redPendingMove,
-        blackPendingMove: hasBlackPendingMove ? payload.blackPendingMove : prev.blackPendingMove,
+        redPendingMove: payload.redPendingMove ?? prev.redPendingMove,
+        blackPendingMove: payload.blackPendingMove ?? prev.blackPendingMove,
         winner: payload.winner ?? prev.winner,
       }));
       
-      // 联机模式：使用服务端将军状态（如有），否则客户端计算
+      // 同步将军状态
       if (payload.checkStatus) {
         setCheckStatus({
           red: payload.checkStatus.red ?? false,
           black: payload.checkStatus.black ?? false,
         });
       } else {
-        // 兼容旧版本服务端：客户端计算将军状态
         const redInCheck = isCheck('red', pieces);
         const blackInCheck = isCheck('black', pieces);
         setCheckStatus({ red: redInCheck, black: blackInCheck });
       }
       
-      // 如果棋子位置发生变化，清除选中状态，让用户重新选择
-      if (shouldClearSelection) {
-        setSelectedPiece(null);
-        setValidMoves([]);
-      }
-      
-      // 收到room_state时，更新目标框（无论是否有值都更新）
-      // 如果服务端返回null或undefined，说明需要清除目标框
+      // 同步目标框（服务端返回什么就显示什么）
       setLastMoveTargets({
         red: payload.lastRedMoveTo ?? null,
         black: payload.lastBlackMoveTo ?? null,
       });
       
-      // 更新对弈历史记录
+      // 如果棋子位置发生变化，清除选中状态
+      if (shouldClearSelection) {
+        setSelectedPiece(null);
+        setValidMoves([]);
+      }
+      
+      // 同步历史记录
       if (payload.roundHistory && Array.isArray(payload.roundHistory)) {
         setHistory(payload.roundHistory);
       }
       
-      // 同步视角：每次收到房间状态时，都确保视角与玩家阵营一致
+      // 同步视角
       if (payload.side) {
         setViewSide(payload.side);
       }
