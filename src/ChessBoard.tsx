@@ -64,7 +64,7 @@ const BoardBackground = () => {
           x2="100%"
           y2={`${y}%`}
           stroke="#8B4513"
-          strokeWidth="2"
+          strokeWidth="0.7"
         />
       );
     } else if (i === 5) {
@@ -77,7 +77,7 @@ const BoardBackground = () => {
           x2="100%"
           y2={`${y}%`}
           stroke="#8B4513"
-          strokeWidth="2"
+          strokeWidth="0.7"
         />
       );
     } else {
@@ -89,7 +89,7 @@ const BoardBackground = () => {
           x2="100%"
           y2={`${y}%`}
           stroke="#8B4513"
-          strokeWidth="2"
+          strokeWidth="0.7"
         />
       );
     }
@@ -108,7 +108,7 @@ const BoardBackground = () => {
           x2={`${x}%`}
           y2={`${riverTop}%`}
           stroke="#8B4513"
-          strokeWidth="2"
+          strokeWidth="0.7"
         />
       );
       lines.push(
@@ -119,7 +119,7 @@ const BoardBackground = () => {
           x2={`${x}%`}
           y2="100%"
           stroke="#8B4513"
-          strokeWidth="2"
+          strokeWidth="0.7"
         />
       );
     } else {
@@ -132,7 +132,7 @@ const BoardBackground = () => {
           x2={`${x}%`}
           y2={`${riverTop}%`}
           stroke="#8B4513"
-          strokeWidth="2"
+          strokeWidth="0.7"
         />
       );
       // 下半部分（汉界以下）
@@ -144,7 +144,7 @@ const BoardBackground = () => {
           x2={`${x}%`}
           y2="100%"
           stroke="#8B4513"
-          strokeWidth="2"
+          strokeWidth="0.7"
         />
       );
     }
@@ -159,8 +159,8 @@ const BoardBackground = () => {
 
   // 红方九宫 X 形
   lines.push(
-    <line key="palace-red-1" x1={`${redPalaceX1}%`} y1={`${redPalaceTop}%`} x2={`${redPalaceX2}%`} y2={`${redPalaceBottom}%`} stroke="#8B4513" strokeWidth="2" />,
-    <line key="palace-red-2" x1={`${redPalaceX2}%`} y1={`${redPalaceTop}%`} x2={`${redPalaceX1}%`} y2={`${redPalaceBottom}%`} stroke="#8B4513" strokeWidth="2" />
+    <line key="palace-red-1" x1={`${redPalaceX1}%`} y1={`${redPalaceTop}%`} x2={`${redPalaceX2}%`} y2={`${redPalaceBottom}%`} stroke="#8B4513" strokeWidth="0.7" />,
+    <line key="palace-red-2" x1={`${redPalaceX2}%`} y1={`${redPalaceTop}%`} x2={`${redPalaceX1}%`} y2={`${redPalaceBottom}%`} stroke="#8B4513" strokeWidth="0.7" />
   );
 
   // 黑方九宫（上方，row 0-2，即视觉上的上方）
@@ -171,8 +171,8 @@ const BoardBackground = () => {
 
   // 黑方九宫 X 形
   lines.push(
-    <line key="palace-black-1" x1={`${blackPalaceX1}%`} y1={`${blackPalaceTop}%`} x2={`${blackPalaceX2}%`} y2={`${blackPalaceBottom}%`} stroke="#8B4513" strokeWidth="2" />,
-    <line key="palace-black-2" x1={`${blackPalaceX2}%`} y1={`${blackPalaceTop}%`} x2={`${blackPalaceX1}%`} y2={`${blackPalaceBottom}%`} stroke="#8B4513" strokeWidth="2" />
+    <line key="palace-black-1" x1={`${blackPalaceX1}%`} y1={`${blackPalaceTop}%`} x2={`${blackPalaceX2}%`} y2={`${blackPalaceBottom}%`} stroke="#8B4513" strokeWidth="0.7" />,
+    <line key="palace-black-2" x1={`${blackPalaceX2}%`} y1={`${blackPalaceTop}%`} x2={`${blackPalaceX1}%`} y2={`${blackPalaceBottom}%`} stroke="#8B4513" strokeWidth="0.7" />
   );
 
   // 楚河汉界区域
