@@ -524,6 +524,12 @@ function App() {
         // 确保 gameRound 是数字
         gameRound: typeof payload.gameRound === 'number' ? payload.gameRound : prev.gameRound,
       }));
+      // 重置游戏状态（新房间开始）
+      setHistory([]);
+      setLastMoveTargets({ red: null, black: null });
+      setCheckStatus({ red: false, black: false });
+      setSelectedPiece(null);
+      setValidMoves([]);
       showMessage(`房间 ${payload.roomId} 已创建，你是${payload.side === 'red' ? '红方' : '黑方'}`);
     });
 
@@ -592,10 +598,12 @@ function App() {
       if (payload.side) {
         setViewSide(payload.side);
       }
-      // 清除最后行动目标框（新游戏开始）
+      // 重置游戏状态（新游戏开始）
+      setHistory([]);
       setLastMoveTargets({ red: null, black: null });
-      // 清除将军状态（新游戏开始）
       setCheckStatus({ red: false, black: false });
+      setSelectedPiece(null);
+      setValidMoves([]);
       showMessage(`加入房间 ${payload.roomId}，你是${payload.side === 'red' ? '红方' : '黑方'}`);
       if (phase === 'strategy') {
         showMessage('双方已就位，可以开始对弈！');
@@ -688,6 +696,12 @@ function App() {
 
     wsClient.on('game_start', () => {
       setOnlineState(prev => ({ ...prev, phase: 'strategy' }));
+      // 重置游戏状态（确保新游戏开始时状态干净）
+      setHistory([]);
+      setLastMoveTargets({ red: null, black: null });
+      setCheckStatus({ red: false, black: false });
+      setSelectedPiece(null);
+      setValidMoves([]);
       showMessage('游戏开始！');
     });
 
