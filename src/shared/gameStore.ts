@@ -5,7 +5,7 @@
 
 import { Piece, Position } from '../types';
 import { RoundHistoryEntry, SettlementEvent } from './history';
-import { getNextLogicRound, calculateGameRound, getUndoGameRound } from './gameRound';
+import { getNextLogicRound } from './gameRound';
 
 // ===== 历史快照 =====
 
@@ -33,12 +33,13 @@ export function createSettlementEntry(
     winner: 'red' | 'black' | 'draw' | null;
     endReason: string | null;
     isGameEnd: boolean;
-  }
+  },
+  currentRound: number
 ): RoundHistoryEntry {
   return {
     ...historyEntryBase,
     logicRound: getNextLogicRound(history),
-    gameRound: calculateGameRound(history),
+    gameRound: currentRound,
   };
 }
 
@@ -51,7 +52,7 @@ export function createUndoEntry(
 ): RoundHistoryEntry {
   return {
     logicRound: getNextLogicRound(history),
-    gameRound: getUndoGameRound(lastSnapshot.gameRound),
+    gameRound: lastSnapshot.gameRound,
     redAction: null,
     blackAction: null,
     redPieceRemoved: [],
@@ -72,12 +73,13 @@ export function createUndoEntry(
 export function createSnapshotBeforeSettlement(
   pieces: Piece[],
   history: RoundHistoryEntry[],
+  currentRound: number,
   lastMoveTargets: { red: Position | null; black: Position | null },
   checkStatus: { red: boolean; black: boolean }
 ): HistorySnapshot {
   return {
     pieces: pieces.map(p => ({ ...p })),
-    gameRound: calculateGameRound(history),
+    gameRound: currentRound,
     logicRound: getNextLogicRound(history),
     lastMoveTargets: { ...lastMoveTargets },
     checkStatus: { ...checkStatus },

@@ -75,6 +75,8 @@ export interface GameState {
   blackCaptureCount: number;
   // 历史快照（用于悔棋）
   historySnapshots: HistorySnapshot[];
+  // 当前回合号
+  currentRound: number;
 }
 
 // 棋子名称映射

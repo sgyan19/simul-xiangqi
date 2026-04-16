@@ -60,6 +60,8 @@ const createInitialState = (): GameState => ({
   blackCaptureCount: 0,
   // 历史快照（用于悔棋）
   historySnapshots: [],
+  // 当前回合号
+  currentRound: 1,
 });
 
 const createInitialOnlineState = (): OnlineState => ({
@@ -284,6 +286,8 @@ function App() {
         blackCaptureCount: 0,
         // 移除最后一个快照
         historySnapshots: prev.historySnapshots.slice(0, -1),
+        // 恢复回合号
+        currentRound: lastSnapshot.gameRound,
       };
       return newState;
     });
@@ -323,6 +327,7 @@ function App() {
       const snapshotBeforeSettlement = createSnapshotBeforeSettlement(
         gameState.pieces,
         history,
+        gameState.currentRound,
         lastMoveTargets,
         checkStatus
       );
@@ -350,7 +355,7 @@ function App() {
       );
 
       // 使用共用模块创建历史记录
-      const entryWithRound = createSettlementEntry(history, historyEntry);
+      const entryWithRound = createSettlementEntry(history, historyEntry, gameState.currentRound);
       setHistory(prev => [...prev, entryWithRound]);
 
       // 结算后播放音效
@@ -399,6 +404,8 @@ function App() {
         blackCaptureCount: newChaseState.blackCaptureCount,
         // 保存结算前的快照（用于悔棋）
         historySnapshots: [...prev.historySnapshots, snapshotBeforeSettlement],
+        // 回合号+1
+        currentRound: prev.currentRound + 1,
       }));
 
       // 设置最后行动目标位置（用于显示目标框）
@@ -874,9 +881,9 @@ function App() {
   // 选择棋子的处理函数
   const handleSelect = gameMode === 'local' ? handleSelectPiece : handleSelectPieceOnline;
 
-  // 计算当前回合号（基于历史记录中的 gameRound）
+  // 计算当前回合号（直接从状态读取）
   const currentRound = gameMode === 'local' 
-    ? (history.length > 0 ? (history[history.length - 1].gameRound ?? 1) : 1)
+    ? gameState.currentRound
     : onlineState.gameRound;
   const handleMove = gameMode === 'local' ? handleMovePiece : handleMovePieceOnline;
   const handleSettleFn = gameMode === 'local' ? handleSettle : handleSettleOnline;
