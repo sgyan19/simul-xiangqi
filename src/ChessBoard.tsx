@@ -308,6 +308,7 @@ const ChessPiece = ({
   isSelectable,
   flipped,
   isInValidMoves,
+  isEnemy,
   onClick,
 }: {
   piece: Piece;
@@ -315,6 +316,7 @@ const ChessPiece = ({
   isSelectable: boolean;
   flipped: boolean;
   isInValidMoves: boolean;
+  isEnemy: boolean;
   onClick: () => void;
 }) => {
   const { left, top } = getPosition(piece.position[0], piece.position[1], flipped);
@@ -322,13 +324,13 @@ const ChessPiece = ({
 
   return (
     <div
-      className={`piece ${piece.side} ${isSelected ? 'selected' : ''} ${isSelectable || isInValidMoves ? 'selectable' : 'hidden'} ${isInValidMoves ? 'can-capture' : ''}`}
+      className={`piece ${piece.side} ${isSelected ? 'selected' : ''} ${isSelectable || isInValidMoves ? 'selectable' : ''} ${isInValidMoves ? 'can-capture' : ''} ${isEnemy ? 'hidden' : ''}`}
       style={{ left, top }}
       onClick={isSelectable || isInValidMoves ? onClick : undefined}
     >
-      <div className="piece-inner">
-        {pieceName}
-      </div>
+      <div className="piece-bg" />
+      <div className="piece-border" />
+      <div className="piece-text">{pieceName}</div>
     </div>
   );
 };
@@ -552,6 +554,7 @@ function ChessBoard({
               isSelectable={phase === 'strategy' && piece.side === currentOperatedSide}
               flipped={flipped}
               isInValidMoves={!!selectedPiece && isInValidMoves && piece.side !== currentOperatedSide}
+              isEnemy={piece.side !== currentOperatedSide}
               onClick={() => {
                 if (isInValidMoves && selectedPiece) {
                   onMovePiece(piece.position);

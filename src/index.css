@@ -189,76 +189,101 @@ body {
   transform: translate(-50%, -50%);
 }
 
-.piece-inner {
+.piece-bg {
+  position: absolute;
   width: 85%;
   height: 90%;
   border-radius: 50%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-family: 'SimSun', 'STSong', serif;
-  font-size: calc(min(100vw, 360px) / 14);
-  font-weight: bold;
-  border: 2px solid;
-  box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
+  z-index: 0;
 }
 
-.piece.red .piece-inner {
+.piece.red .piece-bg {
   background: var(--piece-red-bg);
-  color: var(--piece-red);
+}
+
+.piece.black .piece-bg {
+  background: var(--piece-black-bg);
+}
+
+.piece-border {
+  position: absolute;
+  width: 85%;
+  height: 90%;
+  border-radius: 50%;
+  border: 2px solid;
+  z-index: 1;
+}
+
+.piece.red .piece-border {
   border-color: var(--piece-red);
 }
 
-.piece.black .piece-inner {
-  background: var(--piece-black-bg);
-  color: var(--piece-black);
+.piece.black .piece-border {
   border-color: var(--piece-black);
 }
 
-.piece.selectable:hover .piece-inner {
-  transform: scale(1.08);
+.piece-text {
+  position: relative;
+  font-family: 'SimSun', 'STSong', serif;
+  font-size: calc(min(100vw, 360px) / 14);
+  font-weight: bold;
+  z-index: 2;
+}
+
+.piece.red .piece-text {
+  color: var(--piece-red);
+}
+
+.piece.black .piece-text {
+  color: var(--piece-black);
+}
+
+.piece.selectable:hover {
+  transform: translate(-50%, -50%) scale(1.08);
+}
+
+.piece.selectable:hover .piece-border {
   box-shadow: 0 0 15px var(--highlight);
 }
 
-.piece.selected .piece-inner {
-  transform: scale(1.1);
+.piece.selected {
+  transform: translate(-50%, -50%) scale(1.1);
+}
+
+.piece.selected .piece-border {
   box-shadow: 0 0 20px var(--highlight), 0 0 40px rgba(255, 215, 0, 0.4);
   border-color: var(--highlight) !important;
 }
 
-.piece-inner.flipped {
+.piece-border.flipped {
   transform: rotate(180deg);
 }
 
-.piece.can-capture .piece-inner {
+.piece.can-capture .piece-border {
   box-shadow: 0 0 15px var(--danger), 0 0 30px rgba(255, 68, 68, 0.3);
   border-color: var(--danger) !important;
 }
 
-.piece.can-capture:hover .piece-inner {
-  transform: scale(1.1);
+.piece.can-capture:hover {
+  transform: translate(-50%, -50%) scale(1.1);
+}
+
+.piece.can-capture:hover .piece-border {
   box-shadow: 0 0 20px var(--danger), 0 0 40px rgba(255, 68, 68, 0.5);
 }
 
 .piece.hidden {
   cursor: default;
-  pointer-events: none;
 }
 
-.piece.hidden .piece-inner {
-  position: relative;
+/* 敌方棋子：边框和文字半透明，背景不透明 */
+.piece.hidden .piece-border,
+.piece.hidden .piece-text {
+  opacity: 0.5;
 }
 
-.piece.hidden .piece-inner::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(128, 128, 128, 0.5);
-  border-radius: 50%;
-  z-index: -1;
+.piece.hidden .piece-bg {
+  opacity: 1;
 }
 
 .piece.capturing {
