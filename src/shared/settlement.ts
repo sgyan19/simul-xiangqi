@@ -679,6 +679,13 @@ export const executeSettlement = (
   const redCaptureSuccess = redAction?.actionType === 'capture' && 
     finalPieces.some(p => p.side === 'black' && p.position[0] === redAction.to[0] && p.position[1] === redAction.to[1]);
   
+  console.log('[防反检查] 红方 capture:', {
+    redAction,
+    redCaptureSuccess,
+    redActionTo: redAction?.to,
+    finalPieces_black: finalPieces.filter(p => p.side === 'black').map(p => ({ id: p.id, type: p.type, pos: p.position })),
+  });
+  
   if (redCaptureSuccess) {
     // 红方吃子后移动到的位置
     const redCapturerNewPos: Position = [redAction.to[0], redAction.to[1]];
@@ -689,6 +696,12 @@ export const executeSettlement = (
     );
     
     if (redCapturerInFinal) {
+      console.log('[防反检查] 红方吃子后检查黑方反击:', {
+        redCapturerNewPos,
+        redCapturerInFinal: { id: redCapturerInFinal.id, type: redCapturerInFinal.type },
+        blackPieces: finalPieces.filter(p => p.side === 'black').map(p => ({ id: p.id, type: p.type, pos: p.position })),
+      });
+      
       // 检查黑方棋子能否捉到这个位置
       for (const blackPiece of finalPieces.filter(p => p.side === 'black')) {
         // 检查黑方棋子本回合是否移动了
@@ -700,7 +713,14 @@ export const executeSettlement = (
           }
         }
         
-        if (!movedThisTurn && canCapturePosition(blackPiece, redCapturerNewPos, finalPieces)) {
+        const canCapture = canCapturePosition(blackPiece, redCapturerNewPos, finalPieces);
+        console.log('[防反检查] 检查黑方棋子能否攻击:', {
+          blackPiece: { id: blackPiece.id, type: blackPiece.type, pos: blackPiece.position },
+          movedThisTurn,
+          canCapture,
+        });
+        
+        if (!movedThisTurn && canCapture) {
           // 红方棋子被黑方反吃
           toRemoveByCounterAttack.push(redCapturerInFinal.id);
           redPieceRemoved.push({
