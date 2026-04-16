@@ -873,6 +873,11 @@ function App() {
 
   // 选择棋子的处理函数
   const handleSelect = gameMode === 'local' ? handleSelectPiece : handleSelectPieceOnline;
+
+  // 计算当前回合号
+  const currentRound = gameMode === 'local' 
+    ? history.filter(h => h.type === 'settlement').length + 1 
+    : onlineState.gameRound;
   const handleMove = gameMode === 'local' ? handleMovePiece : handleMovePieceOnline;
   const handleSettleFn = gameMode === 'local' ? handleSettle : handleSettleOnline;
   const handleRedoMoveFn = gameMode === 'local' ? handleRedoMove : handleRedoMoveOnline;
@@ -976,6 +981,11 @@ function App() {
           </button>
         </div>
       )}
+
+      {/* 回合号显示 */}
+      <div className="round-display">
+        当前回合 [{currentRound}]
+      </div>
 
       {/* 棋盘 */}
       <ChessBoard
