@@ -104,10 +104,10 @@ class WebSocketClient {
     console.log('[WS] Sending message:', type, payload);
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       const message = JSON.stringify({ type, payload });
-      console.log('Sending:', message);
+      console.log('[WS] Actual send:', message);
       this.ws.send(message);
     } else {
-      console.warn('WebSocket not connected, readyState:', this.ws?.readyState);
+      console.warn('[WS] WebSocket not connected, readyState:', this.ws?.readyState);
     }
   }
 

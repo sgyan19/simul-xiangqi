@@ -529,6 +529,8 @@ function App() {
       if (payload.side) {
         setViewSide(payload.side);
       }
+      // 清除最后行动目标框（新游戏开始）
+      setLastMoveTargets({ red: null, black: null });
       showMessage(`匹配成功！你是${payload.side === 'red' ? '红方' : '黑方'}`, 3000);
     });
 
@@ -554,6 +556,8 @@ function App() {
       if (payload.side) {
         setViewSide(payload.side);
       }
+      // 清除最后行动目标框（新游戏开始）
+      setLastMoveTargets({ red: null, black: null });
       showMessage(`加入房间 ${payload.roomId}，你是${payload.side === 'red' ? '红方' : '黑方'}`);
       if (phase === 'strategy') {
         showMessage('双方已就位，可以开始对弈！');
@@ -765,11 +769,15 @@ function App() {
 
   // 在线模式：移动棋子
   const handleMovePieceOnline = useCallback((to: Position) => {
-    if (!selectedPiece || !onlineState.roomId) return;
+    if (!selectedPiece || !onlineState.roomId) {
+      console.log('[DEBUG] handleMovePieceOnline early return:', { selectedPiece: !!selectedPiece, roomId: onlineState.roomId });
+      return;
+    }
     
     // 确保使用的是最新的棋子位置（从 onlineState.pieces 中获取）
     const currentPiece = onlineState.pieces.find(p => p.id === selectedPiece.id);
     if (!currentPiece) {
+      console.log('[DEBUG] handleMovePieceOnline: piece not found in onlineState.pieces', { selectedPieceId: selectedPiece.id, availableIds: onlineState.pieces.map(p => p.id) });
       // 棋子可能已经被移除，重置状态
       setSelectedPiece(null);
       setValidMoves([]);
@@ -777,6 +785,13 @@ function App() {
     }
     
     const from = currentPiece.position;
+    console.log('[DEBUG] handleMovePieceOnline: submitting move', { 
+      pieceId: currentPiece.id, 
+      from, 
+      to, 
+      playerSide: onlineState.side,
+      roomId: onlineState.roomId 
+    });
     
     // 检测是吃子还是移动，播放相应音效
     const targetPiece = onlineState.pieces.find(p => 

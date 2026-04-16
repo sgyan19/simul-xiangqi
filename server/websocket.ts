@@ -120,14 +120,14 @@ const tryMatchPlayers = (): void => {
   
   if (player1Info) {
     player1Info.roomId = roomId;
-    player1Info.side = redPlayerId === room.redPlayer ? 'red' : 'black';
+    player1Info.side = ws1 === redWs ? 'red' : 'black';
     player1Info.inMatchmaking = false;
     clients.set(ws1, player1Info);
   }
   
   if (player2Info) {
     player2Info.roomId = roomId;
-    player2Info.side = blackPlayerId === room.blackPlayer ? 'black' : 'red';
+    player2Info.side = ws2 === redWs ? 'red' : 'black';
     player2Info.inMatchmaking = false;
     clients.set(ws2, player2Info);
   }
@@ -339,13 +339,16 @@ const handleMessage = (ws: WebSocket, message: WSMessage): void => {
 
     case 'submit_move': {
       if (!player || !player.roomId || !player.side) {
+        console.log('[SERVER] submit_move rejected: player not in room', { playerId: getPlayerId(ws), player, roomId: player?.roomId, side: player?.side });
         sendToClient(ws, { type: 'error', payload: { message: '你不在任何房间中' } });
         return;
       }
       
       const { from, to } = message.payload as { from: [number, number]; to: [number, number] };
       const playerId = getPlayerId(ws);
+      console.log('[SERVER] submit_move received:', { playerId, roomId: player.roomId, side: player.side, from, to });
       const result = submitMove(player.roomId, playerId, from, to);
+      console.log('[SERVER] submit_move result:', result);
       
       if (result.success) {
         const room = getRoom(player.roomId);

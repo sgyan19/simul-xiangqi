@@ -516,15 +516,22 @@ export const isValidMove = (piece: Piece, from: Position, to: Position, pieces: 
 // 提交移动
 export const submitMove = (roomId: string, playerId: string, from: Position, to: Position): { success: boolean; error?: string } => {
   const room = rooms.get(roomId);
+  console.log('[GAME] submitMove called:', { roomId, playerId, from, to });
   if (!room) return { success: false, error: '房间不存在' };
   if (room.phase !== 'strategy') return { success: false, error: '当前阶段不能移动' };
   
   const side = getPlayerSide(room, playerId);
+  console.log('[GAME] playerSide:', { side, redPlayer: room.redPlayer, blackPlayer: room.blackPlayer });
   if (!side) return { success: false, error: '你不是房间的玩家' };
   
   // 从 room.pieces 中获取最新的棋子数据（确保引用正确）
+  console.log('[GAME] searching for piece:', { side, from, availablePieces: room.pieces.filter(p => p.side === side).map(p => ({ id: p.id, position: p.position })) });
   const piece = room.pieces.find(p => p.side === side && p.position[0] === from[0] && p.position[1] === from[1]);
-  if (!piece) return { success: false, error: '该位置没有你的棋子' };
+  if (!piece) {
+    console.log('[GAME] piece not found at position:', { from, side, allPiecesAtFrom: room.pieces.filter(p => p.position[0] === from[0] && p.position[1] === from[1]) });
+    return { success: false, error: '该位置没有你的棋子' };
+  }
+  console.log('[GAME] piece found:', piece);
   
   // 验证移动合法性
   if (!isValidMove(piece, from, to, room.pieces)) {
