@@ -405,14 +405,8 @@ const canPieceCaptureAt = (piece: Piece, targetPos: Position, pieces: Piece[]): 
       return false;
     
     case 'chariot':
-      // 车直线，路径畅通，且目标必须是敌方棋子
-      if (isPathClearBetween(pCol, pRow, tCol, tRow, pieces)) {
-        const targetPiece = getPieceAt(tCol, tRow, pieces);
-        if (targetPiece && targetPiece.side !== piece.side) {
-          return true;
-        }
-      }
-      return false;
+      // 车直线，路径畅通即可
+      return isPathClearBetween(pCol, pRow, tCol, tRow, pieces);
     
     case 'cannon':
       // 炮吃子需要炮台，必须在同一行或同一列
