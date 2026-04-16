@@ -175,7 +175,7 @@ const BoardBackground = () => {
     <line key="palace-black-2" x1={`${blackPalaceX2}%`} y1={`${blackPalaceTop}%`} x2={`${blackPalaceX1}%`} y2={`${blackPalaceBottom}%`} stroke="#8B4513" strokeWidth="0.7" />
   );
 
-  // 炮的位置标记（十字交叉样式，表示炮的初始位置）
+  // 炮的位置标记（四个象限各画一个L形直角拐角）
   // 红炮：col 1, row 7 和 col 7, row 7
   // 黑炮：col 1, row 2 和 col 7, row 2
   const cannonPositions = [
@@ -185,36 +185,33 @@ const BoardBackground = () => {
     { col: 7, row: 7 },  // 红炮2
   ];
 
-  // 绘制炮位置的十字交叉标记（米字的一角，即对角线）
+  // 绘制炮位置的四个L形直角拐角（象米字样式）
   cannonPositions.forEach(({ col, row }, idx) => {
     const centerX = col * CELL_WIDTH;
     const centerY = row * CELL_HEIGHT;
-    const size = CELL_WIDTH * 0.25; // 交叉线段长度
+    const size = CELL_WIDTH * 0.25; // 直角边长度
+    const thickness = CELL_WIDTH * 0.08; // 直角边宽度（从中心偏移）
 
-    // 画十字交叉（两条对角线，形成米字的一角）
-    // 左上到右下
+    // 四个象限各画一个L形直角拐角
+    // 左上角 (↖)
     lines.push(
-      <line
-        key={`cannon-${idx}-1`}
-        x1={`${centerX - size}%`}
-        y1={`${centerY - size}%`}
-        x2={`${centerX + size}%`}
-        y2={`${centerY + size}%`}
-        stroke="#8B4513"
-        strokeWidth="0.7"
-      />
+      <line key={`cannon-${idx}-tl-h`} x1={`${centerX - thickness}%`} y1={`${centerY - size}%`} x2={`${centerX - thickness}%`} y2={`${centerY - thickness}%`} stroke="#8B4513" strokeWidth="0.7" />,
+      <line key={`cannon-${idx}-tl-v`} x1={`${centerX - size}%`} y1={`${centerY - thickness}%`} x2={`${centerX - thickness}%`} y2={`${centerY - thickness}%`} stroke="#8B4513" strokeWidth="0.7" />
     );
-    // 右上到左下
+    // 右上角 (↗)
     lines.push(
-      <line
-        key={`cannon-${idx}-2`}
-        x1={`${centerX + size}%`}
-        y1={`${centerY - size}%`}
-        x2={`${centerX - size}%`}
-        y2={`${centerY + size}%`}
-        stroke="#8B4513"
-        strokeWidth="0.7"
-      />
+      <line key={`cannon-${idx}-tr-h`} x1={`${centerX + thickness}%`} y1={`${centerY - size}%`} x2={`${centerX + thickness}%`} y2={`${centerY - thickness}%`} stroke="#8B4513" strokeWidth="0.7" />,
+      <line key={`cannon-${idx}-tr-v`} x1={`${centerX + size}%`} y1={`${centerY - thickness}%`} x2={`${centerX + thickness}%`} y2={`${centerY - thickness}%`} stroke="#8B4513" strokeWidth="0.7" />
+    );
+    // 左下角 (↙)
+    lines.push(
+      <line key={`cannon-${idx}-bl-h`} x1={`${centerX - thickness}%`} y1={`${centerY + size}%`} x2={`${centerX - thickness}%`} y2={`${centerY + thickness}%`} stroke="#8B4513" strokeWidth="0.7" />,
+      <line key={`cannon-${idx}-bl-v`} x1={`${centerX - size}%`} y1={`${centerY + thickness}%`} x2={`${centerX - thickness}%`} y2={`${centerY + thickness}%`} stroke="#8B4513" strokeWidth="0.7" />
+    );
+    // 右下角 (↘)
+    lines.push(
+      <line key={`cannon-${idx}-br-h`} x1={`${centerX + thickness}%`} y1={`${centerY + size}%`} x2={`${centerX + thickness}%`} y2={`${centerY + thickness}%`} stroke="#8B4513" strokeWidth="0.7" />,
+      <line key={`cannon-${idx}-br-v`} x1={`${centerX + size}%`} y1={`${centerY + thickness}%`} x2={`${centerX + thickness}%`} y2={`${centerY + thickness}%`} stroke="#8B4513" strokeWidth="0.7" />
     );
   });
 
