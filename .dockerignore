@@ -11,3 +11,4 @@ dist-server
 .DS_Store
 *.md
 !README.md
+!pnpm-lock.yaml

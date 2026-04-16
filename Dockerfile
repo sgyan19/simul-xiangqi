@@ -17,7 +17,7 @@ COPY . .
 
 # 构建前端和后端
 RUN pnpm vite build
-RUN pnpm tsup server/server.ts --format cjs --platform node --target node20 --outDir dist-server --no-splitting --no-minify --external vite
+RUN pnpm tsup server/server.ts --format cjs --platform node --target node20 --outDir dist-server --no-splitting --no-minify --external vite --external express --external ws --external '*.css' --external '*.svg' --external '*.png' --external '*.jpg'
 
 # 运行阶段
 FROM node:20-alpine
