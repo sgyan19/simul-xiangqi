@@ -623,21 +623,12 @@ function App() {
         setValidMoves([]);
       }
       
-      // 新一回合开始时清除目标框（仅当没有lastMoveTo时）
-      if (wasInSettlement && isNowInStrategy) {
-        // 只有当没有新的lastMoveTo时才清除
-        if (!payload.lastRedMoveTo && !payload.lastBlackMoveTo) {
-          setLastMoveTargets({ red: null, black: null });
-        }
-      }
-      
-      // 收到room_state时，如果有lastMoveTo就显示目标框
-      if (payload.lastRedMoveTo || payload.lastBlackMoveTo) {
-        setLastMoveTargets({
-          red: payload.lastRedMoveTo || null,
-          black: payload.lastBlackMoveTo || null,
-        });
-      }
+      // 收到room_state时，更新目标框（无论是否有值都更新）
+      // 如果服务端返回null或undefined，说明需要清除目标框
+      setLastMoveTargets({
+        red: payload.lastRedMoveTo ?? null,
+        black: payload.lastBlackMoveTo ?? null,
+      });
       
       // 更新对弈历史记录
       if (payload.roundHistory && Array.isArray(payload.roundHistory)) {
