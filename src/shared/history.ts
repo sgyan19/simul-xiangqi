@@ -57,6 +57,13 @@ export const getPieceName = (pieceType: string, side?: 'red' | 'black'): string 
   return names[pieceType]?.red || pieceType;
 };
 
+// 获取带编号的棋子名称（如"车0"、"炮1"）
+export const getPieceNameWithId = (piece: { type: string; id: string }, side: 'red' | 'black'): string => {
+  const baseName = getPieceName(piece.type, side);
+  const num = piece.id.split('-').pop() || '0';
+  return `${baseName}${num}`;
+};
+
 // 格式化象棋术语（如"兵五进一"或"炮二平五"）
 export const formatChessNotation = (
   from: [number, number],

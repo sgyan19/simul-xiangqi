@@ -23,6 +23,14 @@ const getReasonLabel = (reason: string): string => {
   }
 };
 
+// 获取带 ID 的棋子名称
+const getPieceNameWithId = (piece: { type: string; id: string }, side: 'red' | 'black'): string => {
+  const baseName = getPieceName(piece.type, side);
+  // 提取 ID 中的编号部分，如 red-chariot-0 -> 0
+  const num = piece.id.split('-').pop() || '0';
+  return `${baseName}${num}`;
+};
+
 // 导出历史记录为文本
 const exportHistoryToText = (history: RoundHistoryEntry[]): string => {
   if (history.length === 0) {
@@ -59,8 +67,8 @@ const exportHistoryToText = (history: RoundHistoryEntry[]): string => {
     }
 
     if (entry.redPieceRemoved.length > 0 || entry.blackPieceRemoved.length > 0) {
-      const redRemoved = entry.redPieceRemoved.map(r => `红${getPieceName(r.piece.type, 'red')}(${getReasonLabel(r.reason)})`).join(', ');
-      const blackRemoved = entry.blackPieceRemoved.map(r => `黑${getPieceName(r.piece.type, 'black')}(${getReasonLabel(r.reason)})`).join(', ');
+      const redRemoved = entry.redPieceRemoved.map(r => `${getPieceNameWithId(r.piece, 'red')}(${r.piece.id})(${getReasonLabel(r.reason)})`).join(', ');
+      const blackRemoved = entry.blackPieceRemoved.map(r => `${getPieceNameWithId(r.piece, 'black')}(${r.piece.id})(${getReasonLabel(r.reason)})`).join(', ');
       if (redRemoved) lines.push(`  红方损失: ${redRemoved}`);
       if (blackRemoved) lines.push(`  黑方损失: ${blackRemoved}`);
     }
