@@ -16,6 +16,8 @@ import {
   addPlayerToRoom,
   requestUndo,
   respondToUndo,
+  requestReset,
+  respondToReset,
 } from './gameState';
 
 interface WSMessage {
@@ -495,6 +497,66 @@ const handleMessage = (ws: WebSocket, message: WSMessage): void => {
                 payload: { 
                   accepted,
                   message: accepted ? '对方同意了悔棋请求' : '对方拒绝了悔棋请求'
+                } 
+              });
+            }
+          }
+          // 广播房间更新
+          broadcastRoomUpdate(room);
+        }
+      } else {
+        sendToClient(ws, { type: 'error', payload: { message: result.error || '操作失败' } });
+      }
+      break;
+    }
+
+    case 'request_reset': {
+      if (!player || !player.roomId || !player.side) {
+        sendToClient(ws, { type: 'error', payload: { message: '你不在任何房间中' } });
+        return;
+      }
+      
+      const result = requestReset(player.roomId, player.side);
+      
+      if (result.success) {
+        const room = getRoom(player.roomId);
+        if (room) {
+          // 通知双方重置请求
+          for (const [ws2, p2] of clients) {
+            if (p2.roomId === room.id) {
+              sendToClient(ws2, { 
+                type: 'reset_requested', 
+                payload: { from: player.side } 
+              });
+            }
+          }
+        }
+      } else {
+        sendToClient(ws, { type: 'error', payload: { message: result.error || '操作失败' } });
+      }
+      break;
+    }
+
+    case 'respond_reset': {
+      if (!player || !player.roomId || !player.side) {
+        sendToClient(ws, { type: 'error', payload: { message: '你不在任何房间中' } });
+        return;
+      }
+      
+      const { accepted } = message.payload as { accepted: boolean };
+      const result = respondToReset(player.roomId, player.side, accepted);
+      
+      if (result.success) {
+        const room = getRoom(player.roomId);
+        if (room) {
+          // 通知双方重置结果
+          for (const [ws2, p2] of clients) {
+            if (p2.roomId === room.id) {
+              sendToClient(ws2, { 
+                type: 'reset_response', 
+                payload: { 
+                  accepted,
+                  message: accepted ? '对方同意了重置请求，游戏已重置' : '对方拒绝了重置请求'
                 } 
               });
             }

@@ -109,6 +109,9 @@ function App() {
   
   // 联机模式悔棋请求状态
   const [undoRequestPending, setUndoRequestPending] = useState<{ from: 'red' | 'black' | null; waiting: boolean }>({ from: null, waiting: false });
+  
+  // 联机模式重置请求状态
+  const [resetRequestPending, setResetRequestPending] = useState<{ from: 'red' | 'black' | null; waiting: boolean }>({ from: null, waiting: false });
 
   // 联机模式：用于跟踪需要重新选择的棋子（在取消确认后）
   const pendingReselectPieceRef = useRef<Piece | null>(null);
@@ -727,6 +730,22 @@ function App() {
       showMessage(payload.message, 2000);
     });
 
+    // 对方发起的重置请求
+    wsClient.on('reset_requested', (payload: any) => {
+      setResetRequestPending({ from: payload.from, waiting: false });
+    });
+
+    // 发送重置请求后等待对方回应
+    wsClient.on('reset_waiting', (payload: any) => {
+      setResetRequestPending({ from: onlineState.side, waiting: true });
+    });
+
+    // 重置请求的回应
+    wsClient.on('reset_response', (payload: any) => {
+      setResetRequestPending({ from: null, waiting: false });
+      showMessage(payload.message, 2000);
+    });
+
     wsClient.on('error', (payload: any) => {
       showMessage(payload.message || '发生错误');
     });
@@ -858,7 +877,20 @@ function App() {
     setUndoRequestPending({ from: null, waiting: false });
   }, []);
 
-  // 在线模式：重置
+  // 在线模式：请求重置
+  const handleRequestResetOnline = useCallback(() => {
+    if (!onlineState.side) return;
+    setResetRequestPending({ from: onlineState.side, waiting: true });
+    wsClient.send('request_reset');
+  }, [onlineState.side]);
+
+  // 在线模式：回应重置请求
+  const handleRespondResetOnline = useCallback((accepted: boolean) => {
+    wsClient.send('respond_reset', { accepted });
+    setResetRequestPending({ from: null, waiting: false });
+  }, []);
+
+  // 在线模式：重置（仅在游戏结束后或对方同意后调用）
   const handleResetOnline = useCallback(() => {
     wsClient.send('reset_game');
     setHistory([]);
@@ -1060,6 +1092,7 @@ function App() {
           <button
             className={`view-btn ${viewSide === 'red' ? 'active' : ''}`}
             onClick={() => handleSwitchView(viewSide === 'red' ? 'black' : 'red')}
+            disabled={gameMode === 'online'}
           >
             {viewSide === 'red' ? '红方视角' : '黑方视角'}
           </button>
@@ -1119,9 +1152,15 @@ function App() {
             悔棋
           </button>
         )}
-        <button className="btn btn-reset" onClick={handleResetFn}>
-          重置
-        </button>
+        {gameMode === 'online' ? (
+          <button className="btn btn-reset" onClick={handleRequestResetOnline}>
+            重置
+          </button>
+        ) : (
+          <button className="btn btn-reset" onClick={handleReset}>
+            重置
+          </button>
+        )}
       </div>
 
       <div className="control-panel" style={{ fontSize: '12px', color: '#AAA' }}>
@@ -1184,6 +1223,37 @@ function App() {
                 同意
               </button>
               <button className="btn btn-reset" onClick={() => handleRespondUndoOnline(false)}>
+                拒绝
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 重置请求弹窗（等待对方同意） */}
+      {gameMode === 'online' && resetRequestPending.waiting && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h2>等待对方同意...</h2>
+            <p>请等待 {resetRequestPending.from === 'red' ? '黑方' : '红方'} 回应重置请求</p>
+            <button className="btn btn-reset" onClick={() => setResetRequestPending({ from: null, waiting: false })}>
+              取消
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 收到重置请求弹窗 */}
+      {gameMode === 'online' && resetRequestPending.from && !resetRequestPending.waiting && onlineState.side && resetRequestPending.from !== onlineState.side && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h2>重置请求</h2>
+            <p>{resetRequestPending.from === 'red' ? '红方' : '黑方'} 请求重置游戏，是否同意？</p>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+              <button className="btn btn-confirm" onClick={() => handleRespondResetOnline(true)}>
+                同意
+              </button>
+              <button className="btn btn-reset" onClick={() => handleRespondResetOnline(false)}>
                 拒绝
               </button>
             </div>

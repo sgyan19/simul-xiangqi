@@ -42,6 +42,9 @@ export interface GameRoom {
   // 悔棋请求状态
   undoRequestFrom: Side | null;  // 谁发起的悔棋请求
   undoRequestedTo: Side | null;   // 请求谁同意
+  // 重置请求状态
+  resetRequestFrom: Side | null;  // 谁发起的重置请求
+  resetRequestedTo: Side | null;   // 请求谁同意
   // 最后行动目标位置（用于客户端显示目标框）
   lastRedMoveTo: Position | null;
   lastBlackMoveTo: Position | null;
@@ -235,6 +238,9 @@ export const createRoom = (roomId: string): GameRoom => {
     // 悔棋请求
     undoRequestFrom: null,
     undoRequestedTo: null,
+    // 重置请求
+    resetRequestFrom: null,
+    resetRequestedTo: null,
     // 最后行动目标位置
     lastRedMoveTo: null,
     lastBlackMoveTo: null,
@@ -588,6 +594,87 @@ export const submitMove = (roomId: string, playerId: string, from: Position, to:
   }
   
   return { success: true };
+};
+
+// 请求重置游戏
+export const requestReset = (roomId: string, requesterSide: Side): { success: boolean; error?: string } => {
+  const room = rooms.get(roomId);
+  if (!room) return { success: false, error: '房间不存在' };
+  if (room.phase === 'waiting') return { success: false, error: '游戏尚未开始' };
+  
+  // 记录重置请求
+  room.resetRequestFrom = requesterSide;
+  room.resetRequestedTo = requesterSide === 'red' ? 'black' : 'red';
+  
+  return { success: true };
+};
+
+// 回应重置请求
+export const respondToReset = (roomId: string, responderSide: Side, accepted: boolean): { success: boolean; error?: string } => {
+  const room = rooms.get(roomId);
+  if (!room) return { success: false, error: '房间不存在' };
+  
+  // 检查是否有待处理的重置请求
+  if (room.resetRequestFrom === null) {
+    return { success: false, error: '没有待处理的重置请求' };
+  }
+  
+  // 检查是否是发给自己的请求
+  if (room.resetRequestedTo !== responderSide) {
+    return { success: false, error: '这不是发给你的重置请求' };
+  }
+  
+  if (accepted) {
+    // 执行重置
+    resetRoomFull(roomId);
+  } else {
+    // 拒绝重置，清除请求状态
+    room.resetRequestFrom = null;
+    room.resetRequestedTo = null;
+  }
+  
+  return { success: true };
+};
+
+// 完全重置房间（重新开始）
+const resetRoomFull = (roomId: string): void => {
+  const room = rooms.get(roomId);
+  if (!room) return;
+  
+  // 重置棋盘
+  room.pieces = INITIAL_PIECES.map(p => ({ ...p }));
+  room.phase = 'strategy';
+  room.currentOperatedSide = 'red';
+  room.redConfirmed = false;
+  room.blackConfirmed = false;
+  room.redPendingMove = null;
+  room.blackPendingMove = null;
+  room.winner = null;
+  // 清除本回合移动记录
+  room.redMovedPieceId = null;
+  room.blackMovedPieceId = null;
+  // 重置长捉计数
+  room.redLastPiece = null;
+  room.redLastTarget = null;
+  room.redCaptureCount = 0;
+  room.blackLastPiece = null;
+  room.blackLastTarget = null;
+  room.blackCaptureCount = 0;
+  // 重置历史
+  room.historySnapshots = [];
+  room.roundHistory = [];
+  // 重置游戏回合数
+  room.gameRound = 1;
+  room.logicRound = 0;
+  // 清除将军状态
+  room.redInCheck = false;
+  room.blackInCheck = false;
+  // 清除重置请求
+  room.resetRequestFrom = null;
+  room.resetRequestedTo = null;
+  // 清除最后目标位置
+  room.lastRedMoveTo = null;
+  room.lastBlackMoveTo = null;
 };
 
 // 撤销移动
