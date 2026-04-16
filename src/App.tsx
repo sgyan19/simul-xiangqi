@@ -95,6 +95,9 @@ function App() {
   // 联机模式悔棋请求状态
   const [undoRequestPending, setUndoRequestPending] = useState<{ from: 'red' | 'black' | null; waiting: boolean }>({ from: null, waiting: false });
 
+  // 联机模式：用于跟踪需要重新选择的棋子（在取消确认后）
+  const pendingReselectPieceRef = useRef<Piece | null>(null);
+
   // 显示提示
   const showMessage = useCallback((msg: string, duration = 2000) => {
     setShowToast(msg);
@@ -571,6 +574,19 @@ function App() {
       if (payload.side) {
         setViewSide(payload.side);
       }
+
+      // 处理待重新选择的棋子（取消确认后）
+      const pendingPiece = pendingReselectPieceRef.current;
+      if (pendingPiece) {
+        pendingReselectPieceRef.current = null;
+        // 从最新的 pieces 中找到该棋子
+        const currentPiece = pieces.find((p: Piece) => p.id === pendingPiece.id);
+        if (currentPiece) {
+          const moves = getValidMoves(currentPiece, pieces);
+          setSelectedPiece(currentPiece);
+          setValidMoves(moves);
+        }
+      }
     });
 
     wsClient.on('opponent_move', (payload: any) => {
@@ -655,7 +671,9 @@ function App() {
     
     const isConfirmed = piece.side === 'red' ? onlineState.redConfirmed : onlineState.blackConfirmed;
     if (isConfirmed) {
-      showMessage('本回合已走棋，等待对方操作');
+      // 对齐本地模式：已确认时允许重新走棋，先发送取消确认
+      pendingReselectPieceRef.current = piece;
+      wsClient.send('undo_move');
       return;
     }
 
