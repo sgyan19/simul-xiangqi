@@ -675,15 +675,20 @@ export const executeSettlement = (
   const toRemoveByCounterAttack: string[] = [];
   
   // 检查红方吃子后是否被黑方反吃
-  // 确认 capture 成功：目标位置必须有黑方棋子
+  // 确认 capture 成功：检查 toRemoveByCapture 列表中是否有目标棋子
   const redCaptureSuccess = redAction?.actionType === 'capture' && 
-    finalPieces.some(p => p.side === 'black' && p.position[0] === redAction.to[0] && p.position[1] === redAction.to[1]);
+    toRemoveByCapture.some(id => {
+      const piece = pieces.find(p => p.id === id);
+      return piece && piece.side === 'black' && 
+             piece.position[0] === redAction.to[0] && 
+             piece.position[1] === redAction.to[1];
+    });
   
   console.log('[防反检查] 红方 capture:', {
     redAction,
     redCaptureSuccess,
     redActionTo: redAction?.to,
-    finalPieces_black: finalPieces.filter(p => p.side === 'black').map(p => ({ id: p.id, type: p.type, pos: p.position })),
+    toRemoveByCapture,
   });
   
   if (redCaptureSuccess) {
@@ -739,9 +744,14 @@ export const executeSettlement = (
   }
   
   // 检查黑方吃子后是否被红方反吃
-  // 确认 capture 成功：目标位置必须有红方棋子
+  // 确认 capture 成功：检查 toRemoveByCapture 列表中是否有目标棋子
   const blackCaptureSuccess = blackAction?.actionType === 'capture' && 
-    finalPieces.some(p => p.side === 'red' && p.position[0] === blackAction.to[0] && p.position[1] === blackAction.to[1]);
+    toRemoveByCapture.some(id => {
+      const piece = pieces.find(p => p.id === id);
+      return piece && piece.side === 'red' && 
+             piece.position[0] === blackAction.to[0] && 
+             piece.position[1] === blackAction.to[1];
+    });
   
   if (blackCaptureSuccess) {
     // 黑方吃子后移动到的位置
