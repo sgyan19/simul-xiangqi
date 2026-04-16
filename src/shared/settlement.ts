@@ -571,9 +571,10 @@ export const executeSettlement = (
     if (redPiece) {
       redPiece.position = [...redAction.to] as Position;
       // 记录移动事件
+      const actionLabel = redAction.actionType === 'capture' ? '捉' : '移动';
       events.push({
         type: 'move',
-        description: `[红-移动]${formatChessNotation(redAction.from, redAction.to, redPiece.type, 'red')}`,
+        description: `[红-${actionLabel}]${formatChessNotation(redAction.from, redAction.to, redPiece.type, 'red')}`,
       });
     }
   }
@@ -585,9 +586,10 @@ export const executeSettlement = (
     if (blackPiece) {
       blackPiece.position = [...blackAction.to] as Position;
       // 记录移动事件
+      const actionLabel = blackAction.actionType === 'capture' ? '捉' : '移动';
       events.push({
         type: 'move',
-        description: `[黑-移动]${formatChessNotation(blackAction.from, blackAction.to, blackPiece.type, 'black')}`,
+        description: `[黑-${actionLabel}]${formatChessNotation(blackAction.from, blackAction.to, blackPiece.type, 'black')}`,
       });
     }
   }
