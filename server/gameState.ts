@@ -630,6 +630,7 @@ const executeSettlement = (room: GameRoom): void => {
   const snapshot = createSnapshotBeforeSettlement(
     room.pieces,
     room.roundHistory,
+    room.gameRound,
     { red: room.lastRedMoveTo, black: room.lastBlackMoveTo },
     { 
       red: isKingInCheck('red', room.pieces), 
@@ -657,7 +658,7 @@ const executeSettlement = (room: GameRoom): void => {
   room.historySnapshots.push(snapshot);
   
   // 使用共用模块创建历史记录
-  const historyEntry = createSettlementEntry(room.roundHistory, result.historyEntry);
+  const historyEntry = createSettlementEntry(room.roundHistory, result.historyEntry, room.gameRound);
   room.roundHistory.push(historyEntry);
   
   // 结算成功，进入下一回合
