@@ -100,6 +100,14 @@ function App() {
   // 联机模式：用于跟踪需要重新选择的棋子（在取消确认后）
   const pendingReselectPieceRef = useRef<Piece | null>(null);
 
+  // 切换游戏模式时清理状态
+  const handleSetGameMode = useCallback((mode: 'local' | 'online') => {
+    // 切换模式时清理选中状态
+    setSelectedPiece(null);
+    setValidMoves([]);
+    setGameMode(mode);
+  }, []);
+
   // 音效开关切换
   const handleToggleSound = useCallback(() => {
     const newValue = !soundEnabled;
@@ -830,13 +838,13 @@ function App() {
         <div style={{ display: 'flex', gap: '8px', marginRight: '10px' }}>
           <button
             className={`mode-btn ${gameMode === 'local' ? 'active' : ''}`}
-            onClick={() => setGameMode('local')}
+            onClick={() => handleSetGameMode('local')}
           >
             本地
           </button>
           <button
             className={`mode-btn ${gameMode === 'online' ? 'active' : ''}`}
-            onClick={() => setGameMode('online')}
+            onClick={() => handleSetGameMode('online')}
           >
             联机
           </button>
