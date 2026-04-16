@@ -39,6 +39,7 @@ interface CounterAttackResult {
  * @param capturerAction 吃子方的动作
  * @param opponentAction 对方本回合的动作（可能为null）
  * @param pieces 原始棋盘状态
+ * @param enemyAtTargetId 被吃掉的棋子ID（需要排除，不能参与保护判定）
  * @returns 反击结果
  */
 const checkCounterAttack = (
@@ -46,10 +47,12 @@ const checkCounterAttack = (
   capturer: Piece,
   capturerAction: PendingAction,
   opponentAction: PendingAction | null,
-  pieces: Piece[]
+  pieces: Piece[],
+  enemyAtTargetId: string
 ): CounterAttackResult => {
   const opponentSide = capturerSide === 'red' ? 'black' : 'red';
-  const opponentPieces = pieces.filter(p => p.side === opponentSide);
+  // 排除被吃的 enemyAtTarget，因为它已从棋盘移除，不能参与保护判定
+  const opponentPieces = pieces.filter(p => p.side === opponentSide && p.id !== enemyAtTargetId);
   
   for (const opponentPiece of opponentPieces) {
     // 检查对方棋子本回合是否移动了
@@ -670,8 +673,9 @@ export const executeSettlement = (
       
       // ===== 保护判定 =====
       // 检查被吃棋子的同阵营棋子能否保护吃子方新位置
+      // 排除 enemyAtTarget，因为它已被标记移除
       if (redCapturer) {
-        const counterResult = checkCounterAttack('red', redCapturer, redAction, blackAction, pieces);
+        const counterResult = checkCounterAttack('red', redCapturer, redAction, blackAction, pieces, enemyAtTarget.id);
         if (counterResult.capturerToRemove && counterResult.removalRecord) {
           toRemoveByCapture.push(redCapturer.id);
           redPieceRemoved.push(counterResult.removalRecord);
@@ -710,8 +714,9 @@ export const executeSettlement = (
       
       // ===== 保护判定 =====
       // 检查被吃棋子的同阵营棋子能否保护吃子方新位置
+      // 排除 enemyAtTarget，因为它已被标记移除
       if (blackCapturer) {
-        const counterResult = checkCounterAttack('black', blackCapturer, blackAction, redAction, pieces);
+        const counterResult = checkCounterAttack('black', blackCapturer, blackAction, redAction, pieces, enemyAtTarget.id);
         if (counterResult.capturerToRemove && counterResult.removalRecord) {
           toRemoveByCapture.push(blackCapturer.id);
           blackPieceRemoved.push(counterResult.removalRecord);
