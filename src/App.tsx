@@ -639,12 +639,6 @@ function App() {
     });
 
     wsClient.on('room_state', (payload: any) => {
-      console.log('[DEBUG] room_state received:', JSON.stringify({
-        phase: payload.phase,
-        winner: payload.winner,
-        gameRound: payload.gameRound
-      }));
-      
       // 检测对方是否离开
       const currentSide = onlineState.side;
       const opponentWasOnline = opponentOnlineRef.current;
@@ -755,17 +749,12 @@ function App() {
     });
 
     wsClient.on('game_over', (payload: any) => {
-      console.log('[DEBUG] game_over received:', JSON.stringify(payload));
-      
       const winnerText = payload.winner === 'draw' ? '和棋！' : 
                          payload.winner === 'red' ? '红方胜利！' : '黑方胜利！';
       showMessage(winnerText + (payload.reason ? ' ' + payload.reason : ''), 3000);
       
       // 更新 phase 为 ended（确保弹窗能显示）
-      setOnlineState(prev => {
-        console.log('[DEBUG] game_over setOnlineState, prev:', { phase: prev.phase, winner: prev.winner });
-        return { ...prev, phase: 'ended', winner: payload.winner };
-      });
+      setOnlineState(prev => ({ ...prev, phase: 'ended', winner: payload.winner }));
       setHideWinModal(false); // 显示弹窗
       
       // 根据结果播放结算音效
@@ -1043,7 +1032,6 @@ function App() {
 
   // 在线模式：重置
   const handleResetOnline = useCallback(() => {
-    console.log('[DEBUG] handleResetOnline called');
     wsClient.send('reset_game');
     // 直接重置状态，确保弹窗立即消失
     setOnlineState(prev => ({
@@ -1438,7 +1426,8 @@ function App() {
         </div>
       )}
 
-      {currentPhase === 'ended' && currentWinner && !hideWinModal && (
+      {/* 胜利弹窗 */}
+      {currentPhase === 'ended' && currentWinner !== null && currentWinner !== undefined && !hideWinModal && (
         <div className="modal-overlay" onClick={() => setHideWinModal(true)}>
           <div className={`modal-content ${
             currentWinner === 'red' ? 'red-wins' :
