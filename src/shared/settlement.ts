@@ -880,7 +880,11 @@ export const executeSettlement = (
 
   // 检查胜负（通过是否还有将帅）
   if (!winner) {
-    if (!redKing) {
+    if (!redKing && !blackKing) {
+      // 将帅同时被吃 = 和棋
+      winner = 'draw';
+      reason = '将帅同时被吃，和棋';
+    } else if (!redKing) {
       winner = 'black';
       reason = '红帅被吃，黑方获胜';
     } else if (!blackKing) {
