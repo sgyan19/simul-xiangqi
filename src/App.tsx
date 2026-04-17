@@ -673,15 +673,15 @@ function App() {
       setOnlineState(prev => ({
         ...prev,
         pieces,
-        phase: payload.phase !== undefined ? payload.phase : prev.phase,
+        phase: 'phase' in payload ? payload.phase : prev.phase,
         side: payload.side ?? prev.side,
         redConfirmed: payload.redConfirmed ?? prev.redConfirmed,
         blackConfirmed: payload.blackConfirmed ?? prev.blackConfirmed,
         // pendingMove 只在服务端返回有效数据时才更新
         redPendingMove: 'redPendingMove' in payload ? payload.redPendingMove : prev.redPendingMove,
         blackPendingMove: 'blackPendingMove' in payload ? payload.blackPendingMove : prev.blackPendingMove,
-        // winner 始终使用服务端数据
-        winner: payload.winner !== undefined ? payload.winner : prev.winner,
+        // winner 始终使用服务端数据（包括 null）
+        winner: 'winner' in payload ? payload.winner : prev.winner,
         // 确保 gameRound 是数字
         gameRound: typeof payload.gameRound === 'number' ? payload.gameRound : prev.gameRound,
       }));
@@ -732,6 +732,9 @@ function App() {
           setValidMoves(moves);
         }
       }
+      
+      // 始终隐藏胜利弹窗，由 room_state 的 phase/winner 控制显示
+      setHideWinModal(true);
     });
 
     wsClient.on('opponent_move', (payload: any) => {
