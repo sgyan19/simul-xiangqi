@@ -1036,11 +1036,27 @@ function App() {
     setResetRequestPending({ from: null, waiting: false });
   }, []);
 
-  // 在线模式：重置 - 只发送消息，状态由 room_state 统一更新
+  // 在线模式：重置
   const handleResetOnline = useCallback(() => {
     console.log('[DEBUG] handleResetOnline called');
     wsClient.send('reset_game');
-    // 不手动重置任何状态，完全依赖 room_state 更新
+    // 直接重置状态，确保弹窗立即消失
+    setOnlineState(prev => ({
+      ...prev,
+      phase: 'strategy',
+      winner: null,
+      pieces: INITIAL_PIECES.map(p => ({ ...p })),
+      redConfirmed: false,
+      blackConfirmed: false,
+      redPendingMove: null,
+      blackPendingMove: null,
+      gameRound: 1,
+    }));
+    setHistory([]);
+    setLastMoveTargets({ red: null, black: null });
+    setCheckStatus({ red: false, black: false });
+    setSelectedPiece(null);
+    setValidMoves([]);
     setHideWinModal(true);
   }, []);
 
