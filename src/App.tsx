@@ -115,6 +115,9 @@ function App() {
 
   // 联机模式：用于跟踪需要重新选择的棋子（在取消确认后）
   const pendingReselectPieceRef = useRef<Piece | null>(null);
+  
+  // 联机模式：用于记录断线重连后是否需要自动发送匹配请求
+  const pendingMatchOnReconnectRef = useRef(false);
 
   // 切换游戏模式时清理状态
   const handleSetGameMode = useCallback((mode: 'local' | 'online') => {
@@ -511,6 +514,12 @@ function App() {
     wsClient.on('connected', (payload: any) => {
       console.log('收到连接成功消息:', payload);
       setOnlineState(prev => ({ ...prev, connected: true }));
+      // 如果之前点击了快速匹配但断线了，重连成功后自动发送匹配请求
+      if (pendingMatchOnReconnectRef.current) {
+        pendingMatchOnReconnectRef.current = false;
+        showMessage('连接已恢复，正在匹配...');
+        wsClient.send('join_matchmaking');
+      }
     });
 
     wsClient.on('room_created', (payload: any) => {
@@ -793,9 +802,12 @@ function App() {
   // 在线模式：快速匹配
   const handleQuickMatch = useCallback(() => {
     if (!onlineState.connected) {
+      // 记录需要自动匹配，重连成功后会自动发送
+      pendingMatchOnReconnectRef.current = true;
       showMessage('连接已断开，正在重新连接...');
       return;
     }
+    pendingMatchOnReconnectRef.current = false;
     console.log('handleQuickMatch called, connected:', onlineState.connected);
     wsClient.send('join_matchmaking');
   }, [onlineState.connected, showMessage]);
@@ -803,6 +815,7 @@ function App() {
   // 在线模式：取消匹配
   const handleCancelMatch = useCallback(() => {
     wsClient.send('leave_matchmaking');
+    pendingMatchOnReconnectRef.current = false;
   }, []);
 
   // 在线模式：创建房间
@@ -822,6 +835,7 @@ function App() {
     wsClient.send('leave_room');
     setOnlineState(createInitialOnlineState());
     setRoomInput('');
+    pendingMatchOnReconnectRef.current = false;
   }, []);
 
   // 在线模式：选择棋子

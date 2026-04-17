@@ -29,6 +29,7 @@ class WebSocketClient {
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private reconnectDelay = 1000;
+  private isManualClose = false;
 
   constructor() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -65,12 +66,14 @@ class WebSocketClient {
 
         this.ws.onclose = () => {
           console.log('WebSocket closed');
-          // 通知所有监听者连接断开
-          const handler = this.handlers.get('disconnected');
-          if (handler) {
-            handler({});
+          // 通知所有监听者连接断开（仅非手动关闭时）
+          if (!this.isManualClose) {
+            const handler = this.handlers.get('disconnected');
+            if (handler) {
+              handler({});
+            }
+            this.attemptReconnect();
           }
-          this.attemptReconnect();
         };
 
         this.ws.onerror = (error) => {
@@ -89,17 +92,26 @@ class WebSocketClient {
       console.log(`Reconnecting... attempt ${this.reconnectAttempts}`);
       setTimeout(() => {
         this.connect().catch(() => {
-          // 重连失败
+          // 重连失败，继续尝试
         });
       }, this.reconnectDelay * this.reconnectAttempts);
+    } else {
+      // 超过最大次数后，继续以固定间隔重连（每5秒尝试一次）
+      console.log('继续尝试重连...');
+      setTimeout(() => {
+        this.reconnectAttempts = this.maxReconnectAttempts; // 保持触发"继续重连"逻辑
+        this.attemptReconnect();
+      }, 5000);
     }
   }
 
   disconnect(): void {
+    this.isManualClose = true;
     if (this.ws) {
       this.ws.close();
       this.ws = null;
     }
+    this.isManualClose = false;
   }
 
   on(type: string, handler: MessageHandler) {
