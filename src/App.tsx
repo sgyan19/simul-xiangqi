@@ -1423,7 +1423,7 @@ function App() {
           <div className={`modal-content ${
             currentWinner === 'red' ? 'red-wins' :
             currentWinner === 'black' ? 'black-wins' : 'draw'
-          }`}>
+          }`} onClick={(e) => e.stopPropagation()}>
             <h2>
               {currentWinner === 'red' ? '红方胜利！' :
                currentWinner === 'black' ? '黑方胜利！' : '和棋！'}
