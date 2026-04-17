@@ -118,6 +118,9 @@ function App() {
   
   // 联机模式：用于记录断线重连后是否需要自动发送匹配请求
   const pendingMatchOnReconnectRef = useRef(false);
+  
+  // 联机模式：追踪对方在线状态，用于检测对方离开
+  const opponentOnlineRef = useRef<boolean | null>(null);
 
   // 切换游戏模式时清理状态
   const handleSetGameMode = useCallback((mode: 'local' | 'online') => {
@@ -629,6 +632,21 @@ function App() {
     });
 
     wsClient.on('room_state', (payload: any) => {
+      // 检测对方是否离开
+      const currentSide = onlineState.side;
+      const opponentWasOnline = opponentOnlineRef.current;
+      if (currentSide === 'red' && payload.blackOnline === false && opponentWasOnline !== false) {
+        showMessage('对方离开了房间');
+        opponentOnlineRef.current = false;
+      } else if (currentSide === 'black' && payload.redOnline === false && opponentWasOnline !== false) {
+        showMessage('对方离开了房间');
+        opponentOnlineRef.current = false;
+      } else if (currentSide === 'red') {
+        opponentOnlineRef.current = payload.blackOnline;
+      } else if (currentSide === 'black') {
+        opponentOnlineRef.current = payload.redOnline;
+      }
+      
       // 检查棋子位置是否发生变化，如果 selectedPiece 对应的棋子位置变了，需要清除选择
       let shouldClearSelection = false;
       if (selectedPiece) {
