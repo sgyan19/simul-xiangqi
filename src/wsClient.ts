@@ -22,6 +22,11 @@ export interface RoomState {
 
 type MessageHandler = (payload: unknown) => void;
 
+// 使用全局变量存储实例，确保热更新不会重新创建
+declare global {
+  var __wsClientInstance: WebSocketClient | undefined;
+}
+
 class WebSocketClient {
   private ws: WebSocket | null = null;
   private url: string;
@@ -30,6 +35,7 @@ class WebSocketClient {
   private maxReconnectAttempts = 5;
   private reconnectDelay = 1000;
   private isManualClose = false;
+  private connectPromise: Promise<void> | null = null;
 
   constructor() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -37,8 +43,19 @@ class WebSocketClient {
   }
 
   connect(): Promise<void> {
-    return new Promise((resolve, reject) => {
+    // 如果正在连接中，返回已有的 promise
+    if (this.connectPromise) {
+      return this.connectPromise;
+    }
+    
+    this.connectPromise = new Promise((resolve, reject) => {
       try {
+        // 如果已有连接且是 OPEN 状态，直接返回
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+          resolve();
+          return;
+        }
+        
         this.ws = new WebSocket(this.url);
 
         this.ws.onopen = () => {
@@ -49,6 +66,7 @@ class WebSocketClient {
           if (handler) {
             handler({});
           }
+          this.connectPromise = null;
           resolve();
         };
 
@@ -66,6 +84,7 @@ class WebSocketClient {
 
         this.ws.onclose = () => {
           console.log('WebSocket closed');
+          this.connectPromise = null;
           // 通知所有监听者连接断开（仅非手动关闭时）
           if (!this.isManualClose) {
             const handler = this.handlers.get('disconnected');
@@ -78,12 +97,16 @@ class WebSocketClient {
 
         this.ws.onerror = (error) => {
           console.error('WebSocket 错误:', error);
+          this.connectPromise = null;
           reject(error);
         };
       } catch (error) {
+        this.connectPromise = null;
         reject(error);
       }
     });
+    
+    return this.connectPromise;
   }
 
   private attemptReconnect(): void {
@@ -138,4 +161,5 @@ class WebSocketClient {
   }
 }
 
-export const wsClient = new WebSocketClient();
+// 使用全局单例，确保热更新不会重新创建实例
+export const wsClient = globalThis.__wsClientInstance ?? (globalThis.__wsClientInstance = new WebSocketClient());
