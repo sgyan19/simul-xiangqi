@@ -680,7 +680,8 @@ function App() {
         // pendingMove 只在服务端返回有效数据时才更新
         redPendingMove: 'redPendingMove' in payload ? payload.redPendingMove : prev.redPendingMove,
         blackPendingMove: 'blackPendingMove' in payload ? payload.blackPendingMove : prev.blackPendingMove,
-        winner: payload.winner ?? prev.winner,
+        // 注意：winner 只在 game_over 事件中更新，避免 room_state 覆盖胜利状态
+        // winner: payload.winner ?? prev.winner,
         // 确保 gameRound 是数字
         gameRound: typeof payload.gameRound === 'number' ? payload.gameRound : prev.gameRound,
       }));
