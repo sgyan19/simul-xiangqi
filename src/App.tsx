@@ -746,7 +746,23 @@ function App() {
     });
 
     wsClient.on('left_room', () => {
-      setOnlineState(createInitialOnlineState());
+      // 保留连接状态，只清空房间相关状态
+      setOnlineState(prev => ({
+        ...prev,
+        roomId: null,
+        side: null,
+        pieces: INITIAL_PIECES.map(p => ({ ...p })),
+        phase: 'strategy',
+        redConfirmed: false,
+        blackConfirmed: false,
+        redPendingMove: null,
+        blackPendingMove: null,
+        winner: null,
+        isMatchmaking: false,
+        gameRound: 1,
+        redMovedPieceId: null,
+        blackMovedPieceId: null,
+      }));
       showMessage('对方离开了房间');
     });
 
@@ -833,7 +849,23 @@ function App() {
   // 在线模式：离开房间
   const handleLeaveRoom = useCallback(() => {
     wsClient.send('leave_room');
-    setOnlineState(createInitialOnlineState());
+    // 保留连接状态，只清空房间相关状态
+    setOnlineState(prev => ({
+      ...prev,
+      roomId: null,
+      side: null,
+      pieces: INITIAL_PIECES.map(p => ({ ...p })),
+      phase: 'strategy',
+      redConfirmed: false,
+      blackConfirmed: false,
+      redPendingMove: null,
+      blackPendingMove: null,
+      winner: null,
+      isMatchmaking: false,
+      gameRound: 1,
+      redMovedPieceId: null,
+      blackMovedPieceId: null,
+    }));
     setRoomInput('');
     pendingMatchOnReconnectRef.current = false;
   }, []);
