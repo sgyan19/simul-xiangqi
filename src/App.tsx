@@ -1411,7 +1411,7 @@ function App() {
       )}
 
       {currentPhase === 'ended' && currentWinner && (
-        <div className="modal-overlay" onClick={handleResetFn}>
+        <div className="modal-overlay" onClick={() => {}}>
           <div className={`modal-content ${
             currentWinner === 'red' ? 'red-wins' :
             currentWinner === 'black' ? 'black-wins' : 'draw'
@@ -1420,9 +1420,14 @@ function App() {
               {currentWinner === 'red' ? '红方胜利！' :
                currentWinner === 'black' ? '黑方胜利！' : '和棋！'}
             </h2>
-            <button className="btn btn-confirm" onClick={handleResetFn}>
-              重新开始
-            </button>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginTop: '20px' }}>
+              <button className="btn btn-confirm" onClick={handleResetFn}>
+                重新开始
+              </button>
+              <button className="btn btn-reset" onClick={() => {}}>
+                稍后再说
+              </button>
+            </div>
           </div>
         </div>
       )}
