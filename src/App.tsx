@@ -673,14 +673,15 @@ function App() {
       setOnlineState(prev => ({
         ...prev,
         pieces,
-        phase: payload.phase ?? prev.phase,
+        phase: payload.phase !== undefined ? payload.phase : prev.phase,
         side: payload.side ?? prev.side,
         redConfirmed: payload.redConfirmed ?? prev.redConfirmed,
         blackConfirmed: payload.blackConfirmed ?? prev.blackConfirmed,
         // pendingMove 只在服务端返回有效数据时才更新
         redPendingMove: 'redPendingMove' in payload ? payload.redPendingMove : prev.redPendingMove,
         blackPendingMove: 'blackPendingMove' in payload ? payload.blackPendingMove : prev.blackPendingMove,
-        winner: payload.winner ?? prev.winner,
+        // winner 始终使用服务端数据
+        winner: payload.winner !== undefined ? payload.winner : prev.winner,
         // 确保 gameRound 是数字
         gameRound: typeof payload.gameRound === 'number' ? payload.gameRound : prev.gameRound,
       }));
