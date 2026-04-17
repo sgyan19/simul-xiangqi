@@ -1047,6 +1047,26 @@ function App() {
   const handleRespondResetOnline = useCallback((accepted: boolean) => {
     wsClient.send('respond_reset', { accepted });
     setResetRequestPending({ from: null, waiting: false });
+    if (accepted) {
+      // 同意重置时，直接重置本地状态
+      setOnlineState(prev => ({
+        ...prev,
+        phase: 'strategy',
+        winner: null,
+        pieces: INITIAL_PIECES.map(p => ({ ...p })),
+        redConfirmed: false,
+        blackConfirmed: false,
+        redPendingMove: null,
+        blackPendingMove: null,
+        gameRound: 1,
+      }));
+      setHistory([]);
+      setLastMoveTargets({ red: null, black: null });
+      setCheckStatus({ red: false, black: false });
+      setSelectedPiece(null);
+      setValidMoves([]);
+      setHideWinModal(true);
+    }
   }, []);
 
   // 在线模式：重置
@@ -1310,6 +1330,8 @@ function App() {
         )}
         {gameMode === 'online' && onlineState.side && currentPhase === 'strategy' && (
           <>
+            {/* DEBUG */}
+            <span style={{display:'none'}} data-debug={`phase=${currentPhase}`}></span>
             <button
               className="btn btn-reset"
               onClick={handleRedoMoveOnline}
