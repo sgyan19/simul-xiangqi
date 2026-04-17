@@ -646,6 +646,15 @@ function App() {
         blackPendingMove: payload.blackPendingMove
       });
       
+      // 检测游戏结束（服务端直接执行结算时）
+      const wasNotEnded = onlineState.phase !== 'ended';
+      if (wasNotEnded && payload.phase === 'ended' && payload.winner) {
+        const winnerText = payload.winner === 'draw' ? '和棋！' : 
+                           payload.winner === 'red' ? '红方胜利！' : '黑方胜利！';
+        showMessage(winnerText, 3000);
+        setHideWinModal(false); // 显示弹窗
+      }
+      
       // 检测对方是否离开
       const currentSide = onlineState.side;
       const opponentWasOnline = opponentOnlineRef.current;
@@ -687,8 +696,8 @@ function App() {
         // pendingMove 只在服务端返回有效数据时才更新
         redPendingMove: 'redPendingMove' in payload ? payload.redPendingMove : prev.redPendingMove,
         blackPendingMove: 'blackPendingMove' in payload ? payload.blackPendingMove : prev.blackPendingMove,
-        // 注意：winner 只在 game_over 事件中更新，避免 room_state 覆盖胜利状态
-        // winner: payload.winner ?? prev.winner,
+        // winner 只在游戏结束时更新
+        winner: payload.phase === 'ended' ? (payload.winner ?? prev.winner) : prev.winner,
         // 确保 gameRound 是数字
         gameRound: typeof payload.gameRound === 'number' ? payload.gameRound : prev.gameRound,
       }));
@@ -1441,13 +1450,6 @@ function App() {
               </button>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* 胜利弹窗调试 */}
-      {currentPhase === 'ended' && currentWinner !== null && (
-        <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: 'red', color: 'white', padding: '10px', zIndex: 9999 }}>
-          DEBUG: hideWinModal={String(hideWinModal)}, currentWinner={String(currentWinner)}, currentPhase={String(currentPhase)}
         </div>
       )}
 
