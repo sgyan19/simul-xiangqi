@@ -112,6 +112,7 @@ function App() {
   
   // 联机模式重置请求状态
   const [resetRequestPending, setResetRequestPending] = useState<{ from: 'red' | 'black' | null; waiting: boolean }>({ from: null, waiting: false });
+  const [hideWinModal, setHideWinModal] = useState(false);
 
   // 联机模式：用于跟踪需要重新选择的棋子（在取消确认后）
   const pendingReselectPieceRef = useRef<Piece | null>(null);
@@ -130,6 +131,7 @@ function App() {
     setHistory([]);  // 清空对弈记录
     setLastMoveTargets({ red: null, black: null });  // 清空行动目标框
     setCheckStatus({ red: false, black: false });  // 清空将军状态
+    setHideWinModal(false);
     setGameMode(mode);
   }, []);
 
@@ -485,6 +487,7 @@ function App() {
     setCheckStatus({ red: false, black: false });
     setHistory([]);
     setLastMoveTargets({ red: null, black: null });
+    setHideWinModal(false);
     showMessage('游戏已重置', 1500);
   }, [showMessage]);
 
@@ -1035,6 +1038,7 @@ function App() {
     setLastMoveTargets({ red: null, black: null });
     setSelectedPiece(null);
     setValidMoves([]);
+    setHideWinModal(false);
   }, []);
 
   // 联机模式：监听双方走棋，自动结算
@@ -1410,7 +1414,7 @@ function App() {
         </div>
       )}
 
-      {currentPhase === 'ended' && currentWinner && (
+      {currentPhase === 'ended' && currentWinner && !hideWinModal && (
         <div className="modal-overlay" onClick={() => {}}>
           <div className={`modal-content ${
             currentWinner === 'red' ? 'red-wins' :
@@ -1424,7 +1428,7 @@ function App() {
               <button className="btn btn-confirm" onClick={handleResetFn}>
                 重新开始
               </button>
-              <button className="btn btn-reset" onClick={() => {}}>
+              <button className="btn btn-reset" onClick={() => setHideWinModal(true)}>
                 稍后再说
               </button>
             </div>
