@@ -584,6 +584,8 @@ function App() {
         blackPendingMove: null,
         message: '',
       }));
+      // 重置对手在线状态
+      opponentOnlineRef.current = true;
       // 匹配成功后，切换到自己的视角
       if (payload.side) {
         setViewSide(payload.side);
@@ -625,6 +627,8 @@ function App() {
       setCheckStatus({ red: false, black: false });
       setSelectedPiece(null);
       setValidMoves([]);
+      // 重置对手在线状态
+      opponentOnlineRef.current = true;
       showMessage(`加入房间 ${payload.roomId}，你是${payload.side === 'red' ? '红方' : '黑方'}`);
       if (phase === 'strategy') {
         showMessage('双方已就位，可以开始对弈！');
@@ -789,6 +793,28 @@ function App() {
       console.log('收到对方离开事件:', payload);
       showMessage('对方离开了房间');
       opponentOnlineRef.current = false;
+      
+      // 停止游戏，恢复到等待对手的状态
+      setOnlineState(prev => ({
+        ...prev,
+        pieces: INITIAL_PIECES.map(p => ({ ...p })),
+        phase: 'waiting', // 等待状态，不允许走棋
+        redConfirmed: false,
+        blackConfirmed: false,
+        redPendingMove: null,
+        blackPendingMove: null,
+        winner: null,
+        isMatchmaking: false,
+        gameRound: 1,
+        redMovedPieceId: null,
+        blackMovedPieceId: null,
+      }));
+      // 清空游戏相关状态
+      setSelectedPiece(null);
+      setValidMoves([]);
+      setHistory([]);
+      setLastMoveTargets({ red: null, black: null });
+      setCheckStatus({ red: false, black: false });
     });
 
     // 收到对方发起的悔棋请求
