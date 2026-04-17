@@ -1408,8 +1408,8 @@ function App() {
         </div>
       )}
 
-      {/* 收到重置请求弹窗 */}
-      {gameMode === 'online' && resetRequestPending.from && !resetRequestPending.waiting && onlineState.side && resetRequestPending.from !== onlineState.side && (
+      {/* 收到重置请求弹窗 - 只在游戏进行中显示 */}
+      {gameMode === 'online' && resetRequestPending.from && !resetRequestPending.waiting && onlineState.side && resetRequestPending.from !== onlineState.side && currentPhase !== 'ended' && (
         <div className="modal-overlay">
           <div className="modal-content">
             <h2>重置请求</h2>
