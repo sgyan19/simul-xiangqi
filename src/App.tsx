@@ -148,6 +148,18 @@ function App() {
     setTimeout(() => setShowToast(null), duration);
   }, []);
 
+  // 调试弹窗状态
+  useEffect(() => {
+    if (currentPhase === 'ended' && currentWinner !== null) {
+      console.log('[DEBUG] Modal check:', {
+        currentPhase,
+        currentWinner,
+        hideWinModal,
+        condition: currentPhase === 'ended' && currentWinner !== null && currentWinner !== undefined && !hideWinModal
+      });
+    }
+  }, [currentPhase, currentWinner, hideWinModal]);
+
   // ===== 本地模式逻辑（来自 d39b70d）=====
 
   // 选择棋子
@@ -639,6 +651,13 @@ function App() {
     });
 
     wsClient.on('room_state', (payload: any) => {
+      console.log('[DEBUG] room_state received:', {
+        phase: payload.phase,
+        winner: payload.winner,
+        redPendingMove: payload.redPendingMove,
+        blackPendingMove: payload.blackPendingMove
+      });
+      
       // 检测对方是否离开
       const currentSide = onlineState.side;
       const opponentWasOnline = opponentOnlineRef.current;
@@ -750,6 +769,7 @@ function App() {
     });
 
     wsClient.on('game_over', (payload: any) => {
+      console.log('[DEBUG] game_over event received:', payload);
       const winnerText = payload.winner === 'draw' ? '和棋！' : 
                          payload.winner === 'red' ? '红方胜利！' : '黑方胜利！';
       showMessage(winnerText + (payload.reason ? ' ' + payload.reason : ''), 3000);
@@ -757,6 +777,7 @@ function App() {
       // 更新 phase 为 ended（确保弹窗能显示）
       setOnlineState(prev => ({ ...prev, phase: 'ended', winner: payload.winner }));
       setHideWinModal(false); // 显示弹窗
+      console.log('[DEBUG] After setting hideWinModal(false), checking modal state...');
       
       // 根据结果播放结算音效
       if (payload.events) {

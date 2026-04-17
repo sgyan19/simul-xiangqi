@@ -442,8 +442,10 @@ const handleMessage = (ws: WebSocket, message: WSMessage): void => {
       const result = settleGame(player.roomId);
       
       if (result.success && room) {
+        console.log('[SERVER] settleGame result:', result);
         if (result.winner) {
           // 游戏结束
+          console.log('[SERVER] Game over! Winner:', result.winner);
           for (const [ws2, p2] of clients) {
             if (p2.roomId === room.id) {
               sendToClient(ws2, { 
