@@ -753,6 +753,9 @@ function App() {
                          payload.winner === 'red' ? '红方胜利！' : '黑方胜利！';
       showMessage(winnerText + (payload.reason ? ' ' + payload.reason : ''), 3000);
       
+      // 更新 phase 为 ended（确保弹窗能显示）
+      setOnlineState(prev => ({ ...prev, phase: 'ended', winner: payload.winner ?? prev.winner }));
+      
       // 根据结果播放结算音效
       if (payload.events) {
         if (payload.events.some((e: any) => e.type === 'collision')) {
