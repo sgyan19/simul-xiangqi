@@ -1065,10 +1065,18 @@ function App() {
 
   // 联机模式：监听双方走棋，自动结算
   useEffect(() => {
+    console.log('[DEBUG] Auto settle check:', {
+      gameMode,
+      phase: onlineState.phase,
+      redPendingMove: onlineState.redPendingMove,
+      blackPendingMove: onlineState.blackPendingMove
+    });
+    
     if (gameMode !== 'online') return;
     if (onlineState.phase !== 'strategy') return;
     if (!onlineState.redPendingMove || !onlineState.blackPendingMove) return;
     
+    console.log('[DEBUG] Auto settle: sending settle message');
     // 双方都走棋后，自动结算（延迟一小段时间让玩家看清箭头）
     const timer = setTimeout(() => {
       wsClient.send('settle');
