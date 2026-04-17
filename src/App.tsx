@@ -784,6 +784,13 @@ function App() {
       showMessage('对方离开了房间');
     });
 
+    // 对方离开房间（收到 opponent_left 事件时）
+    wsClient.on('opponent_left', (payload: any) => {
+      console.log('收到对方离开事件:', payload);
+      showMessage('对方离开了房间');
+      opponentOnlineRef.current = false;
+    });
+
     // 收到对方发起的悔棋请求
     wsClient.on('undo_requested', (payload: any) => {
       setUndoRequestPending({ from: payload.from, waiting: false });

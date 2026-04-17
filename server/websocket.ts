@@ -297,14 +297,24 @@ const handleMessage = (ws: WebSocket, message: WSMessage): void => {
     case 'leave_room': {
       if (player && player.roomId) {
         const room = getRoom(player.roomId);
+        const leaverSide = player.side; // 保存离开方的阵营
+        
         if (room) {
           leaveRoom(player.roomId, getPlayerId(ws));
           
-          // 如果房间空了，删除房间
-          if (!room.redPlayer && !room.blackPlayer) {
-            // 房间会被删除
-          } else {
-            broadcastRoomUpdate(room);
+          // 如果房间不为空，通知对方玩家
+          const opponentSide = leaverSide === 'red' ? 'black' : 'red';
+          const opponentWs = opponentSide === 'red' ? room.redPlayer : room.blackPlayer;
+          
+          if (opponentWs) {
+            // 找到对方的 WebSocket
+            for (const [wsClient, p] of clients) {
+              if (getPlayerId(wsClient) === opponentWs) {
+                // 发送专门的 opponent_left 事件
+                sendToClient(wsClient, { type: 'opponent_left', payload: { side: leaverSide } });
+                break;
+              }
+            }
           }
         }
         
