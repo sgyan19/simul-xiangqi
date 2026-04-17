@@ -1418,7 +1418,7 @@ function App() {
         </div>
       )}
 
-      {currentPhase === 'ended' && currentWinner && (
+      {currentPhase === 'ended' && currentWinner && !hideWinModal && (
         <div className="modal-overlay" onClick={() => setHideWinModal(true)}>
           <div className={`modal-content ${
             currentWinner === 'red' ? 'red-wins' :
