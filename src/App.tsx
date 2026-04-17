@@ -70,8 +70,8 @@ const createInitialState = (): GameState => ({
   currentRound: 1,
 });
 
-const createInitialOnlineState = (): OnlineState => ({
-  connected: false,
+const createInitialOnlineState = (keepConnected?: boolean): OnlineState => ({
+  connected: keepConnected ?? false,
   roomId: null,
   side: null,
   pieces: INITIAL_PIECES.map(p => ({ ...p })),
@@ -1037,16 +1037,16 @@ function App() {
   // 在线模式：重置（仅在游戏结束后或对方同意后调用）
   const handleResetOnline = useCallback(() => {
     wsClient.send('reset_game');
-    // 重置本地状态
+    // 重置本地状态，保留 WebSocket 连接状态
     setHistory([]);
     setGameState(createInitialState());
-    setOnlineState(createInitialOnlineState());
+    setOnlineState(createInitialOnlineState(onlineState.connected));
     setLastMoveTargets({ red: null, black: null });
     setSelectedPiece(null);
     setValidMoves([]);
-    setHideWinModal(false);
+    setHideWinModal(true); // 隐藏胜利弹窗
     setViewSide('red');
-  }, []);
+  }, [onlineState.connected]);
 
   // 联机模式：监听双方走棋，自动结算
   useEffect(() => {
