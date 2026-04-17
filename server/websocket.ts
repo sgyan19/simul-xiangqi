@@ -250,6 +250,11 @@ const handleMessage = (ws: WebSocket, message: WSMessage): void => {
       const playerId = getPlayerId(ws);
       const room = getRoom(roomId);
       
+      console.log(`[join_room] trying to join roomId=${roomId}, room exists: ${!!room}`);
+      if (room) {
+        console.log(`[join_room] room details: redPlayer=${room.redPlayer}, blackPlayer=${room.blackPlayer}`);
+      }
+      
       if (!room) {
         sendToClient(ws, { type: 'error', payload: { message: '房间不存在' } });
         return;
@@ -300,6 +305,7 @@ const handleMessage = (ws: WebSocket, message: WSMessage): void => {
         const leaverSide = player.side; // 保存离开方的阵营
         const leaverId = getPlayerId(ws);
         console.log(`[leave_room] leaverId=${leaverId}, leaverSide=${leaverSide}, roomId=${player.roomId}`);
+        console.log(`[leave_room] room before leave: redPlayer=${room?.redPlayer}, blackPlayer=${room?.blackPlayer}`);
         
         if (room) {
           // 先获取对手的 WebSocket（在 leaveRoom 之前，因为之后 room.redPlayer/blackPlayer 会被清空）
@@ -321,6 +327,10 @@ const handleMessage = (ws: WebSocket, message: WSMessage): void => {
           
           // 执行离开逻辑
           leaveRoom(player.roomId, leaverId);
+          
+          // 检查房间是否还存在
+          const roomAfter = getRoom(player.roomId);
+          console.log(`[leave_room] room after leave: ${roomAfter ? `exists, redPlayer=${roomAfter.redPlayer}, blackPlayer=${roomAfter.blackPlayer}` : 'deleted'}`);
           
           // 如果有对手在线，发送通知
           if (opponentWs) {

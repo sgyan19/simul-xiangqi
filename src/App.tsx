@@ -861,9 +861,8 @@ function App() {
       showMessage(payload.message || '发生错误');
     });
 
-    return () => {
-      wsClient.disconnect();
-    };
+    // 注意：不使用 cleanup 函数断开 WebSocket，因为 wsClient 是全局单例
+    // 热更新时保持连接，App.tsx 重新加载后事件监听器会被重新注册
   }, [gameMode, showMessage]);
 
   // 在线模式：快速匹配
@@ -1004,8 +1003,10 @@ function App() {
 
   // 在线模式：悔棋请求
   const handleRequestUndoOnline = useCallback(() => {
+    console.log('[undo] handleRequestUndoOnline called, phase:', onlineState.phase, 'side:', onlineState.side);
+    console.log('[undo] sending request_undo');
     wsClient.send('request_undo');
-  }, []);
+  }, [onlineState.phase, onlineState.side]);
 
   // 在线模式：回应悔棋请求
   const handleRespondUndoOnline = useCallback((accepted: boolean) => {

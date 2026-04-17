@@ -43,10 +43,18 @@ class WebSocketClient {
   }
 
   connect(): Promise<void> {
-    // 如果正在连接中，返回已有的 promise
-    if (this.connectPromise) {
+    // 如果正在连接中且连接有效，返回已有的 promise
+    if (this.connectPromise && this.ws && this.ws.readyState === WebSocket.OPEN) {
       return this.connectPromise;
     }
+    
+    // 如果已有连接且是 OPEN 状态，直接返回已完成的 promise
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      return Promise.resolve();
+    }
+    
+    // 重置连接状态，准备创建新连接
+    this.connectPromise = null;
     
     this.connectPromise = new Promise((resolve, reject) => {
       try {
@@ -54,6 +62,11 @@ class WebSocketClient {
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
           resolve();
           return;
+        }
+        
+        // 关闭旧连接（如果存在）
+        if (this.ws) {
+          this.ws.close();
         }
         
         this.ws = new WebSocket(this.url);
@@ -134,6 +147,7 @@ class WebSocketClient {
       this.ws.close();
       this.ws = null;
     }
+    this.connectPromise = null;
     this.isManualClose = false;
   }
 
