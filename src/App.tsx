@@ -755,12 +755,17 @@ function App() {
     });
 
     wsClient.on('game_over', (payload: any) => {
+      console.log('[DEBUG] game_over received:', JSON.stringify(payload));
+      
       const winnerText = payload.winner === 'draw' ? '和棋！' : 
                          payload.winner === 'red' ? '红方胜利！' : '黑方胜利！';
       showMessage(winnerText + (payload.reason ? ' ' + payload.reason : ''), 3000);
       
       // 更新 phase 为 ended（确保弹窗能显示）
-      setOnlineState(prev => ({ ...prev, phase: 'ended', winner: payload.winner ?? prev.winner }));
+      setOnlineState(prev => {
+        console.log('[DEBUG] game_over setOnlineState, prev:', { phase: prev.phase, winner: prev.winner });
+        return { ...prev, phase: 'ended', winner: payload.winner };
+      });
       setHideWinModal(false); // 显示弹窗
       
       // 根据结果播放结算音效

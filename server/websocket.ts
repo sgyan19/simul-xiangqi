@@ -440,9 +440,11 @@ const handleMessage = (ws: WebSocket, message: WSMessage): void => {
       
       // 执行结算
       const result = settleGame(player.roomId);
+      console.log('[SERVER] settle result:', JSON.stringify(result));
       
       if (result.success && room) {
         if (result.winner) {
+          console.log('[SERVER] sending game_over to clients, winner:', result.winner);
           // 游戏结束
           for (const [ws2, p2] of clients) {
             if (p2.roomId === room.id) {
@@ -455,6 +457,8 @@ const handleMessage = (ws: WebSocket, message: WSMessage): void => {
               });
             }
           }
+        } else {
+          console.log('[SERVER] no winner, no game_over sent');
         }
         broadcastRoomUpdate(room);
       }
