@@ -298,23 +298,29 @@ const handleMessage = (ws: WebSocket, message: WSMessage): void => {
       if (player && player.roomId) {
         const room = getRoom(player.roomId);
         const leaverSide = player.side; // 保存离开方的阵营
+        const leaverId = getPlayerId(ws);
         
         if (room) {
-          leaveRoom(player.roomId, getPlayerId(ws));
-          
-          // 如果房间不为空，通知对方玩家
+          // 先获取对手的 WebSocket（在 leaveRoom 之前，因为之后 room.redPlayer/blackPlayer 会被清空）
           const opponentSide = leaverSide === 'red' ? 'black' : 'red';
-          const opponentWs = opponentSide === 'red' ? room.redPlayer : room.blackPlayer;
+          const opponentId = opponentSide === 'red' ? room.redPlayer : room.blackPlayer;
+          let opponentWs: WebSocket | null = null;
           
-          if (opponentWs) {
-            // 找到对方的 WebSocket
-            for (const [wsClient, p] of clients) {
-              if (getPlayerId(wsClient) === opponentWs) {
-                // 发送专门的 opponent_left 事件
-                sendToClient(wsClient, { type: 'opponent_left', payload: { side: leaverSide } });
+          if (opponentId) {
+            for (const [wsClient] of clients) {
+              if (getPlayerId(wsClient) === opponentId) {
+                opponentWs = wsClient;
                 break;
               }
             }
+          }
+          
+          // 执行离开逻辑
+          leaveRoom(player.roomId, leaverId);
+          
+          // 如果有对手在线，发送通知
+          if (opponentWs) {
+            sendToClient(opponentWs, { type: 'opponent_left', payload: { side: leaverSide } });
           }
         }
         
