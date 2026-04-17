@@ -148,18 +148,6 @@ function App() {
     setTimeout(() => setShowToast(null), duration);
   }, []);
 
-  // 调试弹窗状态
-  useEffect(() => {
-    if (currentPhase === 'ended' && currentWinner !== null) {
-      console.log('[DEBUG] Modal check:', {
-        currentPhase,
-        currentWinner,
-        hideWinModal,
-        condition: currentPhase === 'ended' && currentWinner !== null && currentWinner !== undefined && !hideWinModal
-      });
-    }
-  }, [currentPhase, currentWinner, hideWinModal]);
-
   // ===== 本地模式逻辑（来自 d39b70d）=====
 
   // 选择棋子
@@ -1445,6 +1433,13 @@ function App() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* 胜利弹窗调试 */}
+      {currentPhase === 'ended' && currentWinner !== null && (
+        <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: 'red', color: 'white', padding: '10px', zIndex: 9999 }}>
+          DEBUG: hideWinModal={String(hideWinModal)}, currentWinner={String(currentWinner)}, currentPhase={String(currentPhase)}
         </div>
       )}
 
