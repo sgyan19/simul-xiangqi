@@ -299,11 +299,14 @@ const handleMessage = (ws: WebSocket, message: WSMessage): void => {
         const room = getRoom(player.roomId);
         const leaverSide = player.side; // 保存离开方的阵营
         const leaverId = getPlayerId(ws);
+        console.log(`[leave_room] leaverId=${leaverId}, leaverSide=${leaverSide}, roomId=${player.roomId}`);
         
         if (room) {
           // 先获取对手的 WebSocket（在 leaveRoom 之前，因为之后 room.redPlayer/blackPlayer 会被清空）
           const opponentSide = leaverSide === 'red' ? 'black' : 'red';
           const opponentId = opponentSide === 'red' ? room.redPlayer : room.blackPlayer;
+          console.log(`[leave_room] opponentSide=${opponentSide}, opponentId=${opponentId}`);
+          
           let opponentWs: WebSocket | null = null;
           
           if (opponentId) {
@@ -314,12 +317,14 @@ const handleMessage = (ws: WebSocket, message: WSMessage): void => {
               }
             }
           }
+          console.log(`[leave_room] opponentWs found: ${!!opponentWs}`);
           
           // 执行离开逻辑
           leaveRoom(player.roomId, leaverId);
           
           // 如果有对手在线，发送通知
           if (opponentWs) {
+            console.log(`[leave_room] sending opponent_left to opponent`);
             sendToClient(opponentWs, { type: 'opponent_left', payload: { side: leaverSide } });
           }
         }

@@ -781,7 +781,7 @@ function App() {
         redMovedPieceId: null,
         blackMovedPieceId: null,
       }));
-      showMessage('对方离开了房间');
+      // left_room 是给自己发的，表示"你离开了房间"
     });
 
     // 对方离开房间（收到 opponent_left 事件时）
