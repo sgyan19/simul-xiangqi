@@ -639,6 +639,12 @@ function App() {
     });
 
     wsClient.on('room_state', (payload: any) => {
+      console.log('[DEBUG] room_state received:', JSON.stringify({
+        phase: payload.phase,
+        winner: payload.winner,
+        gameRound: payload.gameRound
+      }));
+      
       // 检测对方是否离开
       const currentSide = onlineState.side;
       const opponentWasOnline = opponentOnlineRef.current;
@@ -1033,6 +1039,7 @@ function App() {
 
   // 在线模式：重置 - 只发送消息，状态由 room_state 统一更新
   const handleResetOnline = useCallback(() => {
+    console.log('[DEBUG] handleResetOnline called');
     wsClient.send('reset_game');
     // 不手动重置任何状态，完全依赖 room_state 更新
     setHideWinModal(true);
@@ -1411,7 +1418,7 @@ function App() {
         </div>
       )}
 
-      {currentPhase === 'ended' && currentWinner && !hideWinModal && (
+      {currentPhase === 'ended' && currentWinner && (
         <div className="modal-overlay" onClick={() => {}}>
           <div className={`modal-content ${
             currentWinner === 'red' ? 'red-wins' :
