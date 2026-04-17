@@ -1119,6 +1119,58 @@ function App() {
         )}
       </div>
 
+      {/* 在线模式房间UI（顶部状态栏下方，回合状态栏上方） */}
+      {gameMode === 'online' && !onlineState.roomId && !onlineState.isMatchmaking && (
+        <div className="online-panel">
+          <h3>联机对战</h3>
+          <div className="room-actions">
+            <button className="btn btn-primary" onClick={handleQuickMatch}>
+              快速匹配
+            </button>
+            <div className="divider-text">或</div>
+            <button className="btn btn-secondary" onClick={handleCreateRoom}>
+              创建房间
+            </button>
+            <div className="divider-text">或</div>
+            <input
+              type="text"
+              className="room-input"
+              placeholder="输入房间号"
+              value={roomInput}
+              onChange={(e) => setRoomInput(e.target.value.toUpperCase())}
+              maxLength={6}
+            />
+            <button className="btn btn-secondary" onClick={handleJoinRoom}>
+              加入
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 匹配中状态 */}
+      {gameMode === 'online' && onlineState.isMatchmaking && (
+        <div className="online-panel matchmaking">
+          <div className="matchmaking-spinner"></div>
+          <h3>正在匹配对手...</h3>
+          <p>请稍候，系统正在为您寻找对手</p>
+          <button className="btn btn-secondary" onClick={handleCancelMatch}>
+            取消匹配
+          </button>
+        </div>
+      )}
+
+      {/* 等待对手加入状态 */}
+      {gameMode === 'online' && onlineState.phase === 'waiting' && onlineState.roomId && (
+        <div className="online-panel matchmaking">
+          <div className="matchmaking-spinner"></div>
+          <h3>等待对手加入...</h3>
+          <p>对方已离开，请等待新对手加入或重新匹配</p>
+          <button className="btn btn-primary" onClick={handleQuickMatch}>
+            快速匹配
+          </button>
+        </div>
+      )}
+
       {/* 在线模式房间信息（顶部小条） */}
       {gameMode === 'online' && onlineState.roomId && (
         <div className="room-info-bar">
@@ -1186,58 +1238,6 @@ function App() {
         onSelectPiece={handleSelect}
         onMovePiece={handleMove}
       />
-
-      {/* 在线模式房间UI（棋盘下方） */}
-      {gameMode === 'online' && !onlineState.roomId && !onlineState.isMatchmaking && (
-        <div className="online-panel">
-          <h3>联机对战</h3>
-          <div className="room-actions">
-            <button className="btn btn-primary" onClick={handleQuickMatch}>
-              快速匹配
-            </button>
-            <div className="divider-text">或</div>
-            <button className="btn btn-secondary" onClick={handleCreateRoom}>
-              创建房间
-            </button>
-            <div className="divider-text">或</div>
-            <input
-              type="text"
-              className="room-input"
-              placeholder="输入房间号"
-              value={roomInput}
-              onChange={(e) => setRoomInput(e.target.value.toUpperCase())}
-              maxLength={6}
-            />
-            <button className="btn btn-secondary" onClick={handleJoinRoom}>
-              加入
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* 匹配中状态 */}
-      {gameMode === 'online' && onlineState.isMatchmaking && (
-        <div className="online-panel matchmaking">
-          <div className="matchmaking-spinner"></div>
-          <h3>正在匹配对手...</h3>
-          <p>请稍候，系统正在为您寻找对手</p>
-          <button className="btn btn-secondary" onClick={handleCancelMatch}>
-            取消匹配
-          </button>
-        </div>
-      )}
-
-      {/* 等待对手加入状态 */}
-      {gameMode === 'online' && onlineState.phase === 'waiting' && onlineState.roomId && (
-        <div className="online-panel matchmaking">
-          <div className="matchmaking-spinner"></div>
-          <h3>等待对手加入...</h3>
-          <p>对方已离开，请等待新对手加入或重新匹配</p>
-          <button className="btn btn-primary" onClick={handleQuickMatch}>
-            快速匹配
-          </button>
-        </div>
-      )}
 
       {/* 控制面板 */}
       <div className="control-panel">
