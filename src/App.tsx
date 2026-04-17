@@ -1036,12 +1036,15 @@ function App() {
   // 在线模式：重置（仅在游戏结束后或对方同意后调用）
   const handleResetOnline = useCallback(() => {
     wsClient.send('reset_game');
+    // 重置本地状态
     setHistory([]);
     setGameState(createInitialState());
+    setOnlineState(createInitialOnlineState());
     setLastMoveTargets({ red: null, black: null });
     setSelectedPiece(null);
     setValidMoves([]);
     setHideWinModal(false);
+    setViewSide('red');
   }, []);
 
   // 联机模式：监听双方走棋，自动结算
