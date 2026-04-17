@@ -1222,6 +1222,18 @@ function App() {
         </div>
       )}
 
+      {/* 等待对手加入状态 */}
+      {gameMode === 'online' && onlineState.phase === 'waiting' && onlineState.roomId && (
+        <div className="online-panel matchmaking">
+          <div className="matchmaking-spinner"></div>
+          <h3>等待对手加入...</h3>
+          <p>对方已离开，请等待新对手加入或重新匹配</p>
+          <button className="btn btn-primary" onClick={handleQuickMatch}>
+            快速匹配
+          </button>
+        </div>
+      )}
+
       {/* 控制面板 */}
       <div className="control-panel">
         <div className="view-switch">
