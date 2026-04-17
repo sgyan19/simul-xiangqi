@@ -754,9 +754,7 @@ function App() {
                          payload.winner === 'red' ? '红方胜利！' : '黑方胜利！';
       showMessage(winnerText + (payload.reason ? ' ' + payload.reason : ''), 3000);
       
-      // 更新 phase 为 ended（确保弹窗能显示）
-      setOnlineState(prev => ({ ...prev, phase: 'ended', winner: payload.winner ?? prev.winner }));
-      
+      // 注意：状态更新由 room_state 统一处理，这里只做 UI 效果
       // 根据结果播放结算音效
       if (payload.events) {
         if (payload.events.some((e: any) => e.type === 'collision')) {
@@ -853,13 +851,9 @@ function App() {
     // 重置请求的回应
     wsClient.on('reset_response', (payload: any) => {
       setResetRequestPending({ from: null, waiting: false });
+      // 注意：状态更新由 room_state 统一处理，这里只做 UI 效果
       if (payload.accepted) {
-        // 对方同意重置，重置本地状态
-        setHistory([]);
-        setLastMoveTargets({ red: null, black: null });
-        setCheckStatus({ red: false, black: false });
-        setSelectedPiece(null);
-        setValidMoves([]);
+        setHideWinModal(true);
       }
       showMessage(payload.message, 2000);
     });
@@ -1034,19 +1028,12 @@ function App() {
     setResetRequestPending({ from: null, waiting: false });
   }, []);
 
-  // 在线模式：重置（仅在游戏结束后或对方同意后调用）
+  // 在线模式：重置 - 只发送消息，状态由 room_state 统一更新
   const handleResetOnline = useCallback(() => {
     wsClient.send('reset_game');
-    // 重置本地状态，保留 WebSocket 连接状态
-    setHistory([]);
-    setGameState(createInitialState());
-    setOnlineState(createInitialOnlineState(onlineState.connected));
-    setLastMoveTargets({ red: null, black: null });
-    setSelectedPiece(null);
-    setValidMoves([]);
-    setHideWinModal(true); // 隐藏胜利弹窗
-    setViewSide('red');
-  }, [onlineState.connected]);
+    // 不手动重置任何状态，完全依赖 room_state 更新
+    setHideWinModal(true);
+  }, []);
 
   // 联机模式：监听双方走棋，自动结算
   useEffect(() => {
