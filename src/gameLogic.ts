@@ -225,7 +225,11 @@ export const resolveSettlement = (
 
   // 4. 如果没有和棋，检查是否有一方将帅被吃
   if (!winner) {
-    if (!finalRedKing) {
+    if (!finalRedKing && !finalBlackKing) {
+      // 将帅同时被吃 = 和棋
+      winner = 'draw';
+      reason = '将帅同时被吃，和棋';
+    } else if (!finalRedKing) {
       winner = 'black';
       reason = '红帅被吃，黑方获胜';
     } else if (!finalBlackKing) {
