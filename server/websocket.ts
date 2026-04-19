@@ -18,6 +18,8 @@ import {
   respondToUndo,
   requestReset,
   respondToReset,
+  requestRestart,
+  cancelRestart,
 } from './gameState';
 
 interface WSMessage {
@@ -617,6 +619,65 @@ const handleMessage = (ws: WebSocket, message: WSMessage): void => {
         }
       } else {
         sendToClient(ws, { type: 'error', payload: { message: result.error || '操作失败' } });
+      }
+      break;
+    }
+
+    case 'request_restart': {
+      if (!player || !player.roomId || !player.side) {
+        sendToClient(ws, { type: 'error', payload: { message: '你不在任何房间中' } });
+        return;
+      }
+      
+      const result = requestRestart(player.roomId, player.side);
+      
+      if (!result.success) {
+        sendToClient(ws, { type: 'error', payload: { message: result.error || '操作失败' } });
+        return;
+      }
+      
+      if (result.shouldReset) {
+        // 双方都请求了重置，直接重置游戏
+        const room = getRoom(player.roomId);
+        if (room) {
+          // 通知双方游戏重新开始
+          for (const [ws2, p2] of clients) {
+            if (p2.roomId === room.id) {
+              sendToClient(ws2, { type: 'opponent_restart_requested' });
+            }
+          }
+          // 广播房间更新（包含新的游戏状态）
+          broadcastRoomUpdate(room);
+        }
+      } else {
+        // 只有一方请求了，通知对方
+        for (const [ws2, p2] of clients) {
+          if (p2.roomId === player.roomId && p2.ws !== ws) {
+            sendToClient(ws2, { type: 'restart_waiting' });
+          }
+        }
+      }
+      break;
+    }
+
+    case 'cancel_restart': {
+      if (!player || !player.roomId || !player.side) {
+        sendToClient(ws, { type: 'error', payload: { message: '你不在任何房间中' } });
+        return;
+      }
+      
+      const result = cancelRestart(player.roomId, player.side);
+      
+      if (!result.success) {
+        sendToClient(ws, { type: 'error', payload: { message: result.error || '操作失败' } });
+        return;
+      }
+      
+      // 通知对方取消了请求
+      for (const [ws2, p2] of clients) {
+        if (p2.roomId === player.roomId && p2.ws !== ws) {
+          sendToClient(ws2, { type: 'opponent_restart_cancelled' });
+        }
       }
       break;
     }

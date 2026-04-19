@@ -57,6 +57,8 @@ export interface GameRoom {
   // 将军状态
   redInCheck: boolean;
   blackInCheck: boolean;
+  // 重新开始请求状态
+  restartRequestedBy: Side | null;  // 谁请求了重新开始
 }
 
 // 棋盘尺寸
@@ -241,6 +243,8 @@ export const createRoom = (roomId: string): GameRoom => {
     // 重置请求
     resetRequestFrom: null,
     resetRequestedTo: null,
+    // 重新开始请求
+    restartRequestedBy: null,
     // 最后行动目标位置
     lastRedMoveTo: null,
     lastBlackMoveTo: null,
@@ -636,6 +640,38 @@ export const respondToReset = (roomId: string, responderSide: Side, accepted: bo
   return { success: true };
 };
 
+// 请求重新开始（游戏结束后）
+export const requestRestart = (roomId: string, requesterSide: Side): { success: boolean; shouldReset: boolean; error?: string } => {
+  const room = rooms.get(roomId);
+  if (!room) return { success: false, shouldReset: false, error: '房间不存在' };
+  if (room.phase !== 'ended') return { success: false, shouldReset: false, error: '游戏尚未结束' };
+  
+  // 如果对方已经请求了重新开始，则双方都请求了，直接重置
+  if (room.restartRequestedBy !== null && room.restartRequestedBy !== requesterSide) {
+    // 双方都请求了，重新开始游戏
+    resetRoomFull(roomId);
+    return { success: true, shouldReset: true, error: undefined };
+  }
+  
+  // 记录请求
+  room.restartRequestedBy = requesterSide;
+  return { success: true, shouldReset: false, error: undefined };
+};
+
+// 取消重新开始请求
+export const cancelRestart = (roomId: string, requesterSide: Side): { success: boolean; error?: string } => {
+  const room = rooms.get(roomId);
+  if (!room) return { success: false, error: '房间不存在' };
+  
+  // 只能取消自己的请求
+  if (room.restartRequestedBy !== requesterSide) {
+    return { success: false, error: '这不是你发起的请求' };
+  }
+  
+  room.restartRequestedBy = null;
+  return { success: true, error: undefined };
+};
+
 // 完全重置房间（重新开始）
 const resetRoomFull = (roomId: string): void => {
   const room = rooms.get(roomId);
@@ -672,6 +708,8 @@ const resetRoomFull = (roomId: string): void => {
   // 清除重置请求
   room.resetRequestFrom = null;
   room.resetRequestedTo = null;
+  // 清除重新开始请求
+  room.restartRequestedBy = null;
   // 清除最后目标位置
   room.lastRedMoveTo = null;
   room.lastBlackMoveTo = null;

@@ -113,6 +113,9 @@ function App() {
   // 联机模式重置请求状态
   const [resetRequestPending, setResetRequestPending] = useState<{ from: 'red' | 'black' | null; waiting: boolean }>({ from: null, waiting: false });
   const [hideWinModal, setHideWinModal] = useState(false);
+  
+  // 联机模式：等待对方开始游戏状态
+  const [waitingForRestart, setWaitingForRestart] = useState(false);
 
   // 联机模式：用于跟踪需要重新选择的棋子（在取消确认后）
   const pendingReselectPieceRef = useRef<Piece | null>(null);
@@ -132,6 +135,7 @@ function App() {
     setLastMoveTargets({ red: null, black: null });  // 清空行动目标框
     setCheckStatus({ red: false, black: false });  // 清空将军状态
     setHideWinModal(false);
+    setWaitingForRestart(false);  // 清空等待重新开始状态
     setGameMode(mode);
   }, []);
 
@@ -881,6 +885,22 @@ function App() {
       showMessage(payload.message, 2000);
     });
 
+    // 收到对方重新开始请求（游戏结束后）
+    wsClient.on('opponent_restart_requested', () => {
+      setWaitingForRestart(false); // 对方点了，游戏直接开始
+    });
+
+    // 等待对方开始游戏（只有自己点了）
+    wsClient.on('restart_waiting', () => {
+      // waitingForRestart 已经在 handleRequestRestartOnline 中设置为 true
+    });
+
+    // 对方取消了重新开始请求
+    wsClient.on('opponent_restart_cancelled', () => {
+      setWaitingForRestart(false);
+      showMessage('对方取消了重新开始请求', 2000);
+    });
+
     wsClient.on('error', (payload: any) => {
       showMessage(payload.message || '发生错误');
     });
@@ -1093,6 +1113,20 @@ function App() {
     setSelectedPiece(null);
     setValidMoves([]);
     setHideWinModal(true);
+  }, []);
+
+  // 在线模式：请求重新开始（游戏结束后）
+  const handleRequestRestartOnline = useCallback(() => {
+    if (!onlineState.side) return;
+    wsClient.send('request_restart');
+    setWaitingForRestart(true);
+    setHideWinModal(true);
+  }, [onlineState.side]);
+
+  // 在线模式：取消重新开始请求
+  const handleCancelRestart = useCallback(() => {
+    wsClient.send('cancel_restart');
+    setWaitingForRestart(false);
   }, []);
 
   // 联机模式：监听双方走棋，自动结算
@@ -1490,13 +1524,26 @@ function App() {
                currentWinner === 'black' ? '黑方胜利！' : '和棋！'}
             </h2>
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginTop: '20px' }}>
-              <button className="btn btn-confirm" onClick={handleResetFn}>
+              <button className="btn btn-confirm" onClick={handleRequestRestartOnline}>
                 重新开始
               </button>
               <button className="btn btn-reset" onClick={() => setHideWinModal(true)}>
                 稍后再说
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 等待对方开始游戏提示 */}
+      {gameMode === 'online' && waitingForRestart && currentPhase === 'ended' && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h2>等待对方开始游戏...</h2>
+            <p style={{ marginTop: '15px', color: '#888' }}>双方都点击"重新开始"后，游戏将自动开始</p>
+            <button className="btn btn-reset" onClick={handleCancelRestart} style={{ marginTop: '20px' }}>
+              取消
+            </button>
           </div>
         </div>
       )}
