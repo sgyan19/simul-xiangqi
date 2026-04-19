@@ -550,25 +550,32 @@ const handleMessage = (ws: WebSocket, message: WSMessage): void => {
     }
 
     case 'request_reset': {
+      console.log('[SERVER] request_reset received from player:', getPlayerId(ws), 'side:', player?.side, 'phase:', player?.roomId ? getRoom(player.roomId)?.phase : 'no room');
       if (!player || !player.roomId || !player.side) {
+        console.log('[SERVER] request_reset rejected: player or room or side missing');
         sendToClient(ws, { type: 'error', payload: { message: '你不在任何房间中' } });
         return;
       }
       
       const result = requestReset(player.roomId, player.side);
+      console.log('[SERVER] requestReset result:', result);
       
       if (result.success) {
         const room = getRoom(player.roomId);
+        console.log('[SERVER] requestReset success, room:', room?.id, 'sending reset_requested to opponent');
         if (room) {
           // 通知对方有重置请求
+          let sent = false;
           for (const [ws2, p2] of clients) {
+            console.log('[SERVER] checking client:', getPlayerId(ws2), 'roomId:', p2.roomId, 'current roomId:', room.id, 'isSelf:', ws2 === ws);
             if (p2.roomId === room.id && p2.ws !== ws) {
-              sendToClient(ws2, { 
-                type: 'reset_requested', 
-                payload: { from: player.side } 
-              });
+              const msg = { type: 'reset_requested', payload: { from: player.side } };
+              console.log('[SERVER] Sending reset_requested to:', getPlayerId(ws2), 'msg:', JSON.stringify(msg));
+              sendToClient(ws2, msg);
+              sent = true;
             }
           }
+          console.log('[SERVER] reset_requested sent:', sent);
           // 通知请求方等待对方同意
           sendToClient(ws, { 
             type: 'reset_waiting', 

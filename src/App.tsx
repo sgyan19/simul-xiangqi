@@ -861,11 +861,13 @@ function App() {
 
     // 对方发起的重置请求
     wsClient.on('reset_requested', (payload: any) => {
+      console.log('[DEBUG] reset_requested received:', payload);
       setResetRequestPending({ from: payload.from, waiting: false });
     });
-
+    
     // 发送重置请求后等待对方回应
     wsClient.on('reset_waiting', (payload: any) => {
+      console.log('[DEBUG] reset_waiting received:', payload);
       setResetRequestPending({ from: onlineState.side, waiting: true });
     });
 
@@ -1038,10 +1040,11 @@ function App() {
 
   // 在线模式：请求重置
   const handleRequestResetOnline = useCallback(() => {
+    console.log('[DEBUG] handleRequestResetOnline called, side:', onlineState.side, 'phase:', onlineState.phase, 'winner:', onlineState.winner);
     if (!onlineState.side) return;
     setResetRequestPending({ from: onlineState.side, waiting: true });
     wsClient.send('request_reset');
-  }, [onlineState.side]);
+  }, [onlineState.side, onlineState.phase, onlineState.winner]);
 
   // 在线模式：回应重置请求
   const handleRespondResetOnline = useCallback((accepted: boolean) => {
