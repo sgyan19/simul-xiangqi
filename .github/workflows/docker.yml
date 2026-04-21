@@ -58,4 +58,4 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Image digest
-        run: echo "Digest: ${{ steps.build.outputs.digest }}"
+        run: echo "Docker image built and pushed successfully"
